@@ -5,9 +5,8 @@ from picklable_itertools import chain
 from picklable_itertools.iter_dispatch import _iter
 from toolz import sliding_window
 
-from blocks import config
-from blocks.datasets import Dataset
-from blocks.datasets.streams import CachedDataStream
+from fuel import config, Dataset
+from fuel.streams import CachedDataStream
 
 
 class TextFile(Dataset):

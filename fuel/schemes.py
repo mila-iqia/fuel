@@ -5,7 +5,7 @@ from picklable_itertools import chain, repeat, imap, islice, _iter
 from six import add_metaclass
 from six.moves import xrange
 
-from blocks import config
+from fuel import config
 
 
 @add_metaclass(ABCMeta)

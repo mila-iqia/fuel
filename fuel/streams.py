@@ -5,7 +5,7 @@ import theano
 from picklable_itertools import ifilter
 from six import add_metaclass
 
-from blocks.datasets.iterator import DataIterator
+from fuel.iterator import DataIterator
 
 
 @add_metaclass(ABCMeta)

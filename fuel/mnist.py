@@ -5,9 +5,8 @@ import struct
 import numpy
 import theano
 
-from blocks import config
-from blocks.datasets import InMemoryDataset
-from blocks.datasets.schemes import SequentialScheme
+from fuel import config, InMemoryDataset
+from fuel.schemes import SequentialScheme
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 

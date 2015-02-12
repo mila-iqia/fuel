@@ -2,10 +2,9 @@ import collections
 from abc import ABCMeta, abstractmethod
 
 from six import add_metaclass
-from picklable_itertools import izip
+from picklable_itertools import _iter, izip
 
-from blocks.datasets.streams import DataStream
-from blocks.utils import SequenceIterator
+from fuel.streams import DataStream
 
 
 @add_metaclass(ABCMeta)
@@ -207,7 +206,7 @@ class InMemoryDataset(Dataset):
     is ever called.
 
     >>> import dill
-    >>> from blocks.datasets.mnist import MNIST
+    >>> from fuel.mnist import MNIST
     >>> mnist = MNIST('train')
     >>> print("{:,d} KB".format(
     ...     mnist.features.nbytes / 1024)) # doctest: +SKIP
@@ -228,7 +227,7 @@ class InMemoryDataset(Dataset):
     However, if the data files can't be found on disk, accessing the data
     will fail.
 
-    >>> from blocks import config
+    >>> from fuel import config
     >>> correct_path = config.data_path
     >>> config.data_path = '/non/existing/path'
     >>> with open('mnist.pkl', 'rb') as f:
@@ -371,8 +370,7 @@ class ContainerDataset(Dataset):
             self.data_channels = [container]
 
     def open(self):
-        iterators = [SequenceIterator(channel)
-                     for channel in self.data_channels]
+        iterators = [_iter(channel) for channel in self.data_channels]
         return izip(*iterators)
 
     def get_data(self, state=None, request=None):
