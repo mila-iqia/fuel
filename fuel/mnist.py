@@ -3,7 +3,6 @@ import os
 import struct
 
 import numpy
-import theano
 
 from fuel import config, InMemoryDataset
 from fuel.schemes import SequentialScheme
@@ -75,8 +74,7 @@ class MNIST(InMemoryDataset):
         data_path = os.path.join(config.data_path, 'mnist')
         x = read_mnist_images(
             os.path.join(data_path, data),
-            'bool' if self.binary
-            else theano.config.floatX)[self.start:self.stop]
+            'bool' if self.binary else 'float64')[self.start:self.stop]
         x = x.reshape((x.shape[0], numpy.prod(x.shape[1:])))
         y = read_mnist_labels(
             os.path.join(data_path, labels))[self.start:self.stop,

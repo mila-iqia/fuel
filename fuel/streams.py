@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy
-import theano
 from picklable_itertools import ifilter
 from six import add_metaclass
 
@@ -404,8 +403,7 @@ class PaddingDataStream(DataStreamWrapper):
                 padded_data[i, :len(sample)] = sample
             data_with_masks.append(padded_data)
 
-            mask = numpy.zeros((len(source_data), max_sequence_length),
-                               dtype=theano.config.floatX)
+            mask = numpy.zeros((len(source_data), max_sequence_length))
             for i, sequence_length in enumerate(lengths):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
