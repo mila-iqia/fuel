@@ -1,8 +1,6 @@
 import numpy
 from numpy.testing import assert_raises
 
-import theano
-
 from fuel.mnist import MNIST
 
 
@@ -18,7 +16,7 @@ def test_mnist():
 
     first_feature, first_target = mnist_train.get_data(request=[0])
     assert first_feature.shape == (1, 784)
-    assert first_feature.dtype is numpy.dtype(theano.config.floatX)
+    assert first_feature.dtype.kind == 'f'
     assert first_target.shape == (1, 1)
     assert first_target.dtype is numpy.dtype('uint8')
 
