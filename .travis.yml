@@ -32,7 +32,7 @@ before_install:
 install:
   # Install all Python dependencies
   - |
-      conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl nose numpy pip coverage six
+      conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl nose numpy pip coverage six toolz
       pip install -q nose2[coverage-plugin] coveralls
 script:
   - |

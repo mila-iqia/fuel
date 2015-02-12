@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 from picklable_itertools import _iter, izip
 
+from fuel.config_parser import config
 from fuel.streams import DataStream
 
 
