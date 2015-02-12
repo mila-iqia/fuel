@@ -38,6 +38,6 @@ script:
   - |
       python setup.py install # Tests setup.py
       # Running nose2 within coverage makes imports count towards coverage
-      coverage run --source=blocks -m nose2.__main__ -v tests
+      coverage run --source=fuel -m nose2.__main__ -v tests
 after_script:
   - coveralls
