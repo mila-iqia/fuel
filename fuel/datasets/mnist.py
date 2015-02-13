@@ -4,7 +4,8 @@ import struct
 
 import numpy
 
-from fuel import config, InMemoryDataset
+from fuel import config
+from fuel.datasets import InMemoryDataset
 from fuel.schemes import SequentialScheme
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049

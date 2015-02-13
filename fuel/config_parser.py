@@ -36,20 +36,15 @@ The following configurations are supported:
    The path where dataset files are stored. Can also be set using the
    environment variable ``FUEL_DATA_PATH``.
 
-.. option:: default_seed
 
-   The seed used when initializing random number generators (RNGs) such as
-   NumPy :class:`~numpy.random.RandomState` objects as well as Theano's
-   :class:`~theano.sandbox.rng_mrg.MRG_RandomStreams` objects. Must be an
-   integer. By default this is set to 1.
+.. todo::
 
-.. option:: recursion_limit
+   Implement this.
 
-   The recursion max depth limit used in
-   :class:`~fuel.main_loop.MainLoop` as well as in other situations when
-   deep recursion is required. The most notable example of such a situation
-   is pickling or unpickling a complex structure with lots of objects, such
-   as a big Theano computation graph.
+.. option:: floatX
+
+   The default :class:`~numpy.dtype` to use for floating point numbers. The
+   default value is ``float64``. A lower value can save memory.
 
 .. _YAML: http://yaml.org/
 .. _environment variables:

@@ -1,7 +1,7 @@
 import numpy
 from numpy.testing import assert_raises
 
-from fuel.mnist import MNIST
+from fuel.datasets import MNIST
 
 
 def test_mnist():

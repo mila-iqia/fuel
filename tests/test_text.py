@@ -4,7 +4,7 @@ from six.moves import cPickle
 from numpy.testing import assert_raises
 from six import BytesIO
 
-from fuel.text import TextFile
+from fuel.datasets import TextFile
 
 
 def lower(s):

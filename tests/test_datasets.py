@@ -4,7 +4,7 @@ import numpy
 from six.moves import zip
 from nose.tools import assert_raises
 
-from fuel import ContainerDataset
+from fuel.datasets import ContainerDataset
 from fuel.streams import (
     CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
     PaddingDataStream, DataStreamFilter)

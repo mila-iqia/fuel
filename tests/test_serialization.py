@@ -5,7 +5,7 @@ from six.moves import cPickle
 import numpy
 
 from fuel.streams import DataStream
-from fuel.mnist import MNIST
+from fuel.datasets import MNIST
 from fuel.schemes import SequentialScheme
 
 
