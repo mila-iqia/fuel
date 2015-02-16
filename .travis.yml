@@ -2,6 +2,7 @@ sudo: false
 cache:
   directories:
     - $TRAVIS_BUILD_DIR/mnist
+    - $TRAVIS_BUILD_DIR/cifar10
 branches:
   only:
     - master
@@ -26,6 +27,13 @@ before_install:
              -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz \
              -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
         gunzip *-ubyte.gz
+        cd -
+      fi
+      # Download CIFAR10 for tests if not loaded from cache
+      if find cifar10 -empty | read; then
+        mkdir cifar10
+        cd cifar10
+        curl http://www.cs.utoronto.ca/~kriz/cifar-10-python.tar.gz | tar xzf -
         cd -
       fi
       export FUEL_DATA_PATH=$PWD
