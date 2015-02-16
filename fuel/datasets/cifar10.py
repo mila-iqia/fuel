@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
-import cPickle
 
 import numpy
+import six
+from six.moves import  cPickle, xrange
 
 from fuel import config
 from fuel.datasets import InMemoryDataset
@@ -70,16 +71,22 @@ class CIFAR10(InMemoryDataset):
             x = numpy.zeros((50000, 3072), dtype='float64')
             y = numpy.zeros((50000, 1), dtype='uint8')
             for i, fname in enumerate(fnames):
-                with open(os.path.join(base_path, fname)) as f:
-                    data = cPickle.load(f)
+                with open(os.path.join(base_path, fname), 'rb') as f:
+                    if six.PY3:
+                        data = cPickle.load(f, encoding='latin1')
+                    else:
+                        data = cPickle.load(f)
                     x[10000 * i: 10000 * (i + 1)] = data['data']
                     y[10000 * i: 10000 * (i + 1)] = numpy.asarray(
                         data['labels'], dtype='uint8')[:, numpy.newaxis]
             x = x[self.start: self.stop]
             y = y[self.start: self.stop]
         elif self.which_set == 'test':
-            with open(os.path.join(base_path, 'test_batch')) as f:
-                data = cPickle.load(f)
+            with open(os.path.join(base_path, 'test_batch'), 'rb') as f:
+                if six.PY3:
+                    data = cPickle.load(f, encoding='latin1')
+                else:
+                    data = cPickle.load(f)
                 x = data['data'].astype('float64')[self.start: self.stop]
                 y = numpy.asarray(
                     data['labels'], dtype='uint8')[self.start: self.stop,
