@@ -1,6 +1,11 @@
 Welcome to Fuel' documentation!
 ===============================
 
+.. toctree::
+   :hidden:
+
+   overview
+
 Fuel is a data pipeline framework which provides your machine learning models
 with the data they need. It is planned to be used by both the Blocks_ and
 Pylearn2_ neural network libraries.
