@@ -364,6 +364,7 @@ class PaddingDataStream(DataStreamWrapper):
     mask_dtype: str, optional
         data type of masks. If not provided, floatX from config will
         be used.
+
     """
     def __init__(self, data_stream, mask_sources=None, mask_dtype=None):
         super(PaddingDataStream, self).__init__(data_stream)
