@@ -1,5 +1,5 @@
-Welcome to Fuel' documentation!
-===============================
+Welcome to Fuel's documentation!
+================================
 
 .. toctree::
    :hidden:
