@@ -1,4 +1,4 @@
-Datasets
+Overview
 ========
 
 The data pipeline abstraction that Fuel povides looks complicated at first
