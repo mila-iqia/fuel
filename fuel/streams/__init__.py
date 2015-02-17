@@ -5,6 +5,7 @@ from picklable_itertools import ifilter
 from six import add_metaclass
 
 from fuel.iterator import DataIterator
+from fuel import config
 
 
 @add_metaclass(ABCMeta)
@@ -360,13 +361,19 @@ class PaddingDataStream(DataStreamWrapper):
     mask_sources : tuple of strings, optional
         The sources for which we need to add a mask. If not provided, a
         mask will be created for all data sources
-
+    mask_dtype: str, optional
+        data type of masks. If not provided, floatX from config will
+        be used.
     """
-    def __init__(self, data_stream, mask_sources=None):
+    def __init__(self, data_stream, mask_sources=None, mask_dtype=None):
         super(PaddingDataStream, self).__init__(data_stream)
         if mask_sources is None:
             mask_sources = self.data_stream.sources
         self.mask_sources = mask_sources
+        if mask_dtype is None:
+            self.mask_dtype = config.floatX
+        else:
+            self.mask_dtype = mask_dtype
 
     @property
     def sources(self):
@@ -403,8 +410,31 @@ class PaddingDataStream(DataStreamWrapper):
                 padded_data[i, :len(sample)] = sample
             data_with_masks.append(padded_data)
 
-            mask = numpy.zeros((len(source_data), max_sequence_length))
+            mask = numpy.zeros((len(source_data), max_sequence_length),
+                                self.mask_dtype)
             for i, sequence_length in enumerate(lengths):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)
+
+
+class ForceFloatX(DataStreamWrapper):
+    """Force all floating point numpy arrays to be floatX."""
+    def __init__(self, data_stream):
+        super(ForceFloatX, self).__init__(data_stream)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
+        result = []
+        for piece in data:
+            if (isinstance(piece, numpy.ndarray) and
+                    piece.dtype.kind == "f" and
+                    piece.dtype != config.floatX):
+                result.append(piece.astype(config.floatX))
+            else:
+                result.append(piece)
+        return tuple(result)
+
+
