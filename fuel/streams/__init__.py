@@ -5,6 +5,7 @@ from picklable_itertools import ifilter
 from six import add_metaclass
 
 from fuel.iterator import DataIterator
+from fuel import config
 
 
 @add_metaclass(ABCMeta)
@@ -408,3 +409,25 @@ class PaddingDataStream(DataStreamWrapper):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)
+
+
+class ForceFloatX(DataStreamWrapper):
+    """Force all floating point numpy arrays to be floatX."""
+    def __init__(self, data_stream):
+        super(ForceFloatX, self).__init__(data_stream)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
+        result = []
+        for piece in data:
+            if (isinstance(piece, numpy.ndarray) and
+                    piece.dtype.kind == "f" and
+                    piece.dtype != config.floatX):
+                result.append(piece.astype(config.floatX))
+            else:
+                result.append(piece)
+        return tuple(result)
+
+

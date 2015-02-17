@@ -141,5 +141,6 @@ config = Configuration()
 
 # Define configuration options
 config.add_config('data_path', type_=str, env_var='FUEL_DATA_PATH')
+config.add_config('floatX', type_=str, default='float64')
 
 config.load_yaml()
