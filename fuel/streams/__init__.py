@@ -37,8 +37,9 @@ class AbstractDataStream(object):
         given by the dataset.
 
     """
-    def __init__(self, iteration_scheme=None):
+    def __init__(self, iteration_scheme=None, sources=None):
         self.iteration_scheme = iteration_scheme
+        self._sources = sources
 
     def get_data(self, request=None):
         """Request data from the dataset or the wrapped stream.
@@ -109,7 +110,7 @@ class DataStream(AbstractDataStream):
 
     @property
     def sources(self):
-        if hasattr(self, '_sources'):
+        if self._sources:
             return self._sources
         return self.dataset.sources
 
