@@ -1,6 +1,9 @@
+import logging
 import tables
 
 from fuel.datasets import Dataset
+
+logger = logging.getLogger(__name__)
 
 
 class Hdf5Dataset(Dataset):
@@ -32,14 +35,18 @@ class Hdf5Dataset(Dataset):
         self.start = start
         self.stop = stop
         self.num_examples = self.stop - self.start
-        self.nodes = self._open_file()
+        self.nodes = None
         super(Hdf5Dataset, self).__init__(self.provides_sources)
 
-    def _open_file(self):
-        h5file = tables.openFile(self.path, mode="r")
-        node = h5file.getNode('/', self.data_node)
+    def open_file(self, path):
+        try:
+            h5file = tables.open_file(path, mode="r")
+            node = h5file.getNode('/', self.data_node)
 
-        return [getattr(node, source) for source in self.sources_in_file]
+            self.nodes = [getattr(node, source) for source in self.sources_in_file]
+        except IOError:
+            logger.error('Failed to open HDF5 file, try to call open_file'
+                         'method for dataset with actual path')
 
     def get_data(self, state=None, request=None):
         """ Returns data from HDF5 dataset.
@@ -58,5 +65,5 @@ class Hdf5Dataset(Dataset):
     def __setstate__(self, state):
         self.__dict__ = state
         # Open HDF5 file again and sets up `nodes`.
-        self.nodes = self._open_file()
+        self.open_file(self.path)
 
