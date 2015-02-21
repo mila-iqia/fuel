@@ -36,6 +36,7 @@ class Hdf5Dataset(Dataset):
         self.stop = stop
         self.num_examples = self.stop - self.start
         self.nodes = None
+        self.open_file(self.path)
         super(Hdf5Dataset, self).__init__(self.provides_sources)
 
     def open_file(self, path):
