@@ -1,3 +1,5 @@
+import pickle
+import tables
 from collections import OrderedDict
 
 import numpy
@@ -5,6 +7,7 @@ from six.moves import zip
 from nose.tools import assert_raises
 
 from fuel.datasets import ContainerDataset
+from fuel.datasets.hdf5 import Hdf5Dataset
 from fuel.streams import (
     CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
     PaddingDataStream, DataStreamFilter)
@@ -203,3 +206,26 @@ def test_padding_data_stream():
         .get_default_stream(),
         ConstantScheme(2)))
     assert len(next(stream3.get_epoch_iterator())) == 4
+
+
+def test_hdf5_datset():
+    num_rows = 500
+    filters = tables.Filters(complib='blosc', complevel=5)
+
+    h5file = tables.open_file("test.h5", mode = "w", title = "Test file",
+                              filters=filters)
+    group = h5file.create_group("/", 'Data')
+    atom = tables.UInt8Atom()
+    y = h5file.create_carray(group, 'y', atom=atom, title='Data targets',
+                             shape=(num_rows, 1), filters=filters)
+    for i in xrange(num_rows):
+        y[i] = i
+    h5file.flush()
+    h5file.close()
+
+    dataset = Hdf5Dataset(['y'], 0, 500, 'test.h5')
+    assert numpy.all(dataset.get_data(request=slice(0, 10))[0] ==
+                     numpy.arange(10).reshape(10, 1))
+    # Test if pickles
+    dump = pickle.dumps(dataset)
+    pickle.loads(dump)
