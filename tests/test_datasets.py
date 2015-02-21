@@ -3,6 +3,7 @@ import tables
 from collections import OrderedDict
 
 import numpy
+import six.moves
 from six.moves import zip
 from nose.tools import assert_raises
 
@@ -218,7 +219,7 @@ def test_hdf5_datset():
     atom = tables.UInt8Atom()
     y = h5file.create_carray(group, 'y', atom=atom, title='Data targets',
                              shape=(num_rows, 1), filters=filters)
-    for i in xrange(num_rows):
+    for i in six.moves.range(num_rows):
         y[i] = i
     h5file.flush()
     h5file.close()
