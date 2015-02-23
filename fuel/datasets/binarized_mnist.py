@@ -10,7 +10,8 @@ from fuel.schemes import SequentialScheme
 
 @InMemoryDataset.lazy_properties('features')
 class BinarizedMNIST(InMemoryDataset):
-    u"""The binarized, unlabeled MNIST dataset used for DBN, VAE and NADE.
+    u"""The binarized, unlabeled MNIST dataset used for evaluating
+    generative models (e.g. DBN, VAE and NADE).
 
     MNIST (Mixed National Institute of Standards and Technology) [LBBH] is
     a database of handwritten digits. It is one of the most famous datasets
