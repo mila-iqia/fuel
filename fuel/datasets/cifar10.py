@@ -3,14 +3,15 @@ import os
 
 import numpy
 import six
-from six.moves import  cPickle, xrange
+from six.moves import cPickle, xrange
 
 from fuel import config
 from fuel.datasets import InMemoryDataset
+from fuel.datasets.base import do_not_pickle_properties
 from fuel.schemes import SequentialScheme
 
 
-@InMemoryDataset.lazy_properties('features', 'targets')
+@do_not_pickle_properties('features', 'targets')
 class CIFAR10(InMemoryDataset):
     """The CIFAR10 dataset of natural images.
 
