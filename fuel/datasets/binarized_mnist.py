@@ -49,6 +49,7 @@ class BinarizedMNIST(InMemoryDataset):
 
     """
     provides_sources = ('features',)
+    base_path = os.path.join(config.data_path, 'binarized_mnist')
 
     def __init__(self, which_set, **kwargs):
         if which_set not in ('train', 'valid', 'test'):
@@ -59,11 +60,11 @@ class BinarizedMNIST(InMemoryDataset):
         super(BinarizedMNIST, self).__init__(**kwargs)
 
         self.which_set = which_set
+        self.data_path = os.path.join(
+            self.base_path, 'binarized_mnist_' + self.which_set + '.npy')
 
     def load(self):
-        data = 'binarized_mnist_' + self.which_set + '.npy'
-        data_path = os.path.join(config.data_path, 'binarized_mnist', data)
-        x = numpy.load(data_path).astype('float64')
+        x = numpy.load(self.data_path).astype('float64')
         self.features = x
 
     def get_data(self, state=None, request=None):
