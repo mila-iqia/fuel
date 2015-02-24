@@ -34,19 +34,9 @@ before_install:
       if find binarized_mnist -empty | read; then
         mkdir binarized_mnist
         cd binarized_mnist
-        python -c "import numpy; numpy.save('binarized_mnist_train.npy',\
-                   numpy.genfromtxt(\
-                   'http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_train.amat',\
-                   dtype='uint8'))"
-        python -c "import numpy; numpy.save('binarized_mnist_valid.npy',\
-                   numpy.genfromtxt(\
-                   'http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_valid.amat',\
-                   dtype='uint8'))"
-        python -c "import numpy; numpy.save('binarized_mnist_test.npy',\
-                   numpy.genfromtxt(\
-                   'http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_test.amat',\
-                   dtype='uint8'))"
-        rm -r www.cs.toronto.edu
+        curl -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_train.amat\
+             -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_valid.amat\
+             -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_test.amat
         cd -
       fi
       # Download CIFAR10 for tests if not loaded from cache

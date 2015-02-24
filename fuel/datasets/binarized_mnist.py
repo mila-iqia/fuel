@@ -65,6 +65,12 @@ class BinarizedMNIST(InMemoryDataset):
             self.base_path, 'binarized_mnist_' + self.which_set + '.npy')
 
     def load(self):
+        # If only the .amat file is avaiable, do the conversion
+        if not os.path.isfile(self.data_path):
+            numpy.save(
+                self.data_path,
+                numpy.loadtxt(
+                    self.data_path.replace('npy', 'amat'), dtype='uint8'))
         x = numpy.load(self.data_path).astype('float64')
         self.features = x
 
