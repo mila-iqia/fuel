@@ -64,6 +64,10 @@ def do_not_pickle_attributes(*lazy_properties):
             def __getstate__(self):
                 serializable_state = self.__dict__.copy()
                 for lazy_property in lazy_properties:
+                    attr = serializable_state.get('_' + lazy_property)
+                    # Iterators would lose their state
+                    if isinstance(attr, collections.Iterator):
+                        raise ValueError("Iterators can't be lazy loaded")
                     serializable_state.pop('_' + lazy_property, None)
                 return serializable_state
             setattr(cls, '__getstate__', __getstate__)

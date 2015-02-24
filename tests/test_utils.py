@@ -1,6 +1,8 @@
 import pickle
 from six.moves import range
 
+from picklable_itertools import _iter
+
 from fuel.utils import do_not_pickle_attributes
 
 
@@ -11,7 +13,7 @@ class TestClass(object):
 
     def load(self):
         self.bulky_attr = list(range(100))
-        self.non_pickable = open(__file__, 'r')
+        self.non_pickable = lambda x: x
 
 
 def test_do_not_pickle_attributes():
