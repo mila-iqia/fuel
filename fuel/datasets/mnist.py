@@ -6,13 +6,13 @@ import numpy
 
 from fuel import config
 from fuel.datasets import InMemoryDataset
-from fuel.datasets.base import do_not_pickle_properties
+from fuel.utils import do_not_pickle_attributes
 from fuel.schemes import SequentialScheme
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
 
-@do_not_pickle_properties('features', 'targets')
+@do_not_pickle_attributes('features', 'targets')
 class MNIST(InMemoryDataset):
     u"""The MNIST dataset of handwritten digits.
 

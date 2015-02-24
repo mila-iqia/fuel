@@ -1,6 +1,4 @@
-import collections
 from abc import ABCMeta, abstractmethod
-
 from six import add_metaclass
 
 from fuel.streams import DataStream
@@ -192,7 +190,7 @@ class InMemoryDataset(Dataset):
     Datasets which hold data in memory must be treated differently when
     serializing (saving) the training progress, because it would be very
     inefficient to save the data along with the training process. Hence,
-    in-memory datasets support the :func:`do_not_pickle_properties`
+    in-memory datasets support the :func:`do_not_pickle_attributes`
     decorator. Please see documentation there for more information why
     the decorator is needed.
 
@@ -263,75 +261,4 @@ class InMemoryDataset(Dataset):
         pass
 
 
-def do_not_pickle_properties(*lazy_properties):
-    r"""Decorator to assign non-pickable properties.
 
-    Used to assign properties which will not be pickled on some class.
-    This decorator creates a series of properties whose values won't be
-    serialized; instead, their values will be reloaded (e.g. from disk) by
-    the :meth:`load` function after deserializing the object.
-
-    The decorator can be used with :class:`InMemoryDataset` to avoid
-    serialization of bulky attributes. Other possible way of using the
-    decorator is with attributes which cannot be pickled at all. In this
-    case the user should construct the attribute himself in :meth:`load`.
-
-    Parameters
-    ----------
-    \*lazy_properties : strings
-        The names of the attributes that are lazy.
-
-    Notes
-    -----
-    The pickling behavior of the dataset is only overridden if the
-    dataset does not have a ``__getstate__`` method implemented.
-
-    Examples
-    --------
-    In order to make sure that attributes are not serialized with the
-    dataset, and are lazily reloaded after deserialization by the
-    :meth:`load` in the wrapped class. Use the decorator with the names of
-    the attributes as an argument.
-
-    >>> @do_not_pickle_properties('features', 'targets')
-    ... class TestDataset(InMemoryDataset):
-    ...     def load(self):
-    ...         self.features = range(10 ** 6)
-    ...         self.targets = range(10 ** 6)[::-1]
-
-    """
-    def lazy_property_factory(lazy_property):
-        """Create properties that perform lazy loading of attributes."""
-        def lazy_property_getter(self):
-            if not hasattr(self, '_' + lazy_property):
-                self.load()
-            if not hasattr(self, '_' + lazy_property):
-                raise ValueError("{} wasn't loaded".format(lazy_property))
-            return getattr(self, '_' + lazy_property)
-
-        def lazy_property_setter(self, value):
-            setattr(self, '_' + lazy_property, value)
-
-        return lazy_property_getter, lazy_property_setter
-
-    def wrap_class(cls):
-        # Attach the lazy loading properties to the class
-        for lazy_property in lazy_properties:
-            setattr(cls, lazy_property,
-                    property(*lazy_property_factory(lazy_property)))
-
-        # Delete the values of lazy properties when serializing
-        if not hasattr(cls, '__getstate__'):
-            def __getstate__(self):
-                serializable_state = self.__dict__.copy()
-                for lazy_property in lazy_properties:
-                    attr = serializable_state.get('_' + lazy_property)
-                    # Iterators would lose their state
-                    if isinstance(attr, collections.Iterator):
-                        raise ValueError("Iterators can't be lazy loaded")
-                    serializable_state.pop('_' + lazy_property, None)
-                return serializable_state
-            setattr(cls, '__getstate__', __getstate__)
-
-        return cls
-    return wrap_class

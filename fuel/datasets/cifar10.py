@@ -7,11 +7,11 @@ from six.moves import cPickle, xrange
 
 from fuel import config
 from fuel.datasets import InMemoryDataset
-from fuel.datasets.base import do_not_pickle_properties
+from fuel.utils import do_not_pickle_attributes
 from fuel.schemes import SequentialScheme
 
 
-@do_not_pickle_properties('features', 'targets')
+@do_not_pickle_attributes('features', 'targets')
 class CIFAR10(InMemoryDataset):
     """The CIFAR10 dataset of natural images.
 
