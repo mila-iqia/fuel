@@ -1,8 +1,7 @@
 import numpy
 from numpy.testing import assert_raises
 
-from fuel.schemes import (ConstantScheme, SequentialScheme,
-                                     ShuffledScheme)
+from fuel.schemes import ConstantScheme, SequentialScheme, ShuffledScheme
 
 
 def iterator_requester(scheme):
