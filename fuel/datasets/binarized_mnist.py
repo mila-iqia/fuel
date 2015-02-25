@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 import os
 
 import numpy
@@ -6,6 +7,8 @@ import numpy
 from fuel import config
 from fuel.datasets import InMemoryDataset
 from fuel.schemes import SequentialScheme
+
+logger = logging.getLogger(__name__)
 
 
 @InMemoryDataset.lazy_properties('features')
@@ -66,12 +69,13 @@ class BinarizedMNIST(InMemoryDataset):
 
     def load(self):
         # If only the .amat file is avaiable, do the conversion
-        if not os.path.isfile(self.data_path):
-            numpy.save(
-                self.data_path,
-                numpy.loadtxt(
-                    self.data_path.replace('npy', 'amat'), dtype='uint8'))
-        x = numpy.load(self.data_path).astype('float64')
+        if os.path.isfile(self.data_path):
+            x = numpy.load(self.data_path).astype('float64')
+        else:
+            logger.warn("The faster .npy version of " +
+                        "binarized_mnist_{} ".format(self.which_set) +
+                        "isn't available, falling back to the .amat version.")
+            x = numpy.loadtxt(self.data_path[:-3] + 'amat', dtype='float64')
         self.features = x
 
     def get_data(self, state=None, request=None):
