@@ -225,6 +225,26 @@ class DataStreamMapping(DataStreamWrapper):
         return data + image
 
 
+class ForceFloatX(DataStreamWrapper):
+    """Force all floating point numpy arrays to be floatX."""
+    def __init__(self, data_stream):
+        super(ForceFloatX, self).__init__(data_stream)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
+        result = []
+        for piece in data:
+            if (isinstance(piece, numpy.ndarray) and
+                    piece.dtype.kind == "f" and
+                    piece.dtype != config.floatX):
+                result.append(piece.astype(config.floatX))
+            else:
+                result.append(piece)
+        return tuple(result)
+
+
 class DataStreamFilter(DataStreamWrapper):
     """Filters samples that meet a predicate.
 
@@ -290,6 +310,33 @@ class CachedDataStream(DataStreamWrapper):
     def _cache(self):
         for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
             cache.extend(data)
+
+
+class SortMapping(object):
+    """Callable class for creating sorting mappings.
+
+    This class can be used to create a callable that can be used by the
+    :class:`DataStreamMapping` constructor.
+
+    Parameters
+    ----------
+    key : callable
+        The mapping that returns the value to sort on. Its input will be
+        a tuple that contains a single data point for each source.
+    reverse : boolean value that indicates whether the sort order should
+        be reversed.
+
+    """
+    def __init__(self, key, reverse=False):
+        self.key = key
+        self.reverse = reverse
+
+    def __call__(self, batch):
+        output = sorted(zip(*batch), key=self.key, reverse=self.reverse)
+        output = tuple(numpy.asarray(i) if isinstance(j, numpy.ndarray)
+                       else list(i)
+                       for i, j in zip(zip(*output), batch))
+        return output
 
 
 class BatchDataStream(DataStreamWrapper):
@@ -417,25 +464,5 @@ class PaddingDataStream(DataStreamWrapper):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)
-
-
-class ForceFloatX(DataStreamWrapper):
-    """Force all floating point numpy arrays to be floatX."""
-    def __init__(self, data_stream):
-        super(ForceFloatX, self).__init__(data_stream)
-
-    def get_data(self, request=None):
-        if request is not None:
-            raise ValueError
-        data = next(self.child_epoch_iterator)
-        result = []
-        for piece in data:
-            if (isinstance(piece, numpy.ndarray) and
-                    piece.dtype.kind == "f" and
-                    piece.dtype != config.floatX):
-                result.append(piece.astype(config.floatX))
-            else:
-                result.append(piece)
-        return tuple(result)
 
 
