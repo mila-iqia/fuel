@@ -239,8 +239,12 @@ class IterableDataset(Dataset):
                 raise ValueError
             self.iterables = [iterables]
 
-    def __len__(self):
-        return min(len(iterable) for iterable in self.iterables)
+    @property
+    def num_examples(self):
+        try:
+            return min(len(iterable) for iterable in self.iterables)
+        except TypeError:
+            return float('nan')
 
     def open(self):
         iterators = [_iter(channel) for channel in self.iterables]
@@ -310,7 +314,8 @@ class IndexableDataset(Dataset):
         self.start = start
         self.stop = stop
 
-    def __len__(self):
+    @property
+    def num_examples(self):
         return len(self.indexables[0])
 
     def get_data(self, state=None, request=None):
