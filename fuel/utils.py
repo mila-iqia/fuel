@@ -54,6 +54,9 @@ def do_not_pickle_attributes(*lazy_properties):
         return lazy_property_getter, lazy_property_setter
 
     def wrap_class(cls):
+        if not hasattr(cls, 'load'):
+            raise ValueError("no load method implemented")
+
         # Attach the lazy loading properties to the class
         for lazy_property in lazy_properties:
             setattr(cls, lazy_property,
