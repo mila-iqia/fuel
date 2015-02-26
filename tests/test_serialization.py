@@ -1,15 +1,17 @@
 import os
 import tempfile
 
-from six.moves import cPickle
 import numpy
+from six.moves import cPickle
 
 from fuel.streams import DataStream
 from fuel.datasets import MNIST
 from fuel.schemes import SequentialScheme
+from tests import skip_if_not_available
 
 
 def test_in_memory():
+    skip_if_not_available(datasets=['mnist'])
     # Load MNIST and get two batches
     mnist = MNIST('train')
     data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(

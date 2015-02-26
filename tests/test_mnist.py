@@ -2,9 +2,11 @@ import numpy
 from numpy.testing import assert_raises
 
 from fuel.datasets import MNIST
+from tests import skip_if_not_available
 
 
 def test_mnist():
+    skip_if_not_available(datasets=['mnist'])
     mnist_train = MNIST('train', start=20000)
     assert len(mnist_train.features) == 40000
     assert len(mnist_train.targets) == 40000

@@ -3,6 +3,7 @@ cache:
   directories:
     - $TRAVIS_BUILD_DIR/mnist
     - $TRAVIS_BUILD_DIR/cifar10
+    - $TRAVIS_BUILD_DIR/binarized_mnist
 branches:
   only:
     - master
@@ -27,6 +28,15 @@ before_install:
              -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz \
              -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
         gunzip *-ubyte.gz
+        cd -
+      fi
+      # Download binarized MNIST for tests if not loaded from cache
+      if find binarized_mnist -empty | read; then
+        mkdir binarized_mnist
+        cd binarized_mnist
+        curl -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_train.amat\
+             -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_valid.amat\
+             -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_test.amat
         cd -
       fi
       # Download CIFAR10 for tests if not loaded from cache

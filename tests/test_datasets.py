@@ -3,16 +3,19 @@ import tables
 from collections import OrderedDict
 
 import numpy
-import six.moves
-from six.moves import zip
+import operator
+from six.moves import zip, range
 from nose.tools import assert_raises
 
+from fuel import config
 from fuel.datasets import ContainerDataset
 from fuel.datasets.hdf5 import Hdf5Dataset
 from fuel.streams import (
     CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
-    PaddingDataStream, DataStreamFilter)
+    PaddingDataStream, DataStreamFilter, ForceFloatX, SortMapping)
 from fuel.schemes import BatchSizeScheme, ConstantScheme
+
+floatX = config.floatX
 
 
 def test_dataset():
@@ -43,12 +46,71 @@ def test_data_stream_mapping():
     assert list(wrapper2.get_epoch_iterator()) == list(zip(data, data_doubled))
 
 
+def test_data_stream_mapping_sort():
+    data = [[1, 2, 3],
+            [2, 3, 1],
+            [3, 2, 1]]
+    data_sorted = [[1, 2, 3]] * 3
+    data_sorted_rev = [[3, 2, 1]] * 3
+    stream = ContainerDataset(data).get_default_stream()
+    wrapper1 = DataStreamMapping(stream,
+                                 mapping=SortMapping(operator.itemgetter(0)))
+    assert list(wrapper1.get_epoch_iterator()) == list(zip(data_sorted))
+    wrapper2 = DataStreamMapping(stream, SortMapping(lambda x: -x[0]))
+    assert list(wrapper2.get_epoch_iterator()) == list(zip(data_sorted_rev))
+    wrapper3 = DataStreamMapping(stream, SortMapping(operator.itemgetter(0),
+                                                     reverse=True))
+    assert list(wrapper3.get_epoch_iterator()) == list(zip(data_sorted_rev))
+
+
+def test_data_stream_mapping_sort_multisource_ndarrays():
+    data = OrderedDict()
+    data['x'] = [numpy.array([1, 2, 3]),
+                 numpy.array([2, 3, 1]),
+                 numpy.array([3, 2, 1])]
+    data['y'] = [numpy.array([6, 5, 4]),
+                 numpy.array([6, 5, 4]),
+                 numpy.array([6, 5, 4])]
+    data_sorted = [(numpy.array([1, 2, 3]), numpy.array([6, 5, 4])),
+                   (numpy.array([1, 2, 3]), numpy.array([4, 6, 5])),
+                   (numpy.array([1, 2, 3]), numpy.array([4, 5, 6]))]
+    stream = ContainerDataset(data).get_default_stream()
+    wrapper = DataStreamMapping(stream,
+                                mapping=SortMapping(operator.itemgetter(0)))
+    for output, ground_truth in zip(wrapper.get_epoch_iterator(), data_sorted):
+        assert len(output) == len(ground_truth)
+        assert (output[0] == ground_truth[0]).all()
+        assert (output[1] == ground_truth[1]).all()
+
+
+def test_data_stream_mapping_sort_multisource():
+    data = OrderedDict()
+    data['x'] = [[1, 2, 3], [2, 3, 1], [3, 2, 1]]
+    data['y'] = [[6, 5, 4], [6, 5, 4], [6, 5, 4]]
+    data_sorted = [([1, 2, 3], [6, 5, 4]),
+                   ([1, 2, 3], [4, 6, 5]),
+                   ([1, 2, 3], [4, 5, 6])]
+    stream = ContainerDataset(data).get_default_stream()
+    wrapper = DataStreamMapping(stream,
+                                mapping=SortMapping(operator.itemgetter(0)))
+    assert list(wrapper.get_epoch_iterator()) == data_sorted
+
+
 def test_data_stream_filter():
     data = [1, 2, 3]
     data_filtered = [1, 3]
     stream = ContainerDataset(data).get_default_stream()
     wrapper = DataStreamFilter(stream, lambda d: d[0] % 2 == 1)
     assert list(wrapper.get_epoch_iterator()) == list(zip(data_filtered))
+
+
+def test_floatx():
+    x = [numpy.array(d, dtype="float64") for d in [[1, 2], [3, 4]]]
+    y = [numpy.array(d, dtype="int64") for d in [1, 2, 3]]
+    dataset = ContainerDataset(OrderedDict([("x", x), ("y", y)]))
+    data = next(ForceFloatX(dataset.get_default_stream()).get_epoch_iterator())
+    assert str(data[0].dtype) == floatX
+    assert str(data[1].dtype) == "int64"
 
 
 def test_sources_selection():
@@ -219,7 +281,7 @@ def test_hdf5_datset():
     atom = tables.UInt8Atom()
     y = h5file.create_carray(group, 'y', atom=atom, title='Data targets',
                              shape=(num_rows, 1), filters=filters)
-    for i in six.moves.range(num_rows):
+    for i in range(num_rows):
         y[i] = i
     h5file.flush()
     h5file.close()

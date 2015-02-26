@@ -6,12 +6,13 @@ import numpy
 
 from fuel import config
 from fuel.datasets import InMemoryDataset
+from fuel.utils import do_not_pickle_attributes
 from fuel.schemes import SequentialScheme
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
 
-@InMemoryDataset.lazy_properties('features', 'targets')
+@do_not_pickle_attributes('features', 'targets')
 class MNIST(InMemoryDataset):
     u"""The MNIST dataset of handwritten digits.
 
@@ -75,7 +76,7 @@ class MNIST(InMemoryDataset):
         data_path = os.path.join(config.data_path, 'mnist')
         x = read_mnist_images(
             os.path.join(data_path, data),
-            'bool' if self.binary else 'float64')[self.start:self.stop]
+            'bool' if self.binary else config.floatX)[self.start:self.stop]
         x = x.reshape((x.shape[0], numpy.prod(x.shape[1:])))
         y = read_mnist_labels(
             os.path.join(data_path, labels))[self.start:self.stop,
