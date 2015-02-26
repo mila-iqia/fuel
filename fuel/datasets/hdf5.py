@@ -1,10 +1,7 @@
-import logging
 import tables
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
-
-logger = logging.getLogger(__name__)
 
 
 @do_not_pickle_attributes('nodes')
@@ -43,14 +40,10 @@ class Hdf5Dataset(Dataset):
         super(Hdf5Dataset, self).__init__(self.provides_sources)
 
     def open_file(self, path):
-        try:
-            h5file = tables.open_file(path, mode="r")
-            node = h5file.getNode('/', self.data_node)
+        h5file = tables.open_file(path, mode="r")
+        node = h5file.getNode('/', self.data_node)
 
-            self.nodes = [getattr(node, source) for source in self.sources_in_file]
-        except IOError:
-            logger.error('Failed to open HDF5 file, try to call open_file'
-                         'method for dataset with actual path')
+        self.nodes = [getattr(node, source) for source in self.sources_in_file]
 
     def load(self):
         self.open_file(self.path)
