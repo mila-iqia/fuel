@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
+from collections import OrderedDict
 
 import numpy
 
 from fuel import config
-from fuel.datasets import Dataset
+from fuel.datasets import IndexableDataset
 from fuel.utils import do_not_pickle_attributes
 
 logger = logging.getLogger(__name__)
 
 
-@do_not_pickle_attributes('features')
-class BinarizedMNIST(Dataset):
+@do_not_pickle_attributes('indexables')
+class BinarizedMNIST(IndexableDataset):
     u"""Binarized, unlabeled MNIST dataset.
 
     MNIST (Mixed National Institute of Standards and Technology) [LBBH] is
@@ -39,12 +40,6 @@ class BinarizedMNIST(Dataset):
     .. [HUGO] http://www.cs.toronto.edu/~larocheh/public/datasets/
        binarized_mnist/binarized_mnist_{train,valid,test}.amat
 
-    .. todo::
-
-       Right now this dataset always returns flattened images. In order to
-       support e.g. convolutions and visualization, it needs to support the
-       original 28 x 28 image format.
-
     Parameters
     ----------
     which_set : 'train' or 'valid' or 'test'
@@ -53,31 +48,34 @@ class BinarizedMNIST(Dataset):
 
     """
     provides_sources = ('features',)
-    base_path = os.path.join(config.data_path, 'binarized_mnist')
+    folder = 'binarized_mnist'
+    files = {set_: 'binarized_mnist_{}.npy'.format(set_) for set_ in
+             ('train', 'valid', 'test')}
 
-    def __init__(self, which_set, **kwargs):
+    def __init__(self, which_set, flatten=True, **kwargs):
         if which_set not in ('train', 'valid', 'test'):
             raise ValueError("available splits are 'train', 'valid' and "
                              "'test'")
-        self.num_examples = 50000 if which_set == 'train' else 10000
-        super(BinarizedMNIST, self).__init__(**kwargs)
-
         self.which_set = which_set
-        self.data_path = os.path.join(
-            self.base_path, 'binarized_mnist_' + self.which_set + '.npy')
+        self.flatten = flatten
+
+        super(BinarizedMNIST, self).__init__(
+            OrderedDict(zip(self.provides_sources, self.indexables)), **kwargs)
+
+    @property
+    def data_path(self):
+        return os.path.join(config.data_path, self.folder,
+                            self.files[self.which_set])
 
     def load(self):
-        # If only the .amat file is avaiable, do the conversion
         if os.path.isfile(self.data_path):
-            x = numpy.load(self.data_path).astype('float64')
+            images = numpy.load(self.data_path).astype(config.floatX)
         else:
-            logger.warn("The faster .npy version of " +
-                        "binarized_mnist_{} ".format(self.which_set) +
-                        "isn't available, falling back to the .amat version.")
-            x = numpy.loadtxt(self.data_path[:-3] + 'amat', dtype='float64')
-        self.features = x
-
-    def get_data(self, state=None, request=None):
-        if state is not None:
-            raise ValueError("BinarizedMNIST does not have a state")
-        return self.filter_sources((self.features[request],))
+            logger.warn("The faster .npy version of binarized_mnist_{} isn't "
+                        "available, falling back to the .amat version."
+                        .format(self.which_set))
+            images = numpy.loadtxt(self.data_path[:-3] + 'amat',
+                                   dtype=config.floatX)
+            if not self.flatten:
+                images = images.reshape((len(images), 28, 28))
+        self.indexables = [images]
