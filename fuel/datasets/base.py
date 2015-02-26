@@ -38,7 +38,11 @@ class Dataset(object):
     simultaneously.
 
     """
+    provides_sources = None
+
     def __init__(self, sources=None):
+        if not self.provides_sources:
+            raise ValueError("dataset does not have `provides_sources`")
         if sources is not None:
             if not sources or not all(source in self.provides_sources
                                       for source in sources):
