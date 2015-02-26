@@ -2,10 +2,12 @@ import logging
 import tables
 
 from fuel.datasets import Dataset
+from fuel.utils import do_not_pickle_attributes
 
 logger = logging.getLogger(__name__)
 
 
+@do_not_pickle_attributes('nodes')
 class Hdf5Dataset(Dataset):
     """An HDF5 dataset
 
@@ -49,6 +51,9 @@ class Hdf5Dataset(Dataset):
             logger.error('Failed to open HDF5 file, try to call open_file'
                          'method for dataset with actual path')
 
+    def load(self):
+        self.open_file(self.path)
+
     def get_data(self, state=None, request=None):
         """ Returns data from HDF5 dataset.
 
@@ -56,15 +61,3 @@ class Hdf5Dataset(Dataset):
         """
         data = [node[request] for node in self.nodes]
         return data
-
-    def __getstate__(self):
-        fields = self.__dict__
-        # Do not return `nodes` because they are not pickable
-        del fields['nodes']
-        return fields
-
-    def __setstate__(self, state):
-        self.__dict__ = state
-        # Open HDF5 file again and sets up `nodes`.
-        self.open_file(self.path)
-
