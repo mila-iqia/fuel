@@ -6,13 +6,13 @@ import six
 from six.moves import cPickle, xrange
 
 from fuel import config
-from fuel.datasets import InMemoryDataset
+from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
 from fuel.schemes import SequentialScheme
 
 
 @do_not_pickle_attributes('features', 'targets')
-class CIFAR10(InMemoryDataset):
+class CIFAR10(Dataset):
     """The CIFAR10 dataset of natural images.
 
     This dataset is a labeled subset of the ``80 million tiny images''

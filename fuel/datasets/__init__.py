@@ -1,4 +1,4 @@
-from fuel.datasets.base import Dataset, InMemoryDataset
+from fuel.datasets.base import Dataset
 
 from fuel.datasets.binarized_mnist import BinarizedMNIST
 from fuel.datasets.container import ContainerDataset
