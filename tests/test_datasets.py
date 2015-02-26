@@ -6,7 +6,7 @@ from six.moves import zip
 from nose.tools import assert_raises
 
 from fuel import config
-from fuel.datasets import ContainerDataset
+from fuel.datasets import IterableDataset
 from fuel.streams import (
     CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
     PaddingDataStream, DataStreamFilter, ForceFloatX, SortMapping)
@@ -18,7 +18,7 @@ floatX = config.floatX
 def test_dataset():
     data = [1, 2, 3]
     # The default stream requests an example at a time
-    stream = DataStream(ContainerDataset(data))
+    stream = DataStream(IterableDataset(data))
     epoch = stream.get_epoch_iterator()
     assert list(epoch) == list(zip(data))
 
@@ -33,7 +33,7 @@ def test_dataset():
 def test_data_stream_mapping():
     data = [1, 2, 3]
     data_doubled = [2, 4, 6]
-    stream = DataStream(ContainerDataset(data))
+    stream = DataStream(IterableDataset(data))
     wrapper1 = DataStreamMapping(
         stream, lambda d: (2 * d[0],))
     assert list(wrapper1.get_epoch_iterator()) == list(zip(data_doubled))
@@ -49,7 +49,7 @@ def test_data_stream_mapping_sort():
             [3, 2, 1]]
     data_sorted = [[1, 2, 3]] * 3
     data_sorted_rev = [[3, 2, 1]] * 3
-    stream = DataStream(ContainerDataset(data))
+    stream = DataStream(IterableDataset(data))
     wrapper1 = DataStreamMapping(stream,
                                  mapping=SortMapping(operator.itemgetter(0)))
     assert list(wrapper1.get_epoch_iterator()) == list(zip(data_sorted))
@@ -71,7 +71,7 @@ def test_data_stream_mapping_sort_multisource_ndarrays():
     data_sorted = [(numpy.array([1, 2, 3]), numpy.array([6, 5, 4])),
                    (numpy.array([1, 2, 3]), numpy.array([4, 6, 5])),
                    (numpy.array([1, 2, 3]), numpy.array([4, 5, 6]))]
-    stream = DataStream(ContainerDataset(data))
+    stream = DataStream(IterableDataset(data))
     wrapper = DataStreamMapping(stream,
                                 mapping=SortMapping(operator.itemgetter(0)))
     for output, ground_truth in zip(wrapper.get_epoch_iterator(), data_sorted):
@@ -87,7 +87,7 @@ def test_data_stream_mapping_sort_multisource():
     data_sorted = [([1, 2, 3], [6, 5, 4]),
                    ([1, 2, 3], [4, 6, 5]),
                    ([1, 2, 3], [4, 5, 6])]
-    stream = DataStream(ContainerDataset(data))
+    stream = DataStream(IterableDataset(data))
     wrapper = DataStreamMapping(stream,
                                 mapping=SortMapping(operator.itemgetter(0)))
     assert list(wrapper.get_epoch_iterator()) == data_sorted
@@ -96,7 +96,7 @@ def test_data_stream_mapping_sort_multisource():
 def test_data_stream_filter():
     data = [1, 2, 3]
     data_filtered = [1, 3]
-    stream = DataStream(ContainerDataset(data))
+    stream = DataStream(IterableDataset(data))
     wrapper = DataStreamFilter(stream, lambda d: d[0] % 2 == 1)
     assert list(wrapper.get_epoch_iterator()) == list(zip(data_filtered))
 
@@ -104,7 +104,7 @@ def test_data_stream_filter():
 def test_floatx():
     x = [numpy.array(d, dtype="float64") for d in [[1, 2], [3, 4]]]
     y = [numpy.array(d, dtype="int64") for d in [1, 2, 3]]
-    dataset = ContainerDataset(OrderedDict([("x", x), ("y", y)]))
+    dataset = IterableDataset(OrderedDict([("x", x), ("y", y)]))
     data = next(ForceFloatX(DataStream(dataset)).get_epoch_iterator())
     assert str(data[0].dtype) == floatX
     assert str(data[1].dtype) == "int64"
@@ -113,18 +113,18 @@ def test_floatx():
 def test_sources_selection():
     features = [5, 6, 7, 1]
     targets = [1, 0, 1, 1]
-    stream = DataStream(ContainerDataset(OrderedDict(
+    stream = DataStream(IterableDataset(OrderedDict(
         [('features', features), ('targets', targets)])))
     assert list(stream.get_epoch_iterator()) == list(zip(features, targets))
 
-    stream = DataStream(ContainerDataset(
+    stream = DataStream(IterableDataset(
         {'features': features, 'targets': targets},
         sources=('targets',)))
     assert list(stream.get_epoch_iterator()) == list(zip(targets))
 
 
 def test_data_driven_epochs():
-    class TestDataset(ContainerDataset):
+    class TestDataset(IterableDataset):
         sources = ('data',)
 
         def __init__(self):
@@ -176,7 +176,7 @@ def test_data_driven_epochs():
 
 
 def test_cache():
-    dataset = ContainerDataset(range(100))
+    dataset = IterableDataset(range(100))
     stream = DataStream(dataset)
     batched_stream = BatchDataStream(stream, ConstantScheme(11))
     cached_stream = CachedDataStream(batched_stream, ConstantScheme(7))
@@ -206,7 +206,7 @@ def test_cache():
 
 
 def test_batch_data_stream():
-    stream = DataStream(ContainerDataset([1, 2, 3, 4, 5]))
+    stream = DataStream(IterableDataset([1, 2, 3, 4, 5]))
     batches = list(BatchDataStream(stream, ConstantScheme(2))
                    .get_epoch_iterator())
     expected = [(numpy.array([1, 2]),),
@@ -223,7 +223,7 @@ def test_batch_data_stream():
             .get_epoch_iterator())
     assert_raises(ValueError, try_strict, 2)
     assert len(try_strict(1)) == 2
-    stream2 = DataStream(ContainerDataset([1, 2, 3, 4, 5, 6]))
+    stream2 = DataStream(IterableDataset([1, 2, 3, 4, 5, 6]))
     assert len(list(BatchDataStream(stream2, ConstantScheme(2), strictness=2)
                     .get_epoch_iterator())) == 3
 
@@ -231,7 +231,7 @@ def test_batch_data_stream():
 def test_padding_data_stream():
     # 1-D sequences
     stream = BatchDataStream(
-        DataStream(ContainerDataset([[1], [2, 3], [], [4, 5, 6], [7]])),
+        DataStream(IterableDataset([[1], [2, 3], [], [4, 5, 6], [7]])),
         ConstantScheme(2))
     mask_stream = PaddingDataStream(stream)
     assert mask_stream.sources == ("data", "data_mask")
@@ -248,8 +248,8 @@ def test_padding_data_stream():
 
     # 2D sequences
     stream2 = BatchDataStream(
-        DataStream(ContainerDataset([numpy.ones((3, 4)),
-                                     2 * numpy.ones((2, 4))])),
+        DataStream(IterableDataset([numpy.ones((3, 4)),
+                                    2 * numpy.ones((2, 4))])),
         ConstantScheme(2))
     it = PaddingDataStream(stream2).get_epoch_iterator()
     data, mask = next(it)
@@ -260,7 +260,7 @@ def test_padding_data_stream():
 
     # 2 sources
     stream3 = PaddingDataStream(BatchDataStream(
-        DataStream(ContainerDataset(dict(features=[[1], [2, 3], []],
-                                         targets=[[4, 5, 6], [7]]))),
+        DataStream(IterableDataset(dict(features=[[1], [2, 3], []],
+                                        targets=[[4, 5, 6], [7]]))),
         ConstantScheme(2)))
     assert len(next(stream3.get_epoch_iterator())) == 4

@@ -198,7 +198,6 @@ class IterableDataset(Dataset):
 
     """
     def __init__(self, iterables, **kwargs):
-        super(IterableDataset, self).__init__(**kwargs)
         if isinstance(iterables, dict):
             self.provides_sources = tuple(iterables.keys())
         else:
@@ -206,7 +205,7 @@ class IterableDataset(Dataset):
         super(IterableDataset, self).__init__(**kwargs)
         if isinstance(iterables, dict):
             if not all(isinstance(iterable, collections.Iterable)
-                       for iterable in iterables.values):
+                       for iterable in iterables.values()):
                 raise ValueError
             self.iterables = [iterables[source] for source in self.sources]
         else:
