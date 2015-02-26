@@ -67,14 +67,14 @@ class MNIST(IndexableDataset):
             OrderedDict(zip(self.provides_sources, self.indexables)), **kwargs)
 
     def load(self):
-        data_path = os.path.join(config.data_path, self.folder)
+        base_patch = os.path.join(config.data_path, self.folder)
         images = read_mnist_images(
-            os.path.join(data_path, self.files[self.which_set]['images']),
+            os.path.join(base_patch, self.files[self.which_set]['images']),
             'bool' if self.binary else config.floatX)
         if self.flatten:
             images = images.reshape((len(images), 784))
         labels = read_mnist_labels(
-            os.path.join(data_path,
+            os.path.join(base_patch,
                          self.files[self.which_set]['labels']))[:, None]
         self.indexables = [data[self.start:self.stop] for source, data
                            in zip(self.provides_sources, [images, labels])

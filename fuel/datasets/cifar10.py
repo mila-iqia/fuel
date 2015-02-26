@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 import os
+from collections import OrderedDict
 
 import numpy
 import six
-from six.moves import cPickle, xrange
+from six.moves import cPickle
 
 from fuel import config
-from fuel.datasets import Dataset
+from fuel.datasets import IndexableDataset
 from fuel.utils import do_not_pickle_attributes
 
 
-@do_not_pickle_attributes('features', 'targets')
-class CIFAR10(Dataset):
+@do_not_pickle_attributes('indexables')
+class CIFAR10(IndexableDataset):
     """The CIFAR10 dataset of natural images.
 
     This dataset is a labeled subset of the ``80 million tiny images''
@@ -27,12 +27,6 @@ class CIFAR10(Dataset):
     .. [CIFAR10] Alex Krizhevsky, *Learning Multiple Layers of Features
        from Tiny Images*, technical report, 2009.
 
-    .. todo::
-
-       Right now this dataset always returns flattened images. In order to
-       support e.g. convolutions and visualization, it needs to support the
-       original 32 x 32 x 3 image format.
-
     Parameters
     ----------
     which_set : 'train' or 'test'
@@ -47,54 +41,45 @@ class CIFAR10(Dataset):
 
     """
     provides_sources = ('features', 'targets')
+    folder = 'cifar10'
+    files = {
+        'train': [os.path.join('cifar-10-batches-py',
+                               'data_batch_{}'.format(i))
+                  for i in range(1, 6)],
+        'test': ['cifar-10-batches-py/test_batch']
+    }
 
-    def __init__(self, which_set, start=None, stop=None, **kwargs):
+    def __init__(self, which_set, start=None, stop=None, flatten=True,
+                 **kwargs):
         if which_set not in ('train', 'test'):
             raise ValueError("CIFAR10 only has a train and test set")
-        if stop is None:
-            stop = 50000 if which_set == "train" else 10000
-        if start is None:
-            start = 0
-        self.num_examples = stop - start
-        super(CIFAR10, self).__init__(**kwargs)
 
         self.which_set = which_set
         self.start = start
         self.stop = stop
+        self.flatten = flatten
+
+        super(CIFAR10, self).__init__(
+            OrderedDict(zip(self.provides_sources, self.indexables)), **kwargs)
 
     def load(self):
-        base_path = os.path.join(
-            config.data_path, 'cifar10', 'cifar-10-batches-py')
-        if self.which_set == 'train':
-            fnames = ['data_batch_%i' % i for i in xrange(1, 6)]
-            x = numpy.zeros((50000, 3072), dtype='float64')
-            y = numpy.zeros((50000, 1), dtype='uint8')
-            for i, fname in enumerate(fnames):
-                with open(os.path.join(base_path, fname), 'rb') as f:
-                    if six.PY3:
-                        data = cPickle.load(f, encoding='latin1')
-                    else:
-                        data = cPickle.load(f)
-                    x[10000 * i: 10000 * (i + 1)] = data['data']
-                    y[10000 * i: 10000 * (i + 1)] = numpy.asarray(
-                        data['labels'], dtype='uint8')[:, numpy.newaxis]
-            x = x[self.start: self.stop]
-            y = y[self.start: self.stop]
-        elif self.which_set == 'test':
-            with open(os.path.join(base_path, 'test_batch'), 'rb') as f:
+        base_path = os.path.join(config.data_path, self.folder)
+        num_examples = 50000 if self.which_set == 'train' else 10000
+        image_shape = (3072,) if self.flatten else (3, 32, 32)
+        images = numpy.zeros((num_examples,) + image_shape,
+                             dtype=config.floatX)
+        labels = numpy.zeros((num_examples, 1), dtype='uint8')
+        for i, fname in enumerate(self.files[self.which_set]):
+            with open(os.path.join(base_path, fname), 'rb') as f:
                 if six.PY3:
-                    data = cPickle.load(f, encoding='latin1')
+                    batch = cPickle.load(f, encoding='latin1')
                 else:
-                    data = cPickle.load(f)
-                x = data['data'].astype('float64')[self.start: self.stop]
-                y = numpy.asarray(
-                    data['labels'], dtype='uint8')[self.start: self.stop,
-                                                   numpy.newaxis]
-        self.features = x
-        self.targets = y
-
-    def get_data(self, state=None, request=None):
-        if state is not None:
-            raise ValueError("CIFAR10 does not have a state")
-        return self.filter_sources((self.features[request],
-                                    self.targets[request]))
+                    batch = cPickle.load(f)
+                if not self.flatten:
+                    batch['data'] = batch['data'].reshape((10000, 3, 32, 32))
+                images[10000 * i:10000 * (i + 1)] = batch['data']
+                labels[10000 * i:10000 * (i + 1)] = numpy.asarray(
+                    batch['labels'], dtype='uint8')[:, None]
+        self.indexables = [data[self.start:self.stop] for source, data
+                           in zip(self.provides_sources, [images, labels])
+                           if source in self.sources]
