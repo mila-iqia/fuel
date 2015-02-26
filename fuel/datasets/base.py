@@ -276,6 +276,8 @@ class IndexableDataset(Dataset):
 
         def property_factory(source):
             def property_(self):
+                if source not in self.sources:
+                    raise AttributeError
                 return self.indexables[self.sources.index(source)]
             return property_
         for source in self.sources:
