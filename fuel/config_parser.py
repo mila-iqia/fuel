@@ -145,8 +145,8 @@ config.add_config('default_seed', type_=int, default=1)
 
 # Default to Theano's floatX if possible
 try:
-    from theano import config
-    default_floatX = config.floatX
+    from theano import config as theano_config
+    default_floatX = theano_config.floatX
 except Exception:
     default_floatX = 'float64'
 config.add_config('floatX', type_=str, env_var='FUEL_FLOATX',
