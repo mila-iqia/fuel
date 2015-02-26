@@ -12,14 +12,14 @@ python:
   - "2.7"
   - "3.4"
 before_install:
+  # Setup Python environment with BLAS libraries
+  - wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=$HOME/miniconda/bin:$PATH
+  - conda update -q --yes conda
+  # Download MNIST for tests if not loaded from cache
   - |
-      # Setup Python environment with BLAS libraries
-      wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-      chmod +x miniconda.sh
-      ./miniconda.sh -b
-      export PATH=$HOME/miniconda/bin:$PATH
-      conda update -q --yes conda
-      # Download MNIST for tests if not loaded from cache
       if find mnist -empty | read; then
         mkdir mnist
         cd mnist
@@ -30,7 +30,8 @@ before_install:
         gunzip *-ubyte.gz
         cd -
       fi
-      # Download binarized MNIST for tests if not loaded from cache
+  # Download binarized MNIST for tests if not loaded from cache
+  - |
       if find binarized_mnist -empty | read; then
         mkdir binarized_mnist
         cd binarized_mnist
@@ -39,23 +40,28 @@ before_install:
              -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_test.amat
         cd -
       fi
-      # Download CIFAR10 for tests if not loaded from cache
+    # Download CIFAR10 for tests if not loaded from cache
+  - |
       if find cifar10 -empty | read; then
         mkdir cifar10
         cd cifar10
         curl http://www.cs.utoronto.ca/~kriz/cifar-10-python.tar.gz | tar xzf -
         cd -
       fi
-      export FUEL_DATA_PATH=$PWD
+  - export FUEL_DATA_PATH=$PWD
 install:
   # Install all Python dependencies
-  - |
-      conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl nose numpy pip coverage six toolz
-      pip install -q nose2[coverage-plugin] coveralls
+  - conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six toolz
+  - pip install -q nose2[coverage-plugin] coveralls
 script:
-  - |
-      python setup.py install # Tests setup.py
-      # Running nose2 within coverage makes imports count towards coverage
-      coverage run --source=fuel -m nose2.__main__ -v tests
+  - pip install . -r requirements.txt
+  # With Fuel installed we can install Blocks
+  - pip install -e git+git://github.com/bartvm/blocks.git#egg=blocks[test,plot] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
+  # Run the Blocks test to make sure we didn't break anything
+  - bokeh-server &> /dev/null &
+  - nose2 tests --start-dir $HOME/blocks
+  - nose2 doctests --start-dir $HOME/blocks
+  # Running nose2 within coverage makes imports count towards coverage
+  - coverage run --source=fuel -m nose2.__main__ -v tests
 after_script:
   - coveralls

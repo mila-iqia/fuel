@@ -1,0 +1,3 @@
+--allow-external picklable-itertools
+--allow-unverified picklable-itertools
+git+https://github.com/dwf/picklable_itertools.git#egg=picklable-itertools

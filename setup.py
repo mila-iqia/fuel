@@ -29,7 +29,5 @@ setup(
     ],
     keywords='dataset data iteration pipeline processing',
     packages=find_packages(exclude=['tests']),
-    install_requires=['six', 'picklable_itertools', 'toolz', 'pyyaml'],
-    dependency_links=['http://github.com/dwf/picklable_itertools/'
-                      'tarball/master#egg=picklable_itertools'],
-    )
+    install_requires=['six', 'picklable_itertools', 'toolz', 'pyyaml']
+)
