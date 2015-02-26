@@ -1,10 +1,11 @@
-import numpy
 from numpy.testing import assert_raises
 
 from fuel.datasets import BinarizedMNIST
+from tests import skip_if_not_available
 
 
 def test_mnist():
+    skip_if_not_available(datasets=['binarized_mnist'])
     mnist_train = BinarizedMNIST('train')
     assert len(mnist_train.features) == 50000
     assert mnist_train.num_examples == 50000

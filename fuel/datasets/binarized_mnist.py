@@ -61,7 +61,6 @@ class BinarizedMNIST(Dataset):
             raise ValueError("available splits are 'train', 'valid' and "
                              "'test'")
         self.num_examples = 50000 if which_set == 'train' else 10000
-        self.default_scheme = SequentialScheme(self.num_examples, 1)
         super(BinarizedMNIST, self).__init__(**kwargs)
 
         self.which_set = which_set

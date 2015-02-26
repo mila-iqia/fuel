@@ -57,7 +57,6 @@ class CIFAR10(Dataset):
         if start is None:
             start = 0
         self.num_examples = stop - start
-        self.default_scheme = SequentialScheme(self.num_examples, 1)
         super(CIFAR10, self).__init__(**kwargs)
 
         self.which_set = which_set

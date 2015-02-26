@@ -28,10 +28,6 @@ class Dataset(object):
         'targets')`` for MNIST (regardless of which data the data stream
         actually requests). Any implementation of a dataset should set this
         attribute on the class (or at least before calling ``super``).
-    default_iteration_scheme : :class:`.IterationScheme`, optional
-        The default iteration scheme that will be used by
-        :meth:`get_default_stream` to create a data stream without needing
-        to specify what iteration scheme to use.
 
     Notes
     -----
@@ -138,12 +134,6 @@ class Dataset(object):
 
         """
         raise NotImplementedError
-
-    def get_default_stream(self):
-        """Use the default iteration scheme to construct a data stream."""
-        if not hasattr(self, 'default_scheme'):
-            raise ValueError("Dataset does not provide a default iterator")
-        return DataStream(self, iteration_scheme=self.default_scheme)
 
     def filter_sources(self, data):
         """Filter the requested sources from those provided by the dataset.

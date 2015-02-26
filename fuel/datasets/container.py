@@ -23,8 +23,6 @@ class ContainerDataset(Dataset):
     :class:`BatchDataStream` data stream.
 
     """
-    default_scheme = None
-
     def __init__(self, container, sources=None):
         if isinstance(container, dict):
             self.provides_sources = (sources if sources is not None

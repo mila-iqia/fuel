@@ -49,7 +49,8 @@ class TextFile(Dataset):
     >>> text_data = TextFile(files=['sentences.txt'],
     ...                      dictionary=dictionary, bos_token=None,
     ...                      preprocess=lower)
-    >>> for data in text_data.get_default_stream().get_epoch_iterator():
+    >>> from fuel.streams import DataStream
+    >>> for data in DataStream(text_data).get_epoch_iterator():
     ...     print(data)
     ([2, 0, 3, 0, 1],)
     ([2, 0, 4, 1],)
@@ -62,7 +63,6 @@ class TextFile(Dataset):
 
     """
     provides_sources = ('features',)
-    default_scheme = None
 
     def __init__(self, files, dictionary, bos_token='<S>', eos_token='</S>',
                  unk_token='<UNK>', level='word', preprocess=None):

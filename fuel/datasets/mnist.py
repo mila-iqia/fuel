@@ -58,7 +58,6 @@ class MNIST(Dataset):
         if start is None:
             start = 0
         self.num_examples = stop - start
-        self.default_scheme = SequentialScheme(self.num_examples, 1)
         super(MNIST, self).__init__(**kwargs)
 
         self.which_set = which_set

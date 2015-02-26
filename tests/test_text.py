@@ -5,6 +5,7 @@ from six import BytesIO
 from six.moves import cPickle
 
 from fuel.datasets import TextFile
+from fuel.streams import DataStream
 
 
 def lower(s):
@@ -25,7 +26,7 @@ def test_text():
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, bos_token=None,
                          preprocess=lower)
-    stream = text_data.get_default_stream()
+    stream = DataStream(text_data)
     epoch = stream.get_epoch_iterator()
     assert len(list(epoch)) == 4
     epoch = stream.get_epoch_iterator()
@@ -46,6 +47,6 @@ def test_text():
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, preprocess=lower,
                          level="character")
-    sentence = next(text_data.get_default_stream().get_epoch_iterator())[0]
+    sentence = next(DataStream(text_data).get_epoch_iterator())[0]
     assert sentence[:3] == [27, 19, 7]
     assert sentence[-3:] == [2, 4, 28]
