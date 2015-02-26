@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 import os
 import struct
+from collections import OrderedDict
 
 import numpy
 
 from fuel import config
-from fuel.datasets import Dataset
+from fuel.datasets import IndexableDataset
 from fuel.utils import do_not_pickle_attributes
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
 
-@do_not_pickle_attributes('features', 'targets')
-class MNIST(Dataset):
+@do_not_pickle_attributes('indexables')
+class MNIST(IndexableDataset):
     u"""The MNIST dataset of handwritten digits.
 
     MNIST (Mixed National Institute of Standards and Technology) [LBBH] is
@@ -23,12 +24,6 @@ class MNIST(Dataset):
     .. [LBBH] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner,
        *Gradient-based learning applied to document recognition*,
        Proceedings of the IEEE, November 1998, 86(11):2278-2324.
-
-    .. todo::
-
-       Right now this dataset always returns flattened images. In order to
-       support e.g. convolutions and visualization, it needs to support the
-       original 28 x 28 image format.
 
     Parameters
     ----------
@@ -44,49 +39,46 @@ class MNIST(Dataset):
     binary : bool, optional
         If ``True``, returns binary (black/white) images instead of
         grayscale. ``False`` by default.
+    flatten : bool, optional
+        If ``True``, returns flattened MNIST examples i.e. vectors of
+        length 784 instead of 28 x 28 images. Defaults to ``True``.
 
     """
     provides_sources = ('features', 'targets')
+    folder = 'mnist'
+    files = {
+        'train': {'images': 'train-images-idx3-ubyte',
+                  'labels': 'train-labels-idx1-ubyte'},
+        'test': {'images': 't10k-images-idx3-ubyte',
+                 'labels': 't10k-labels-idx1-ubyte'}
+    }
 
     def __init__(self, which_set, start=None, stop=None, binary=False,
-                 **kwargs):
+                 flatten=True, **kwargs):
         if which_set not in ('train', 'test'):
             raise ValueError("MNIST only has a train and test set")
-        if stop is None:
-            stop = 60000 if which_set == "train" else 10000
-        if start is None:
-            start = 0
-        self.num_examples = stop - start
-        super(MNIST, self).__init__(**kwargs)
-
         self.which_set = which_set
         self.start = start
         self.stop = stop
         self.binary = binary
+        self.flatten = flatten
+
+        super(MNIST, self).__init__(
+            OrderedDict(zip(self.provides_sources, self.indexables)), **kwargs)
 
     def load(self):
-        if self.which_set == 'train':
-            data = 'train-images-idx3-ubyte'
-            labels = 'train-labels-idx1-ubyte'
-        elif self.which_set == 'test':
-            data = 't10k-images-idx3-ubyte'
-            labels = 't10k-labels-idx1-ubyte'
-        data_path = os.path.join(config.data_path, 'mnist')
-        x = read_mnist_images(
-            os.path.join(data_path, data),
-            'bool' if self.binary else config.floatX)[self.start:self.stop]
-        x = x.reshape((x.shape[0], numpy.prod(x.shape[1:])))
-        y = read_mnist_labels(
-            os.path.join(data_path, labels))[self.start:self.stop,
-                                             numpy.newaxis]
-        self.features = x
-        self.targets = y
-
-    def get_data(self, state=None, request=None):
-        if state is not None:
-            raise ValueError("MNIST does not have a state")
-        return self.filter_sources((self.features[request],
-                                    self.targets[request]))
+        data_path = os.path.join(config.data_path, self.folder)
+        images = read_mnist_images(
+            os.path.join(data_path, self.files[self.which_set]['images']),
+            'bool' if self.binary else config.floatX)
+        if self.flatten:
+            images = images.reshape((len(images), 784))
+        labels = read_mnist_labels(
+            os.path.join(data_path,
+                         self.files[self.which_set]['labels']))[:, None]
+        self.indexables = [data[self.start:self.stop] for source, data
+                           in zip(self.provides_sources, [images, labels])
+                           if source in self.sources]
 
 
 def read_mnist_images(filename, dtype=None):

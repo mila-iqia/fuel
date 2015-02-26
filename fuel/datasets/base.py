@@ -1,5 +1,8 @@
+import collections
 from abc import ABCMeta, abstractmethod
 from six import add_metaclass
+
+from picklable_itertools import _iter, izip
 
 
 @add_metaclass(ABCMeta)
@@ -35,8 +38,6 @@ class Dataset(object):
     simultaneously.
 
     """
-    provides_sources = None
-
     def __init__(self, sources=None):
         if sources is not None:
             if not sources or not all(source in self.provides_sources
@@ -163,3 +164,123 @@ class Dataset(object):
         """
         return tuple([d for d, s in zip(data, self.provides_sources)
                       if s in self.sources])
+
+
+class IterableDataset(Dataset):
+    """Creates a dataset from a set of iterables.
+
+    Parameters
+    ----------
+    iterables : :class:`~collections.OrderedDict` or iterable
+        The iterable(s) to provide interface to. The iterables' `__iter__`
+        method should return a new iterator over the iterable. If an
+        :class:`~collections.OrderedDict` is given, its values should be
+        iterables providing data, and its keys strings that are used as
+        source names. If a single iterable is given, it will be given the
+        source ``data``.
+
+    Attributes
+    ----------
+    iterables : list
+        A list of :class:`~collections.Iterable` objects.
+
+    Notes
+    -----
+    Internally, this method uses `picklable iterools's`_ ``_iter``
+    function, providing picklable alternatives to some iterators such as
+    :func:`range`, :func:`tuple`, and even :class:`file`. However, if the
+    iterable returns a different kind of iterator that is not picklable,
+    you might want to consider using the :func:`.do_not_pickle_attributes`
+    decorator.
+
+    To iterate over a container in batches, combine this dataset with the
+    :class:`BatchDataStream` data stream.
+
+    """
+    def __init__(self, iterables, **kwargs):
+        super(IterableDataset, self).__init__(**kwargs)
+        if isinstance(iterables, dict):
+            self.provides_sources = tuple(iterables.keys())
+        else:
+            self.provides_sources = ('data',)
+        super(IterableDataset, self).__init__(**kwargs)
+        if isinstance(iterables, dict):
+            if not all(isinstance(iterable, collections.Iterable)
+                       for iterable in iterables.values):
+                raise ValueError
+            self.iterables = [iterables[source] for source in self.sources]
+        else:
+            if not isinstance(iterables, collections.Iterable):
+                raise ValueError
+            self.iterables = [iterables]
+
+    def __len__(self):
+        return min(len(iterable) for iterable in self.iterables)
+
+    def open(self):
+        iterators = [_iter(channel) for channel in self.iterables]
+        return izip(*iterators)
+
+    def get_data(self, state=None, request=None):
+        if state is None or request is not None:
+            raise ValueError
+        return next(state)
+
+
+class IndexableDataset(Dataset):
+    """Creates a dataset from a set of indexible containers.
+
+    Parameters
+    ----------
+    indexables : :class:`~collections.OrderedDict` or indexable
+        The indexable(s) to provide interface to. This means it must
+        support the syntax ```indexable[0]``. If an
+        :class:`~collections.OrderedDict` is given, its values should be
+        indexables providing data, and its keys strings that are used as
+        source names. If a single indexable is given, it will be given the
+        source ``data``.
+
+    Attributes
+    ----------
+    indexables : list
+        A list of indexable objects.
+
+    Notes
+    -----
+    If the indexable data is very large, you might want to consider using
+    the :func:`.do_not_pickle_attributes` decorator to make sure the data
+    doesn't get pickled with the dataset, but gets reloaded/recreated
+    instead.
+
+    This dataset also uses the source names to create properties that
+    provide easy access to the data.
+
+    """
+    def __init__(self, indexables, **kwargs):
+        if isinstance(indexables, dict):
+            self.provides_sources = tuple(indexables.keys())
+        else:
+            self.provides_sources = ('data',)
+        super(IndexableDataset, self).__init__(**kwargs)
+        if isinstance(indexables, dict):
+            self.indexables = [indexables[source] for source in self.sources]
+            if not all(len(indexable) == len(self.indexables[0])
+                       for indexable in self.indexables):
+                raise ValueError("sources have different lengths")
+        else:
+            self.indexables = [indexables]
+
+        def property_factory(source):
+            def property_(self):
+                return self.indexables[self.sources.index(source)]
+            return property_
+        for source in self.sources:
+            setattr(self.__class__, source, property(property_factory(source)))
+
+    def __len__(self):
+        return len(self.indexables[0])
+
+    def get_data(self, state=None, request=None):
+        if state is not None or request is None:
+            raise ValueError
+        return tuple(indexable[request] for indexable in self.indexables)
