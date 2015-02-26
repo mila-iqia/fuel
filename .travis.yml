@@ -53,10 +53,12 @@ install:
   # Install all Python dependencies
   - conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six toolz
   - pip install -q nose2[coverage-plugin] coveralls
-  - pip install -e git+git://github.com/bartvm/blocks.git#egg=blocks[test,plot,docs] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
 script:
   - python setup.py install # Tests setup.py
+  # With Fuel installed we can install Blocks
+  - pip install -e git+git://github.com/bartvm/blocks.git#egg=blocks[test,plot,docs] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
   # Run the Blocks test to make sure we didn't break anything
+  - bokeh-server &> /dev/null &
   - nose2 tests --start-dir $HOME/blocks
   # Running nose2 within coverage makes imports count towards coverage
   - coverage run --source=fuel -m nose2.__main__ -v tests
