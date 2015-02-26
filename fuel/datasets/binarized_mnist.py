@@ -13,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 @do_not_pickle_attributes('features')
 class BinarizedMNIST(Dataset):
-    u"""The binarized, unlabeled MNIST dataset used for evaluating
-    generative models (e.g. DBN, VAE and NADE).
+    u"""Binarized, unlabeled MNIST dataset.
 
     MNIST (Mixed National Institute of Standards and Technology) [LBBH] is
     a database of handwritten digits. It is one of the most famous datasets
@@ -22,12 +21,12 @@ class BinarizedMNIST(Dataset):
     testing images. The images are grayscale and 28 x 28 pixels large.
 
     This particular version of the dataset is the one used in R.
-    Salakhutdinov's DBN paper [DBN] as well as the VAE and NADE papers,
-    and is accessible through Hugo Larochelle's public website [HUGO].
+    Salakhutdinov's DBN paper [DBN] as well as the VAE and NADE papers, and
+    is accessible through Hugo Larochelle's public website [HUGO].
 
     The training set has further been split into a training and a
-    validation set. All examples were binarized by sampling from a
-    binomial distribution defined by the pixel values.
+    validation set. All examples were binarized by sampling from a binomial
+    distribution defined by the pixel values.
 
     .. [LBBH] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner,
        *Gradient-based learning applied to document recognition*,
