@@ -259,14 +259,15 @@ class IndexableDataset(Dataset):
     provide easy access to the data.
 
     """
-    def __init__(self, indexables, **kwargs):
+    def __init__(self, indexables, start=None, stop=None, **kwargs):
         if isinstance(indexables, dict):
             self.provides_sources = tuple(indexables.keys())
         else:
             self.provides_sources = ('data',)
         super(IndexableDataset, self).__init__(**kwargs)
         if isinstance(indexables, dict):
-            self.indexables = [indexables[source] for source in self.sources]
+            self.indexables = [indexables[source][start:stop]
+                               for source in self.sources]
             if not all(len(indexable) == len(self.indexables[0])
                        for indexable in self.indexables):
                 raise ValueError("sources have different lengths")
@@ -279,6 +280,9 @@ class IndexableDataset(Dataset):
             return property_
         for source in self.sources:
             setattr(self.__class__, source, property(property_factory(source)))
+
+        self.start = start
+        self.stop = stop
 
     def __len__(self):
         return len(self.indexables[0])

@@ -53,20 +53,23 @@ class MNIST(IndexableDataset):
                  'labels': 't10k-labels-idx1-ubyte'}
     }
 
-    def __init__(self, which_set, start=None, stop=None, binary=False,
-                 flatten=True, **kwargs):
+    def __init__(self, which_set, binary=False, flatten=True, **kwargs):
         if which_set not in ('train', 'test'):
             raise ValueError("MNIST only has a train and test set")
         self.which_set = which_set
-        self.start = start
-        self.stop = stop
         self.binary = binary
         self.flatten = flatten
 
-        super(MNIST, self).__init__(
-            OrderedDict(zip(self.provides_sources, self.indexables)), **kwargs)
+        super(MNIST, self).__init__(OrderedDict(zip(self.provides_sources,
+                                                    self._load_mnist())),
+                                    **kwargs)
 
     def load(self):
+        self.indexables = [data[self.start:self.stop] for source, data
+                           in zip(self.provides_sources, self._load_mnist())
+                           if source in self.sources]
+
+    def _load_mnist(self):
         base_patch = os.path.join(config.data_path, self.folder)
         images = read_mnist_images(
             os.path.join(base_patch, self.files[self.which_set]['images']),
@@ -76,9 +79,7 @@ class MNIST(IndexableDataset):
         labels = read_mnist_labels(
             os.path.join(base_patch,
                          self.files[self.which_set]['labels']))[:, None]
-        self.indexables = [data[self.start:self.stop] for source, data
-                           in zip(self.provides_sources, [images, labels])
-                           if source in self.sources]
+        return images, labels
 
 
 def read_mnist_images(filename, dtype=None):

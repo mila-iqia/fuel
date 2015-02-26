@@ -60,7 +60,8 @@ class BinarizedMNIST(IndexableDataset):
         self.flatten = flatten
 
         super(BinarizedMNIST, self).__init__(
-            OrderedDict(zip(self.provides_sources, self.indexables)), **kwargs)
+            OrderedDict(zip(self.provides_sources,
+                            self._load_binarized_mnist())), **kwargs)
 
     @property
     def data_path(self):
@@ -68,6 +69,10 @@ class BinarizedMNIST(IndexableDataset):
                             self.files[self.which_set])
 
     def load(self):
+        indexable, = self._load_binarized_mnist()
+        self.indexables = [indexable[self.start:self.stop]]
+
+    def _load_binarized_mnist(self):
         if os.path.isfile(self.data_path):
             images = numpy.load(self.data_path).astype(config.floatX)
         else:
@@ -78,4 +83,4 @@ class BinarizedMNIST(IndexableDataset):
                                    dtype=config.floatX)
             if not self.flatten:
                 images = images.reshape((len(images), 28, 28))
-        self.indexables = [images]
+        return [images]

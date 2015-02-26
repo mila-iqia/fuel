@@ -49,20 +49,23 @@ class CIFAR10(IndexableDataset):
         'test': ['cifar-10-batches-py/test_batch']
     }
 
-    def __init__(self, which_set, start=None, stop=None, flatten=True,
-                 **kwargs):
+    def __init__(self, which_set, flatten=True, **kwargs):
         if which_set not in ('train', 'test'):
             raise ValueError("CIFAR10 only has a train and test set")
 
         self.which_set = which_set
-        self.start = start
-        self.stop = stop
         self.flatten = flatten
 
-        super(CIFAR10, self).__init__(
-            OrderedDict(zip(self.provides_sources, self.indexables)), **kwargs)
+        super(CIFAR10, self).__init__(OrderedDict(zip(self.provides_sources,
+                                                      self._load_cifar10())),
+                                      **kwargs)
 
     def load(self):
+        self.indexables = [data[self.start:self.stop] for source, data
+                           in zip(self.provides_sources, self._load_cifar10())
+                           if source in self.sources]
+
+    def _load_cifar10(self):
         base_path = os.path.join(config.data_path, self.folder)
         num_examples = 50000 if self.which_set == 'train' else 10000
         image_shape = (3072,) if self.flatten else (3, 32, 32)
@@ -80,6 +83,4 @@ class CIFAR10(IndexableDataset):
                 images[10000 * i:10000 * (i + 1)] = batch['data']
                 labels[10000 * i:10000 * (i + 1)] = numpy.asarray(
                     batch['labels'], dtype='uint8')[:, None]
-        self.indexables = [data[self.start:self.stop] for source, data
-                           in zip(self.provides_sources, [images, labels])
-                           if source in self.sources]
+        return images, labels
