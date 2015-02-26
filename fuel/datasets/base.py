@@ -4,6 +4,9 @@ from six import add_metaclass
 
 from picklable_itertools import _iter, izip
 
+from fuel.schemes import SequentialExampleScheme
+from fuel.streams import DataStream
+
 
 @add_metaclass(ABCMeta)
 class Dataset(object):
@@ -29,6 +32,9 @@ class Dataset(object):
         'targets')`` for MNIST (regardless of which data the data stream
         actually requests). Any implementation of a dataset should set this
         attribute on the class (or at least before calling ``super``).
+    example_iteration_scheme : :class:`.IterationScheme` or ``None``
+        The iteration scheme the class uses in order to produce a stream of
+        examples.
 
     Notes
     -----
@@ -58,6 +64,20 @@ class Dataset(object):
     @sources.setter
     def sources(self, sources):
         self._sources = sources
+
+    @property
+    def example_iteration_scheme(self):
+        if not hasattr(self, '_example_iteration_scheme'):
+            raise AttributeError("dataset does not provide an example "
+                                 "iteration scheme")
+        return self._example_iteration_scheme
+
+    @example_iteration_scheme.setter
+    def example_iteration_scheme(self, value):
+        self._example_iteration_scheme = value
+
+    def get_example_stream(self):
+        return DataStream(self, iteration_scheme=self.example_iteration_scheme)
 
     def open(self):
         """Return the state if the dataset requires one.
@@ -201,6 +221,8 @@ class IterableDataset(Dataset):
     :class:`BatchDataStream` data stream.
 
     """
+    example_iteration_scheme = None
+
     def __init__(self, iterables, **kwargs):
         if isinstance(iterables, dict):
             self.provides_sources = tuple(iterables.keys())
@@ -273,6 +295,8 @@ class IndexableDataset(Dataset):
                 raise ValueError("sources have different lengths")
         else:
             self.indexables = [indexables]
+
+        self.example_iteration_scheme = SequentialExampleScheme(len(self))
 
         def property_factory(source):
             def property_(self):
