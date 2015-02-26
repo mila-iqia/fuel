@@ -7,11 +7,12 @@ import numpy
 from fuel import config
 from fuel.datasets import InMemoryDataset
 from fuel.schemes import SequentialScheme
+from fuel.utils import do_not_pickle_attributes
 
 logger = logging.getLogger(__name__)
 
 
-@InMemoryDataset.lazy_properties('features')
+@do_not_pickle_attributes('features')
 class BinarizedMNIST(InMemoryDataset):
     u"""The binarized, unlabeled MNIST dataset used for evaluating
     generative models (e.g. DBN, VAE and NADE).
