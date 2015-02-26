@@ -142,7 +142,14 @@ config = Configuration()
 # Define configuration options
 config.add_config('data_path', type_=str, env_var='FUEL_DATA_PATH')
 config.add_config('default_seed', type_=int, default=1)
+
+# Default to Theano's floatX if possible
+try:
+    from theano import config
+    default_floatX = config.floatX
+except Exception:
+    default_floatX = 'float64'
 config.add_config('floatX', type_=str, env_var='FUEL_FLOATX',
-                  default='float64')
+                  default=default_floatX)
 
 config.load_yaml()
