@@ -7,7 +7,6 @@ import numpy
 from fuel import config
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
-from fuel.schemes import SequentialScheme
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 

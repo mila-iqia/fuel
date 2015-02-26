@@ -1,8 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 
-from fuel.streams import DataStream
-
 
 @add_metaclass(ABCMeta)
 class Dataset(object):

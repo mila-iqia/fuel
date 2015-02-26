@@ -6,7 +6,6 @@ import numpy
 
 from fuel import config
 from fuel.datasets import Dataset
-from fuel.schemes import SequentialScheme
 from fuel.utils import do_not_pickle_attributes
 
 logger = logging.getLogger(__name__)
@@ -38,7 +37,8 @@ class BinarizedMNIST(Dataset):
        Analysis of Deep Belief Networks*, Proceedings of the 25th
        international conference on Machine learning, 2008, pp. 872-879.
 
-    .. [HUGO] http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_{train,valid,test}.amat
+    .. [HUGO] http://www.cs.toronto.edu/~larocheh/public/datasets/
+       binarized_mnist/binarized_mnist_{train,valid,test}.amat
 
     .. todo::
 

@@ -8,7 +8,6 @@ from six.moves import cPickle, xrange
 from fuel import config
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
-from fuel.schemes import SequentialScheme
 
 
 @do_not_pickle_attributes('features', 'targets')
