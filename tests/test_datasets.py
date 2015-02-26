@@ -261,6 +261,6 @@ def test_padding_data_stream():
     # 2 sources
     stream3 = PaddingDataStream(BatchDataStream(
         DataStream(ContainerDataset(dict(features=[[1], [2, 3], []],
-                              targets=[[4, 5, 6], [7]]))),
+                                         targets=[[4, 5, 6], [7]]))),
         ConstantScheme(2)))
     assert len(next(stream3.get_epoch_iterator())) == 4

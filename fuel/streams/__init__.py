@@ -459,10 +459,8 @@ class PaddingDataStream(DataStreamWrapper):
             data_with_masks.append(padded_data)
 
             mask = numpy.zeros((len(source_data), max_sequence_length),
-                                self.mask_dtype)
+                               self.mask_dtype)
             for i, sequence_length in enumerate(lengths):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)
-
-
