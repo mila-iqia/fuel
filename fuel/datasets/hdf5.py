@@ -25,6 +25,7 @@ class Hdf5Dataset(Dataset):
         Names of nodes in HDF5 file which contain sources. Should the same
         length as `sources`.
         Optional, if not set will be equal to `sources`.
+
     """
     def __init__(self, sources, start, stop, path, data_node='Data',
                  sources_in_file=None):
@@ -58,6 +59,15 @@ class Hdf5Dataset(Dataset):
         """ Returns data from HDF5 dataset.
 
         .. note:: The best performance if `request` is a slice.
+
         """
+        if self.start:
+            if isinstance(request, slice):
+                request = slice(request.start + self.start,
+                                request.stop + self.start, request.step)
+            elif isinstance(request, list):
+                request = [index + self.start for index in request]
+            else:
+                raise ValueError
         data = [node[request] for node in self.nodes]
         return data
