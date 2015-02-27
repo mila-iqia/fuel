@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 HERE = path.abspath(path.dirname(__file__))
 
-with open(path.join(HERE, 'README.md')) as f:
+with open(path.join(HERE, 'README.rst')) as f:
     LONG_DESCRIPTION = f.read().strip()
 
 setup(
