@@ -300,7 +300,8 @@ class IndexableDataset(Dataset):
         else:
             self.indexables = [indexables]
 
-        self.example_iteration_scheme = SequentialExampleScheme(len(self))
+        self.example_iteration_scheme = SequentialExampleScheme(
+            self.num_examples)
 
         def property_factory(source):
             def property_(self):
