@@ -24,4 +24,7 @@ def test_mnist():
     assert_raises(ValueError, BinarizedMNIST, 'dummy')
 
     mnist_test = cPickle.loads(cPickle.dumps(mnist_test))
-    assert len(mnist_test.features) == 50000
+    assert len(mnist_test.features) == 10000
+
+    mnist_test_unflattened = BinarizedMNIST('test')
+    assert mnist_test_unflattened.features.shape == (10000, 28, 28)

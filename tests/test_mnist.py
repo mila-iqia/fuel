@@ -32,3 +32,6 @@ def test_mnist():
 
     mnist_train = cPickle.loads(cPickle.dumps(mnist_train))
     assert len(mnist_train.features) == 40000
+
+    mnist_test_unflattened = MNIST('test', flatten=False)
+    assert mnist_test_unflattened.features.shape == (10000, 28, 28)

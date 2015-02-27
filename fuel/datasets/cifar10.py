@@ -34,10 +34,9 @@ class CIFAR10(IndexableDataset):
         (10,000 samples). Note that CIFAR10 does not have a validation
         set; usually you will create your own training/validation split
         using the start and stop arguments.
-    start : int, optional
-        The first example to load
-    stop : int, optional
-        The last example to load
+    flatten : bool
+        Whether to flatten the images. If ``False``, returns images of the
+        format (3, 32, 32). Is ``True`` by default.
 
     """
     provides_sources = ('features', 'targets')

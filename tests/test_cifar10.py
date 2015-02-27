@@ -27,3 +27,6 @@ def test_cifar10():
 
     cifar10_test = cPickle.loads(cPickle.dumps(cifar10_test))
     assert len(cifar10_test.targets) == 10000
+
+    cifar_10_test_unflattened = CIFAR10('test', flatten=False)
+    cifar_10_test_unflattened.features.shape == (10000, 3, 32, 32)
