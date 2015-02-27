@@ -1,8 +1,6 @@
 import pickle
 from six.moves import range
 
-from picklable_itertools import _iter
-
 from fuel.utils import do_not_pickle_attributes
 
 
@@ -24,4 +22,3 @@ def test_do_not_pickle_attributes():
     loaded = pickle.loads(dump)
     assert loaded.bulky_attr == list(range(100))
     assert loaded.non_pickable is not None
-

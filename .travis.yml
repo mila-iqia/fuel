@@ -35,8 +35,8 @@ before_install:
       if find binarized_mnist -empty | read; then
         mkdir binarized_mnist
         cd binarized_mnist
-        curl -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_train.amat\
-             -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_valid.amat\
+        curl -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_train.amat \
+             -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_valid.amat \
              -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_test.amat
         cd -
       fi

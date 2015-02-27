@@ -1,6 +1,21 @@
 import collections
 
 
+def lazy_property_factory(lazy_property):
+    """Create properties that perform lazy loading of attributes."""
+    def lazy_property_getter(self):
+        if not hasattr(self, '_' + lazy_property):
+            self.load()
+        if not hasattr(self, '_' + lazy_property):
+            raise ValueError("{} wasn't loaded".format(lazy_property))
+        return getattr(self, '_' + lazy_property)
+
+    def lazy_property_setter(self, value):
+        setattr(self, '_' + lazy_property, value)
+
+    return lazy_property_getter, lazy_property_setter
+
+
 def do_not_pickle_attributes(*lazy_properties):
     r"""Decorator to assign non-pickable properties.
 
@@ -9,10 +24,10 @@ def do_not_pickle_attributes(*lazy_properties):
     serialized; instead, their values will be reloaded (e.g. from disk) by
     the :meth:`load` function after deserializing the object.
 
-    The decorator can be used with :class:`InMemoryDataset` to avoid
-    serialization of bulky attributes. Other possible way of using the
-    decorator is with attributes which cannot be pickled at all. In this
-    case the user should construct the attribute himself in :meth:`load`.
+    The decorator can be used to avoid the serialization of bulky
+    attributes. Another possible use is for attributes which cannot be
+    pickled at all. In this case the user should construct the attribute
+    himself in :meth:`load`.
 
     Parameters
     ----------
@@ -31,29 +46,18 @@ def do_not_pickle_attributes(*lazy_properties):
     :meth:`load` in the wrapped class. Use the decorator with the names of
     the attributes as an argument.
 
-    >>> from fuel.datasets import InMemoryDataset
+    >>> from fuel.datasets import Dataset
     >>> @do_not_pickle_attributes('features', 'targets')
-    ... class TestDataset(InMemoryDataset):
+    ... class TestDataset(Dataset):
     ...     def load(self):
     ...         self.features = range(10 ** 6)
     ...         self.targets = range(10 ** 6)[::-1]
 
     """
-    def lazy_property_factory(lazy_property):
-        """Create properties that perform lazy loading of attributes."""
-        def lazy_property_getter(self):
-            if not hasattr(self, '_' + lazy_property):
-                self.load()
-            if not hasattr(self, '_' + lazy_property):
-                raise ValueError("{} wasn't loaded".format(lazy_property))
-            return getattr(self, '_' + lazy_property)
-
-        def lazy_property_setter(self, value):
-            setattr(self, '_' + lazy_property, value)
-
-        return lazy_property_getter, lazy_property_setter
-
     def wrap_class(cls):
+        if not hasattr(cls, 'load'):
+            raise ValueError("no load method implemented")
+
         # Attach the lazy loading properties to the class
         for lazy_property in lazy_properties:
             setattr(cls, lazy_property,

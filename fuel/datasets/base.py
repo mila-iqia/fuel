@@ -1,6 +1,10 @@
+import collections
 from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 
+from picklable_itertools import _iter, izip
+
+from fuel.schemes import SequentialExampleScheme
 from fuel.streams import DataStream
 
 
@@ -28,10 +32,9 @@ class Dataset(object):
         'targets')`` for MNIST (regardless of which data the data stream
         actually requests). Any implementation of a dataset should set this
         attribute on the class (or at least before calling ``super``).
-    default_iteration_scheme : :class:`.IterationScheme`, optional
-        The default iteration scheme that will be used by
-        :meth:`get_default_stream` to create a data stream without needing
-        to specify what iteration scheme to use.
+    example_iteration_scheme : :class:`.IterationScheme` or ``None``
+        The iteration scheme the class uses in order to produce a stream of
+        examples.
 
     Notes
     -----
@@ -44,6 +47,8 @@ class Dataset(object):
     provides_sources = None
 
     def __init__(self, sources=None):
+        if not self.provides_sources:
+            raise ValueError("dataset does not have `provides_sources`")
         if sources is not None:
             if not sources or not all(source in self.provides_sources
                                       for source in sources):
@@ -59,6 +64,20 @@ class Dataset(object):
     @sources.setter
     def sources(self, sources):
         self._sources = sources
+
+    @property
+    def example_iteration_scheme(self):
+        if not hasattr(self, '_example_iteration_scheme'):
+            raise AttributeError("dataset does not provide an example "
+                                 "iteration scheme")
+        return self._example_iteration_scheme
+
+    @example_iteration_scheme.setter
+    def example_iteration_scheme(self, value):
+        self._example_iteration_scheme = value
+
+    def get_example_stream(self):
+        return DataStream(self, iteration_scheme=self.example_iteration_scheme)
 
     def open(self):
         """Return the state if the dataset requires one.
@@ -139,12 +158,6 @@ class Dataset(object):
         """
         raise NotImplementedError
 
-    def get_default_stream(self):
-        """Use the default iteration scheme to construct a data stream."""
-        if not hasattr(self, 'default_scheme'):
-            raise ValueError("Dataset does not provide a default iterator")
-        return DataStream(self, iteration_scheme=self.default_scheme)
-
     def filter_sources(self, data):
         """Filter the requested sources from those provided by the dataset.
 
@@ -177,88 +190,138 @@ class Dataset(object):
                       if s in self.sources])
 
 
-@add_metaclass(ABCMeta)
-class InMemoryDataset(Dataset):
-    """Datasets who hold all of their data in memory.
+class IterableDataset(Dataset):
+    """Creates a dataset from a set of iterables.
 
-    For small datasets like e.g. MNIST it is easiest to simply load the
-    entire dataset into memory. All data streams will then access the same
-    data in memory.
+    Parameters
+    ----------
+    iterables : :class:`~collections.OrderedDict` or iterable
+        The iterable(s) to provide interface to. The iterables' `__iter__`
+        method should return a new iterator over the iterable. If an
+        :class:`~collections.OrderedDict` is given, its values should be
+        iterables providing data, and its keys strings that are used as
+        source names. If a single iterable is given, it will be given the
+        source ``data``.
+
+    Attributes
+    ----------
+    iterables : list
+        A list of :class:`~collections.Iterable` objects.
 
     Notes
     -----
-    Datasets which hold data in memory must be treated differently when
-    serializing (saving) the training progress, because it would be very
-    inefficient to save the data along with the training process. Hence,
-    in-memory datasets support the :func:`do_not_pickle_attributes`
-    decorator. Please see documentation there for more information why
-    the decorator is needed.
+    Internally, this method uses `picklable iterools's`_ ``_iter``
+    function, providing picklable alternatives to some iterators such as
+    :func:`range`, :func:`tuple`, and even :class:`file`. However, if the
+    iterable returns a different kind of iterator that is not picklable,
+    you might want to consider using the :func:`.do_not_pickle_attributes`
+    decorator.
 
-    If the files from which the data were loaded are no longer available,
-    the de-serialization could fail. Hence the reloading of these
-    properties happens lazily i.e. only when the properties are requested.
-    This allows the user to intervene and change the location from which
-    files are loaded after de-serialization, before the :meth:`load` method
-    is ever called.
-
-    >>> from six.moves import cPickle
-    >>> from fuel.datasets import MNIST
-    >>> mnist = MNIST('train')
-    >>> print("{:,d} KB".format(
-    ...     mnist.features.nbytes / 1024)) # doctest: +SKIP
-    183,750 KB
-    >>> with open('mnist.pkl', 'wb') as f:
-    ...     cPickle.dump(mnist, f)
-
-    You will notice that the dumping of the dataset was relatively quick,
-    because it didn't attempt to write MNIST to disk. We can now reload it,
-    and if the data file has not been moved, it will be as if nothing
-    happened.
-
-    >>> with open('mnist.pkl', 'rb') as f:
-    ...     mnist = cPickle.load(f)
-    >>> print(mnist.features.shape)
-    (60000, 784)
-
-    However, if the data files can't be found on disk, accessing the data
-    will fail.
-
-    >>> from fuel import config
-    >>> correct_path = config.data_path
-    >>> config.data_path = '/non/existing/path'
-    >>> with open('mnist.pkl', 'rb') as f:
-    ...     mnist = cPickle.load(f)
-    >>> print(mnist.features.shape) # doctest: +SKIP
-    Traceback (most recent call last):
-      ...
-    FileNotFoundError: [Errno 2] No such file or directory: ...
-
-    Because the loading happens lazily, we can still deserialize our
-    dataset, correct the situation, and then continue.
-
-    >>> config.data_path = correct_path
-    >>> print(mnist.features.shape)
-    (60000, 784)
-
-    .. doctest::
-       :hide:
-
-       >>> import os
-       >>> os.remove('mnist.pkl')
-
+    To iterate over a container in batches, combine this dataset with the
+    :class:`BatchDataStream` data stream.
 
     """
-    def load(self):
-        """Load data from e.g. the file system.
+    example_iteration_scheme = None
 
-        Any interaction with the outside world e.g. the file system,
-        database connections, servers, etc. should be done in this method.
-        This allows datasets to be pickled and unpickled, even in
-        environments where the original data is unavailable or has changed
-        position.
+    def __init__(self, iterables, **kwargs):
+        if isinstance(iterables, dict):
+            self.provides_sources = tuple(iterables.keys())
+        else:
+            self.provides_sources = ('data',)
+        super(IterableDataset, self).__init__(**kwargs)
+        if isinstance(iterables, dict):
+            if not all(isinstance(iterable, collections.Iterable)
+                       for iterable in iterables.values()):
+                raise ValueError
+            self.iterables = [iterables[source] for source in self.sources]
+        else:
+            if not isinstance(iterables, collections.Iterable):
+                raise ValueError
+            self.iterables = [iterables]
+        try:
+            if len(set(len(iterable) for iterable in self.iterables)) != 1:
+                raise ValueError("iterables are of different length")
+        except TypeError:
+            pass
 
-        """
-        pass
+    @property
+    def num_examples(self):
+        try:
+            num_examples, = set(len(iterable) for iterable in self.iterables)
+            return num_examples
+        except TypeError:
+            return float('nan')
+
+    def open(self):
+        iterators = [_iter(channel) for channel in self.iterables]
+        return izip(*iterators)
+
+    def get_data(self, state=None, request=None):
+        if state is None or request is not None:
+            raise ValueError
+        return next(state)
 
 
+class IndexableDataset(Dataset):
+    """Creates a dataset from a set of indexable containers.
 
+    Parameters
+    ----------
+    indexables : :class:`~collections.OrderedDict` or indexable
+        The indexable(s) to provide interface to. This means it must
+        support the syntax ```indexable[0]``. If an
+        :class:`~collections.OrderedDict` is given, its values should be
+        indexables providing data, and its keys strings that are used as
+        source names. If a single indexable is given, it will be given the
+        source ``data``.
+
+    Attributes
+    ----------
+    indexables : list
+        A list of indexable objects.
+
+    Notes
+    -----
+    If the indexable data is very large, you might want to consider using
+    the :func:`.do_not_pickle_attributes` decorator to make sure the data
+    doesn't get pickled with the dataset, but gets reloaded/recreated
+    instead.
+
+    This dataset also uses the source names to create properties that
+    provide easy access to the data.
+
+    """
+    def __init__(self, indexables, start=None, stop=None, **kwargs):
+        if isinstance(indexables, dict):
+            self.provides_sources = tuple(indexables.keys())
+        else:
+            self.provides_sources = ('data',)
+        super(IndexableDataset, self).__init__(**kwargs)
+        if isinstance(indexables, dict):
+            self.indexables = [indexables[source][start:stop]
+                               for source in self.sources]
+            if not all(len(indexable) == len(self.indexables[0])
+                       for indexable in self.indexables):
+                raise ValueError("sources have different lengths")
+        else:
+            self.indexables = [indexables]
+
+        self.example_iteration_scheme = SequentialExampleScheme(
+            self.num_examples)
+
+        self.start = start
+        self.stop = stop
+
+    def __getattr__(self, attr):
+        if attr in self.sources:
+            return self.indexables[self.sources.index(attr)]
+        super(IndexableDataset, self).__getattribute__(attr)
+
+    @property
+    def num_examples(self):
+        return len(self.indexables[0])
+
+    def get_data(self, state=None, request=None):
+        if state is not None or request is None:
+            raise ValueError
+        return tuple(indexable[request] for indexable in self.indexables)
