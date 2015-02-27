@@ -1,11 +1,13 @@
 import tempfile
 
+import numpy
 from numpy.testing import assert_raises
 from six import BytesIO
 from six.moves import cPickle
 
-from fuel.datasets import TextFile
+from fuel.datasets import TextFile, IterableDataset
 from fuel.streams import DataStream
+from fuel.streams.text import NGramStream
 
 
 def lower(s):
@@ -50,3 +52,11 @@ def test_text():
     sentence = next(DataStream(text_data).get_epoch_iterator())[0]
     assert sentence[:3] == [27, 19, 7]
     assert sentence[-3:] == [2, 4, 28]
+
+
+def test_ngram_stream():
+    sentences = [list(numpy.random.randint(10, size=sentence_length))
+                 for sentence_length in [3, 5, 7]]
+    stream = IterableDataset(sentences).get_example_stream()
+    ngrams = NGramStream(4, stream)
+    assert len(list(ngrams.get_epoch_iterator())) == 4
