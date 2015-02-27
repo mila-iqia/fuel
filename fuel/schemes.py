@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 from picklable_itertools import chain, repeat, imap, islice, _iter
+from picklable_itertools.extras import partition_all
 from six import add_metaclass
 from six.moves import xrange
 
@@ -61,8 +62,6 @@ class BatchScheme(IterationScheme):
     def __init__(self, num_examples, batch_size):
         self.num_examples = num_examples
         self.batch_size = batch_size
-        d, r = divmod(self.num_examples, self.batch_size)
-        self.num_batches = d + bool(r)
 
 
 @add_metaclass(ABCMeta)
@@ -125,9 +124,8 @@ class SequentialScheme(BatchScheme):
 
     """
     def get_request_iterator(self):
-        return imap(list, imap(
-            islice, repeat(_iter(xrange(self.num_examples)), self.num_batches),
-            repeat(self.batch_size, self.num_batches)))
+        return imap(list, partition_all(self.batch_size,
+                                        xrange(self.num_examples)))
 
 
 class ShuffledScheme(BatchScheme):
@@ -154,9 +152,7 @@ class ShuffledScheme(BatchScheme):
     def get_request_iterator(self):
         indices = list(range(self.num_examples))
         self.rng.shuffle(indices)
-        return imap(list, imap(
-            islice, repeat(_iter(indices), self.num_batches),
-            repeat(self.batch_size, self.num_batches)))
+        return imap(list, partition_all(self.batch_size, indices))
 
 
 class SequentialExampleScheme(IndexScheme):
