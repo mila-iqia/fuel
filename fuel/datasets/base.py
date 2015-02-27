@@ -2,7 +2,7 @@ import collections
 from abc import ABCMeta, abstractmethod
 from six import add_metaclass
 
-from picklable_itertools import _iter, izip
+from picklable_itertools import iter_, izip
 
 from fuel.schemes import SequentialExampleScheme
 from fuel.streams import DataStream
@@ -253,7 +253,7 @@ class IterableDataset(Dataset):
             return float('nan')
 
     def open(self):
-        iterators = [_iter(channel) for channel in self.iterables]
+        iterators = [iter_(channel) for channel in self.iterables]
         return izip(*iterators)
 
     def get_data(self, state=None, request=None):

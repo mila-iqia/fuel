@@ -1,4 +1,4 @@
-from picklable_itertools import _iter, chain
+from picklable_itertools import iter_, chain
 
 from fuel.datasets import Dataset
 
@@ -85,7 +85,7 @@ class TextFile(Dataset):
         super(TextFile, self).__init__()
 
     def open(self):
-        return chain(*[_iter(open(f)) for f in self.files])
+        return chain(*[iter_(open(f)) for f in self.files])
 
     def get_data(self, state=None, request=None):
         if request is not None:
