@@ -313,7 +313,7 @@ class IndexableDataset(Dataset):
         self.stop = stop
 
     def __getattr__(self, attr):
-        if attr != 'sources' and attr in self.sources:
+        if attr not in ['sources', 'indexables'] and attr in self.sources:
             return self.indexables[self.sources.index(attr)]
         raise AttributeError
 
