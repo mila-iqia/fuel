@@ -309,17 +309,13 @@ class IndexableDataset(Dataset):
         self.example_iteration_scheme = SequentialExampleScheme(
             self.num_examples)
 
-        def property_factory(source):
-            def property_(self):
-                if source not in self.sources:
-                    raise AttributeError
-                return self.indexables[self.sources.index(source)]
-            return property_
-        for source in self.sources:
-            setattr(self.__class__, source, property(property_factory(source)))
-
         self.start = start
         self.stop = stop
+
+    def __getattr__(self, attr):
+        if attr in self.sources:
+            return self.indexables[self.sources.index(attr)]
+        super(IndexableDataset, self).__getattribute__(attr)
 
     @property
     def num_examples(self):
