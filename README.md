@@ -1,3 +1,18 @@
+.. image:: https://img.shields.io/coveralls/bartvm/fuel.svg
+   :target: https://coveralls.io/r/bartvm/fuel
+
+.. image:: https://travis-ci.org/bartvm/fuel.svg?branch=master
+   :target: https://travis-ci.org/bartvm/fuel
+
+.. image:: https://readthedocs.org/projects/fuel/badge/?version=latest
+   :target: https://fuel.readthedocs.org/
+
+.. image:: https://img.shields.io/scrutinizer/g/bartvm/fuel.svg
+   :target: https://scrutinizer-ci.com/g/bartvm/fuel/
+
+.. image:: https://img.shields.io/badge/license-MIT-blue.svg
+   :target: https://github.com/bartvm/fuel/blob/master/LICENSE
+
 # Fuel
 
 Fuel provides your machine learning models with the data they need to learn.
