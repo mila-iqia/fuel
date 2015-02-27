@@ -1,147 +1,15 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 
 import numpy
 from picklable_itertools import ifilter
 from six import add_metaclass
 
-from fuel.iterator import DataIterator
 from fuel import config
+from fuel.streams import AbstractDataStream
 
 
 @add_metaclass(ABCMeta)
-class AbstractDataStream(object):
-    """A stream of data separated into epochs.
-
-    A data stream is an iterable stream of examples/minibatches. It shares
-    similarities with Python file handles return by the ``open`` method.
-    Data streams can be closed using the :meth:`close` method and reset
-    using :meth:`reset` (similar to ``f.seek(0)``).
-
-    Parameters
-    ----------
-    iteration_scheme : :class:`.IterationScheme`, optional
-        The iteration scheme to use when retrieving data. Note that not all
-        datasets support the same iteration schemes, some datasets require
-        one, and others don't support any. In case when the data stream
-        wraps another data stream, the choice of supported iteration
-        schemes is typically even more limited. Be sure to read the
-        documentation of the dataset or data stream in question.
-
-    Attributes
-    ----------
-    iteration_scheme : :class:`.IterationScheme`
-        The iteration scheme used to retrieve data. Can be ``None`` when
-        not used.
-    sources : tuple of strings
-        The names of the data sources returned by this data stream, as
-        given by the dataset.
-
-    """
-    def __init__(self, iteration_scheme=None):
-        self.iteration_scheme = iteration_scheme
-
-    def get_data(self, request=None):
-        """Request data from the dataset or the wrapped stream.
-
-        Parameters
-        ----------
-        request : object
-            A request fetched from the `request_iterator`.
-
-        """
-        pass
-
-    @abstractmethod
-    def reset(self):
-        """Reset the data stream."""
-        pass
-
-    @abstractmethod
-    def close(self):
-        """Gracefully close the data stream, e.g. releasing file handles."""
-        pass
-
-    @abstractmethod
-    def next_epoch(self):
-        """Switch the data stream to the next epoch."""
-        pass
-
-    @abstractmethod
-    def get_epoch_iterator(self, as_dict=False):
-        return DataIterator(self, self.iteration_scheme.get_request_iterator()
-                            if self.iteration_scheme else None,
-                            as_dict=as_dict)
-
-    def iterate_epochs(self, as_dict=False):
-        """Allow iteration through all epochs.
-
-        Notes
-        -----
-        This method uses the :meth:`get_epoch_iterator` method to retrieve
-        the :class:`DataIterator` for each epoch. The default
-        implementation of this method resets the state of the data stream
-        so that the new epoch can read the data from the beginning.
-        However, this behavior only works as long as the ``epochs``
-        property is iterated over using e.g. ``for epoch in
-        stream.epochs``. If you create the data iterators in advance (e.g.
-        using ``for i, epoch in zip(range(10), stream.epochs`` in Python 2)
-        you must call the :meth:`reset` method yourself.
-
-        """
-        while True:
-            yield self.get_epoch_iterator(as_dict=as_dict)
-
-
-class DataStream(AbstractDataStream):
-    """A stream of data from a dataset.
-
-    Parameters
-    ----------
-    dataset : instance of :class:`Dataset`
-        The dataset from which the data is fetched.
-
-    """
-    def __init__(self, dataset, **kwargs):
-        super(DataStream, self).__init__(**kwargs)
-        self.dataset = dataset
-        self.data_state = self.dataset.open()
-        self._fresh_state = True
-
-    @property
-    def sources(self):
-        if hasattr(self, '_sources'):
-            return self._sources
-        return self.dataset.sources
-
-    @sources.setter
-    def sources(self, value):
-        self._sources = value
-
-    def close(self):
-        self.data_state = self.dataset.close(self.data_state)
-
-    def reset(self):
-        self.data_state = self.dataset.reset(self.data_state)
-        self._fresh_state = True
-
-    def next_epoch(self):
-        self.data_state = self.dataset.next_epoch(self.data_state)
-
-    def get_data(self, request=None):
-        """Get data from the dataset."""
-        return self.dataset.get_data(self.data_state, request)
-
-    def get_epoch_iterator(self, **kwargs):
-        """Get an epoch iterator for the data stream."""
-        if not self._fresh_state:
-            self.next_epoch()
-        else:
-            self._fresh_state = False
-        return super(DataStream, self).get_epoch_iterator(**kwargs)
-
-
-@add_metaclass(ABCMeta)
-class DataStreamWrapper(AbstractDataStream):
+class Transformer(AbstractDataStream):
     """A data stream that wraps another data stream.
 
     Attributes
@@ -154,7 +22,7 @@ class DataStreamWrapper(AbstractDataStream):
 
     """
     def __init__(self, data_stream, **kwargs):
-        super(DataStreamWrapper, self).__init__(**kwargs)
+        super(Transformer, self).__init__(**kwargs)
         self.data_stream = data_stream
 
     @property
@@ -188,10 +56,10 @@ class DataStreamWrapper(AbstractDataStream):
 
         """
         self.child_epoch_iterator = self.data_stream.get_epoch_iterator()
-        return super(DataStreamWrapper, self).get_epoch_iterator(**kwargs)
+        return super(Transformer, self).get_epoch_iterator(**kwargs)
 
 
-class DataStreamMapping(DataStreamWrapper):
+class Mapping(Transformer):
     """Applies a mapping to the data of the wrapped data stream.
 
     Parameters
@@ -206,7 +74,7 @@ class DataStreamMapping(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, mapping, add_sources=None):
-        super(DataStreamMapping, self).__init__(data_stream)
+        super(Mapping, self).__init__(data_stream)
         self.mapping = mapping
         self.add_sources = add_sources
 
@@ -225,7 +93,7 @@ class DataStreamMapping(DataStreamWrapper):
         return data + image
 
 
-class ForceFloatX(DataStreamWrapper):
+class ForceFloatX(Transformer):
     """Force all floating point numpy arrays to be floatX."""
     def __init__(self, data_stream):
         super(ForceFloatX, self).__init__(data_stream)
@@ -245,7 +113,7 @@ class ForceFloatX(DataStreamWrapper):
         return tuple(result)
 
 
-class DataStreamFilter(DataStreamWrapper):
+class Filter(Transformer):
     """Filters samples that meet a predicate.
 
     Parameters
@@ -257,15 +125,15 @@ class DataStreamFilter(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, predicate):
-        super(DataStreamFilter, self).__init__(data_stream)
+        super(Filter, self).__init__(data_stream)
         self.predicate = predicate
 
     def get_epoch_iterator(self, **kwargs):
-        super(DataStreamFilter, self).get_epoch_iterator(**kwargs)
+        super(Filter, self).get_epoch_iterator(**kwargs)
         return ifilter(self.predicate, self.child_epoch_iterator)
 
 
-class CachedDataStream(DataStreamWrapper):
+class Cache(Transformer):
     """Cache examples when sequentially reading a dataset.
 
     Given a data stream which reads large chunks of data, this data
@@ -290,7 +158,7 @@ class CachedDataStream(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, iteration_scheme):
-        super(CachedDataStream, self).__init__(
+        super(Cache, self).__init__(
             data_stream, iteration_scheme=iteration_scheme)
         self.cache = [[] for _ in self.sources]
 
@@ -305,7 +173,7 @@ class CachedDataStream(DataStreamWrapper):
 
     def get_epoch_iterator(self, **kwargs):
         self.cache = [[] for _ in self.sources]
-        return super(CachedDataStream, self).get_epoch_iterator(**kwargs)
+        return super(Cache, self).get_epoch_iterator(**kwargs)
 
     def _cache(self):
         for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
@@ -316,7 +184,7 @@ class SortMapping(object):
     """Callable class for creating sorting mappings.
 
     This class can be used to create a callable that can be used by the
-    :class:`DataStreamMapping` constructor.
+    :class:`Mapping` constructor.
 
     Parameters
     ----------
@@ -339,7 +207,7 @@ class SortMapping(object):
         return output
 
 
-class BatchDataStream(DataStreamWrapper):
+class Batch(Transformer):
     """Creates minibatches from data streams providing single examples.
 
     Some datasets only return one example at at time e.g. when reading text
@@ -363,7 +231,7 @@ class BatchDataStream(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, iteration_scheme, strictness=0):
-        super(BatchDataStream, self).__init__(
+        super(Batch, self).__init__(
             data_stream, iteration_scheme=iteration_scheme)
         self.strictness = strictness
 
@@ -388,7 +256,7 @@ class BatchDataStream(DataStreamWrapper):
         return tuple(numpy.asarray(source_data) for source_data in data)
 
 
-class PaddingDataStream(DataStreamWrapper):
+class Padding(Transformer):
     """Adds padding to variable-length sequences.
 
     When your batches consist of variable-length sequences, use this class
@@ -414,7 +282,7 @@ class PaddingDataStream(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, mask_sources=None, mask_dtype=None):
-        super(PaddingDataStream, self).__init__(data_stream)
+        super(Padding, self).__init__(data_stream)
         if mask_sources is None:
             mask_sources = self.data_stream.sources
         self.mask_sources = mask_sources

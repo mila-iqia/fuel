@@ -7,7 +7,7 @@ from six.moves import cPickle
 
 from fuel.datasets import TextFile, IterableDataset
 from fuel.streams import DataStream
-from fuel.streams.text import NGramStream
+from fuel.transformers.text import NGrams
 
 
 def lower(s):
@@ -58,5 +58,5 @@ def test_ngram_stream():
     sentences = [list(numpy.random.randint(10, size=sentence_length))
                  for sentence_length in [3, 5, 7]]
     stream = IterableDataset(sentences).get_example_stream()
-    ngrams = NGramStream(4, stream)
+    ngrams = NGrams(4, stream)
     assert len(list(ngrams.get_epoch_iterator())) == 4

@@ -6,7 +6,7 @@ class DataIterator(six.Iterator):
 
     Parameters
     ----------
-    data_stream : :class:`DataStream` or :class:`DataStreamWrapper`
+    data_stream : :class:`DataStream` or :class:`Transformer`
         The data stream over which to iterate.
     request_iterator : iterator
         An iterator which returns the request to pass to the data stream
