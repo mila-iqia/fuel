@@ -1,5 +1,6 @@
 import numpy
 from numpy.testing import assert_raises
+from six.moves import cPickle
 
 from fuel.datasets import CIFAR10
 
@@ -23,3 +24,6 @@ def test_cifar10():
     assert first_target.shape == (2, 1)
 
     assert_raises(ValueError, CIFAR10, 'valid')
+
+    cifar10_test = cPickle.loads(cPickle.dumps(cifar10_test))
+    assert len(cifar10_test.targets) == 10000

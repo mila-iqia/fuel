@@ -1,5 +1,6 @@
 import numpy
 from numpy.testing import assert_raises
+from six.moves import cPickle
 
 from fuel.datasets import MNIST
 from tests import skip_if_not_available
@@ -28,3 +29,6 @@ def test_mnist():
     first_feature, = binary_mnist.get_data(request=[0])
     assert first_feature.dtype.kind == 'b'
     assert_raises(ValueError, MNIST, 'valid')
+
+    mnist_train = cPickle.loads(cPickle.dumps(mnist_train))
+    assert len(mnist_train.features) == 40000
