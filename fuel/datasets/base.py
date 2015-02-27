@@ -315,7 +315,7 @@ class IndexableDataset(Dataset):
     def __getattr__(self, attr):
         if attr != 'sources' and attr in self.sources:
             return self.indexables[self.sources.index(attr)]
-        super(IndexableDataset, self).__getattribute__(attr)
+        raise AttributeError
 
     @property
     def num_examples(self):
