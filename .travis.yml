@@ -56,7 +56,7 @@ install:
 script:
   - pip install . -r requirements.txt
   # With Fuel installed we can install Blocks
-  - pip install -e git+git://github.com/bartvm/blocks.git@refactor#egg=blocks[test,plot] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
+  - pip install -e git+git://github.com/bartvm/blocks.git#egg=blocks[test,plot] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
   # Run the Blocks test to make sure we didn't break anything
   - bokeh-server &> /dev/null &
   - nose2 tests --start-dir $HOME/blocks
