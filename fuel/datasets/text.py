@@ -63,6 +63,7 @@ class TextFile(Dataset):
 
     """
     provides_sources = ('features',)
+    example_iteration_scheme = None
 
     def __init__(self, files, dictionary, bos_token='<S>', eos_token='</S>',
                  unk_token='<UNK>', level='word', preprocess=None):
