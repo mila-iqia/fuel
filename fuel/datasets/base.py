@@ -257,7 +257,7 @@ class IterableDataset(Dataset):
 
 
 class IndexableDataset(Dataset):
-    """Creates a dataset from a set of indexible containers.
+    """Creates a dataset from a set of indexable containers.
 
     Parameters
     ----------
