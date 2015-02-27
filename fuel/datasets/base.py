@@ -238,11 +238,17 @@ class IterableDataset(Dataset):
             if not isinstance(iterables, collections.Iterable):
                 raise ValueError
             self.iterables = [iterables]
+        try:
+            if len(set(len(iterable) for iterable in self.iterables)) != 1:
+                raise ValueError("iterables are of different length")
+        except TypeError:
+            pass
 
     @property
     def num_examples(self):
         try:
-            return min(len(iterable) for iterable in self.iterables)
+            num_examples, = set(len(iterable) for iterable in self.iterables)
+            return num_examples
         except TypeError:
             return float('nan')
 

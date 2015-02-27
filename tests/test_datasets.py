@@ -103,7 +103,7 @@ def test_data_stream_filter():
 
 
 def test_floatx():
-    x = [numpy.array(d, dtype="float64") for d in [[1, 2], [3, 4]]]
+    x = [numpy.array(d, dtype="float64") for d in [[1, 2], [3, 4], [5, 6]]]
     y = [numpy.array(d, dtype="int64") for d in [1, 2, 3]]
     dataset = IterableDataset(OrderedDict([("x", x), ("y", y)]))
     data = next(ForceFloatX(DataStream(dataset)).get_epoch_iterator())
@@ -261,14 +261,17 @@ def test_padding_data_stream():
 
     # 2 sources
     stream3 = PaddingDataStream(BatchDataStream(
-        DataStream(IterableDataset(dict(features=[[1], [2, 3], []],
+        DataStream(IterableDataset(dict(features=[[1], [2, 3]],
                                         targets=[[4, 5, 6], [7]]))),
         ConstantScheme(2)))
     assert len(next(stream3.get_epoch_iterator())) == 4
 
 
 def test_num_examples():
-    dataset = IterableDataset({'features': range(10), 'targets': range(7)})
+    assert_raises(ValueError, IterableDataset,
+                  {'features': range(10), 'targets': range(7)})
+    dataset = IterableDataset({'features': range(7),
+                               'targets': range(7)})
     assert dataset.num_examples == 7
     dataset = IterableDataset(repeat(1))
     assert numpy.isnan(dataset.num_examples)
