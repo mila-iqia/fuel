@@ -4,9 +4,10 @@ import numpy
 import operator
 from six.moves import zip
 from nose.tools import assert_raises
+from picklable_itertools import repeat
 
 from fuel import config
-from fuel.datasets import IterableDataset
+from fuel.datasets import IterableDataset, IndexableDataset
 from fuel.streams import (
     CachedDataStream, DataStream, DataStreamMapping, BatchDataStream,
     PaddingDataStream, DataStreamFilter, ForceFloatX, SortMapping)
@@ -264,3 +265,16 @@ def test_padding_data_stream():
                                         targets=[[4, 5, 6], [7]]))),
         ConstantScheme(2)))
     assert len(next(stream3.get_epoch_iterator())) == 4
+
+
+def test_num_examples():
+    dataset = IterableDataset({'features': range(10), 'targets': range(7)})
+    assert dataset.num_examples == 7
+    dataset = IterableDataset(repeat(1))
+    assert numpy.isnan(dataset.num_examples)
+    x = numpy.random.rand(5, 3)
+    y = numpy.random.rand(5, 4)
+    dataset = IndexableDataset({'features': x, 'targets': y})
+    assert dataset.num_examples == 5
+    assert_raises(ValueError, IndexableDataset,
+                  {'features': x, 'targets': y[:4]})
