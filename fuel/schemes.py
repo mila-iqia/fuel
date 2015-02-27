@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy
-from picklable_itertools import chain, repeat, imap, islice, _iter
+from picklable_itertools import chain, repeat, imap, _iter
 from picklable_itertools.extras import partition_all
 from six import add_metaclass
 from six.moves import xrange
