@@ -87,9 +87,6 @@ class TextFile(Dataset):
     def open(self):
         return chain(*[_iter(open(f)) for f in self.files])
 
-    def _open_file(self, partition_index):
-        return open(self.files[partition_index])
-
     def get_data(self, state=None, request=None):
         if request is not None:
             raise ValueError
