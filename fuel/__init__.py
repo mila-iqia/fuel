@@ -1,7 +1,7 @@
 import os.path
 from pkg_resources import get_distribution, DistributionNotFound
 
-from fuel.config_parser import config  # flake8: noqa
+from fuel.config_parser import config  # noqa
 
 try:
     DIST = get_distribution('fuel')

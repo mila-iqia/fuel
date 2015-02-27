@@ -15,7 +15,7 @@ def test_in_memory():
     # Load MNIST and get two batches
     mnist = MNIST('train')
     data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
-        num_examples=len(mnist), batch_size=256))
+        num_examples=mnist.num_examples, batch_size=256))
     epoch = data_stream.get_epoch_iterator()
     for i, (features, targets) in enumerate(epoch):
         if i == 1:
