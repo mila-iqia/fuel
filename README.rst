@@ -13,7 +13,8 @@
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: https://github.com/bartvm/fuel/blob/master/LICENSE
 
-# Fuel
+Fuel
+====
 
 Fuel provides your machine learning models with the data they need to learn.
 
