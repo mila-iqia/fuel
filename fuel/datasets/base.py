@@ -218,7 +218,7 @@ class IterableDataset(Dataset):
     decorator.
 
     To iterate over a container in batches, combine this dataset with the
-    :class:`BatchDataStream` data stream.
+    :class:`Batch` data stream.
 
     """
     example_iteration_scheme = None

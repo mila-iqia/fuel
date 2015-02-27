@@ -1,7 +1,7 @@
-from fuel.streams import DataStreamWrapper
+from fuel.transformers import Transformer
 
 
-class NGramStream(DataStreamWrapper):
+class NGrams(Transformer):
     """Return n-grams from a stream.
 
     This data stream wrapper takes as an input a data stream outputting
@@ -27,7 +27,7 @@ class NGramStream(DataStreamWrapper):
     def __init__(self, ngram_order, data_stream, target_source='targets'):
         if len(data_stream.sources) > 1:
             raise ValueError
-        super(NGramStream, self).__init__(data_stream)
+        super(NGrams, self).__init__(data_stream)
         self.sources = self.sources + (target_source,)
         self.ngram_order = ngram_order
         self.sentence = []
