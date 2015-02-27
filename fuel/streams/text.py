@@ -1,6 +1,3 @@
-import numpy
-from toolz import sliding_window
-
 from fuel.streams import DataStreamWrapper
 
 
