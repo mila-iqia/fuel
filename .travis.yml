@@ -62,6 +62,8 @@ script:
   - nose2 tests --start-dir $HOME/blocks
   - nose2 doctests --start-dir $HOME/blocks
   # Running nose2 within coverage makes imports count towards coverage
-  - coverage run --source=fuel -m nose2.__main__ -v tests
+  - coverage run -p --source=fuel -m nose2.__main__ -v tests
+  - coverage run -p --source=fuel -m nose2.__main__ -v doctests
 after_script:
+  - coverage combine
   - coveralls
