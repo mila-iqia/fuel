@@ -1,7 +1,8 @@
 from abc import ABCMeta
 
 import numpy
-from picklable_itertools import ifilter
+from picklable_itertools import chain, ifilter, izip
+from picklable_itertools.extras import partition
 from six import add_metaclass
 
 from fuel import config
@@ -332,3 +333,40 @@ class Padding(Transformer):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)
+
+
+class Merge(Transformer):
+    """Merges several datastreams into a single one.
+
+    Parameters
+    ----------
+    data_streams : iterable
+        The data streams to merge.
+    sources : iterable
+        A collection of strings, determining what sources should be called.
+
+    Examples
+    --------
+    >>> from fuel.datasets import IterableDataset
+    >>> english = IterableDataset(['Hello world!'])
+    >>> french = IterableDataset(['Bonjour le monde!'])
+    >>> streams = (english.get_example_stream(),
+    ...            french.get_example_stream())
+    >>> merged_stream = Merge(streams, ('english', 'french'))
+    >>> merged_stream.sources
+    ('english', 'french')
+    >>> next(merged_stream.get_epoch_iterator())
+    ('Hello world!', 'Bonjour le monde!')
+
+    """
+    def __init__(self, data_streams, sources):
+        self.data_streams = data_streams
+        if len(list(chain(*[data_stream.sources for data_stream
+                            in data_streams]))) != len(sources):
+            raise ValueError("wrong number of sources given")
+        self.sources = sources
+
+    def get_epoch_iterator(self, **kwargs):
+        batches = chain(*izip(*[data_stream.get_epoch_iterator()
+                                for data_stream in self.data_streams]))
+        return partition(len(self.sources), chain(*batches))
