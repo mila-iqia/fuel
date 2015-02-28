@@ -88,8 +88,8 @@ iterator is called an *epoch iterator*.
 
 This iterator behaves like any other Python iterator, so we call :func:`next` on it
 
->>> next(epoch)
-batch
+>>> next(epoch)  # doctest: +ELLIPSIS
+(array([[ 0.,  0.,  0., ...,  0.,  0.,  0.],...
 
 and we can use a ``for`` loop
 
@@ -99,6 +99,8 @@ and we can use a ``for`` loop
 Once we have completed the epoch, the iterator will be exhausted
 
 >>> next(epoch)
+Traceback (most recent call last):
+  ...
 StopIteration
 
 but we can ask the stream for a new one, which will provide a complete
@@ -109,7 +111,7 @@ different set of minibatches.
 We can iterate over epochs as well, providing our model with an endless stream
 of MNIST batches.
 
->>> for epoch in stream.iterate_epochs():
+>>> for epoch in stream.iterate_epochs():  # doctest: +SKIP
 ...     for batch in epoch:
 ...         pass
 
