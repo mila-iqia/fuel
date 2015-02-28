@@ -5,9 +5,9 @@ build:
       - pip install -q git+git://github.com/bartvm/pep257.git@numpy
   tests:
     override:
-      - flake8 fuel tests
+      - flake8 fuel doctests tests
       - pep257 fuel --numpy --ignore=D100,D101,D102,D103
-      - pep257 tests --numpy --ignore=D100,D101,D102,D103 --match='.*\.py'
+      - pep257 doctests tests --numpy --ignore=D100,D101,D102,D103 --match='.*\.py'
 checks:
     python:
         code_rating: true
