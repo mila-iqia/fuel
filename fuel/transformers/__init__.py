@@ -374,15 +374,30 @@ class Merge(Transformer):
         return partition(len(self.sources), chain.from_iterable(batches))
 
 
-class BackgroudProcess(object):
-    """A background process that reads batches and stores them in a queue."""
+class BackgroundProcess(object):
+    """A background process that reads batches and stores them in a queue.
+
+    The :meth:`main` method needs to be called in order to start reading
+    batches into the queue. Note that this process will run infinitely;
+    start it as a :attr:`~multiprocessing.Process.daemon` to make sure it
+    will get killed when the main process exits.
+
+    Parameters
+    ----------
+    data_stream : :class:`.DataStream` or :class:`Transformer`
+        The data stream from which to read batches.
+    max_batches : int
+        The maximum number of batches to store in the queue. If reached,
+        the process wil block until a batch is popped from the queue.
+
+    """
     def __init__(self, data_stream, max_batches):
         self.data_stream = data_stream
         self.batches = Queue(max_batches)
         self.run_background = True
 
     def main(self):
-        while self.run_background:
+        while True:
             iterator = self.data_stream.get_epoch_iterator()
             for batch in iterator:
                 self.batches.put(batch)
@@ -418,7 +433,7 @@ class MultiProcessing(Transformer):
     """
     def __init__(self, data_stream, max_store=100):
         super(MultiProcessing, self).__init__(data_stream)
-        self.background = BackgroudProcess(data_stream, max_store)
+        self.background = BackgroundProcess(data_stream, max_store)
         self.proc = Process(target=self.background.main)
         self.proc.daemon = True
         self.proc.start()
