@@ -95,10 +95,13 @@ class TextFile(Dataset):
             sentence = self.preprocess(sentence)
         data = [self.dictionary[self.bos_token]] if self.bos_token else []
         if self.level == 'word':
-            data += [self.dictionary.get(word, self.dictionary[self.unk_token])
-                     for word in sentence.split()]
+            data.extend(self.dictionary.get(word,
+                                            self.dictionary[self.unk_token])
+                        for word in sentence.split())
         else:
-            data += [self.dictionary.get(char, self.dictionary[self.unk_token])
-                     for char in sentence.strip()]
-        data += [self.dictionary[self.eos_token]] if self.eos_token else []
+            data.extend(self.dictionary.get(char,
+                                            self.dictionary[self.unk_token])
+                        for char in sentence.strip())
+        if self.eos_token:
+            data.append(self.dictionary[self.eos_token])
         return (data,)

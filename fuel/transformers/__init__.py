@@ -367,6 +367,7 @@ class Merge(Transformer):
         self.sources = sources
 
     def get_epoch_iterator(self, **kwargs):
-        batches = chain(*izip(*[data_stream.get_epoch_iterator()
-                                for data_stream in self.data_streams]))
-        return partition(len(self.sources), chain(*batches))
+        batches = chain.from_iterable(
+            izip(*[data_stream.get_epoch_iterator()
+                   for data_stream in self.data_streams]))
+        return partition(len(self.sources), chain.from_iterable(batches))
