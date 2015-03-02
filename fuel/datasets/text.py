@@ -1,4 +1,4 @@
-from picklable_itertools import _iter, chain
+from picklable_itertools import iter_, chain
 
 from fuel.datasets import Dataset
 
@@ -44,10 +44,13 @@ class TextFile(Dataset):
     ...     _ = f.write("This is a sentence\n")
     ...     _ = f.write("This another one")
     >>> dictionary = {'<UNK>': 0, '</S>': 1, 'this': 2, 'a': 3, 'one': 4}
+    >>> def lower(s):
+    ...     return s.lower()
     >>> text_data = TextFile(files=['sentences.txt'],
     ...                      dictionary=dictionary, bos_token=None,
-    ...                      preprocess=str.lower)
-    >>> for data in text_data.get_default_stream().get_epoch_iterator():
+    ...                      preprocess=lower)
+    >>> from fuel.streams import DataStream
+    >>> for data in DataStream(text_data).get_epoch_iterator():
     ...     print(data)
     ([2, 0, 3, 0, 1],)
     ([2, 0, 4, 1],)
@@ -60,7 +63,7 @@ class TextFile(Dataset):
 
     """
     provides_sources = ('features',)
-    default_scheme = None
+    example_iteration_scheme = None
 
     def __init__(self, files, dictionary, bos_token='<S>', eos_token='</S>',
                  unk_token='<UNK>', level='word', preprocess=None):
@@ -82,10 +85,7 @@ class TextFile(Dataset):
         super(TextFile, self).__init__()
 
     def open(self):
-        return chain(*[_iter(open(f)) for f in self.files])
-
-    def _open_file(self, partition_index):
-        return open(self.files[partition_index])
+        return chain(*[iter_(open(f)) for f in self.files])
 
     def get_data(self, state=None, request=None):
         if request is not None:
@@ -95,10 +95,13 @@ class TextFile(Dataset):
             sentence = self.preprocess(sentence)
         data = [self.dictionary[self.bos_token]] if self.bos_token else []
         if self.level == 'word':
-            data += [self.dictionary.get(word, self.dictionary[self.unk_token])
-                     for word in sentence.split()]
+            data.extend(self.dictionary.get(word,
+                                            self.dictionary[self.unk_token])
+                        for word in sentence.split())
         else:
-            data += [self.dictionary.get(char, self.dictionary[self.unk_token])
-                     for char in sentence.strip()]
-        data += [self.dictionary[self.eos_token]] if self.eos_token else []
+            data.extend(self.dictionary.get(char,
+                                            self.dictionary[self.unk_token])
+                        for char in sentence.strip())
+        if self.eos_token:
+            data.append(self.dictionary[self.eos_token])
         return (data,)

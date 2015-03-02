@@ -1,10 +1,13 @@
 import tempfile
 
-from six.moves import cPickle
+import numpy
 from numpy.testing import assert_raises
 from six import BytesIO
+from six.moves import cPickle
 
-from fuel.datasets import TextFile
+from fuel.datasets import TextFile, IterableDataset
+from fuel.streams import DataStream
+from fuel.transformers.text import NGrams
 
 
 def lower(s):
@@ -25,7 +28,7 @@ def test_text():
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, bos_token=None,
                          preprocess=lower)
-    stream = text_data.get_default_stream()
+    stream = DataStream(text_data)
     epoch = stream.get_epoch_iterator()
     assert len(list(epoch)) == 4
     epoch = stream.get_epoch_iterator()
@@ -40,12 +43,20 @@ def test_text():
     assert_raises(StopIteration, next, epoch)
 
     # Test character level.
-    dictionary = dict([(chr(ord('a') + i), i) for i in range(26)]
-                      + [(' ', 26)] + [('<S>', 27)]
-                      + [('</S>', 28)] + [('<UNK>', 29)])
+    dictionary = dict([(chr(ord('a') + i), i) for i in range(26)] +
+                      [(' ', 26)] + [('<S>', 27)] +
+                      [('</S>', 28)] + [('<UNK>', 29)])
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, preprocess=lower,
                          level="character")
-    sentence = next(text_data.get_default_stream().get_epoch_iterator())[0]
+    sentence = next(DataStream(text_data).get_epoch_iterator())[0]
     assert sentence[:3] == [27, 19, 7]
     assert sentence[-3:] == [2, 4, 28]
+
+
+def test_ngram_stream():
+    sentences = [list(numpy.random.randint(10, size=sentence_length))
+                 for sentence_length in [3, 5, 7]]
+    stream = IterableDataset(sentences).get_example_stream()
+    ngrams = NGrams(4, stream)
+    assert len(list(ngrams.get_epoch_iterator())) == 4

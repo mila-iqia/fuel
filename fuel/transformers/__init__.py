@@ -1,147 +1,17 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
+from multiprocessing import Process, Queue
 
 import numpy
-from picklable_itertools import ifilter
+from picklable_itertools import chain, ifilter, izip
+from picklable_itertools.extras import partition
 from six import add_metaclass
 
-from fuel.iterator import DataIterator
 from fuel import config
+from fuel.streams import AbstractDataStream
 
 
 @add_metaclass(ABCMeta)
-class AbstractDataStream(object):
-    """A stream of data separated into epochs.
-
-    A data stream is an iterable stream of examples/minibatches. It shares
-    similarities with Python file handles return by the ``open`` method.
-    Data streams can be closed using the :meth:`close` method and reset
-    using :meth:`reset` (similar to ``f.seek(0)``).
-
-    Parameters
-    ----------
-    iteration_scheme : :class:`.IterationScheme`, optional
-        The iteration scheme to use when retrieving data. Note that not all
-        datasets support the same iteration schemes, some datasets require
-        one, and others don't support any. In case when the data stream
-        wraps another data stream, the choice of supported iteration
-        schemes is typically even more limited. Be sure to read the
-        documentation of the dataset or data stream in question.
-
-    Attributes
-    ----------
-    iteration_scheme : :class:`.IterationScheme`
-        The iteration scheme used to retrieve data. Can be ``None`` when
-        not used.
-    sources : tuple of strings
-        The names of the data sources returned by this data stream, as
-        given by the dataset.
-
-    """
-    def __init__(self, iteration_scheme=None):
-        self.iteration_scheme = iteration_scheme
-
-    def get_data(self, request=None):
-        """Request data from the dataset or the wrapped stream.
-
-        Parameters
-        ----------
-        request : object
-            A request fetched from the `request_iterator`.
-
-        """
-        pass
-
-    @abstractmethod
-    def reset(self):
-        """Reset the data stream."""
-        pass
-
-    @abstractmethod
-    def close(self):
-        """Gracefully close the data stream, e.g. releasing file handles."""
-        pass
-
-    @abstractmethod
-    def next_epoch(self):
-        """Switch the data stream to the next epoch."""
-        pass
-
-    @abstractmethod
-    def get_epoch_iterator(self, as_dict=False):
-        return DataIterator(self, self.iteration_scheme.get_request_iterator()
-                            if self.iteration_scheme else None,
-                            as_dict=as_dict)
-
-    def iterate_epochs(self, as_dict=False):
-        """Allow iteration through all epochs.
-
-        Notes
-        -----
-        This method uses the :meth:`get_epoch_iterator` method to retrieve
-        the :class:`DataIterator` for each epoch. The default
-        implementation of this method resets the state of the data stream
-        so that the new epoch can read the data from the beginning.
-        However, this behavior only works as long as the ``epochs``
-        property is iterated over using e.g. ``for epoch in
-        stream.epochs``. If you create the data iterators in advance (e.g.
-        using ``for i, epoch in zip(range(10), stream.epochs`` in Python 2)
-        you must call the :meth:`reset` method yourself.
-
-        """
-        while True:
-            yield self.get_epoch_iterator(as_dict=as_dict)
-
-
-class DataStream(AbstractDataStream):
-    """A stream of data from a dataset.
-
-    Parameters
-    ----------
-    dataset : instance of :class:`Dataset`
-        The dataset from which the data is fetched.
-
-    """
-    def __init__(self, dataset, **kwargs):
-        super(DataStream, self).__init__(**kwargs)
-        self.dataset = dataset
-        self.data_state = self.dataset.open()
-        self._fresh_state = True
-
-    @property
-    def sources(self):
-        if hasattr(self, '_sources'):
-            return self._sources
-        return self.dataset.sources
-
-    @sources.setter
-    def sources(self, value):
-        self._sources = value
-
-    def close(self):
-        self.data_state = self.dataset.close(self.data_state)
-
-    def reset(self):
-        self.data_state = self.dataset.reset(self.data_state)
-        self._fresh_state = True
-
-    def next_epoch(self):
-        self.data_state = self.dataset.next_epoch(self.data_state)
-
-    def get_data(self, request=None):
-        """Get data from the dataset."""
-        return self.dataset.get_data(self.data_state, request)
-
-    def get_epoch_iterator(self, **kwargs):
-        """Get an epoch iterator for the data stream."""
-        if not self._fresh_state:
-            self.next_epoch()
-        else:
-            self._fresh_state = False
-        return super(DataStream, self).get_epoch_iterator(**kwargs)
-
-
-@add_metaclass(ABCMeta)
-class DataStreamWrapper(AbstractDataStream):
+class Transformer(AbstractDataStream):
     """A data stream that wraps another data stream.
 
     Attributes
@@ -154,7 +24,7 @@ class DataStreamWrapper(AbstractDataStream):
 
     """
     def __init__(self, data_stream, **kwargs):
-        super(DataStreamWrapper, self).__init__(**kwargs)
+        super(Transformer, self).__init__(**kwargs)
         self.data_stream = data_stream
 
     @property
@@ -188,10 +58,10 @@ class DataStreamWrapper(AbstractDataStream):
 
         """
         self.child_epoch_iterator = self.data_stream.get_epoch_iterator()
-        return super(DataStreamWrapper, self).get_epoch_iterator(**kwargs)
+        return super(Transformer, self).get_epoch_iterator(**kwargs)
 
 
-class DataStreamMapping(DataStreamWrapper):
+class Mapping(Transformer):
     """Applies a mapping to the data of the wrapped data stream.
 
     Parameters
@@ -206,7 +76,7 @@ class DataStreamMapping(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, mapping, add_sources=None):
-        super(DataStreamMapping, self).__init__(data_stream)
+        super(Mapping, self).__init__(data_stream)
         self.mapping = mapping
         self.add_sources = add_sources
 
@@ -225,7 +95,27 @@ class DataStreamMapping(DataStreamWrapper):
         return data + image
 
 
-class DataStreamFilter(DataStreamWrapper):
+class ForceFloatX(Transformer):
+    """Force all floating point numpy arrays to be floatX."""
+    def __init__(self, data_stream):
+        super(ForceFloatX, self).__init__(data_stream)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
+        result = []
+        for piece in data:
+            if (isinstance(piece, numpy.ndarray) and
+                    piece.dtype.kind == "f" and
+                    piece.dtype != config.floatX):
+                result.append(piece.astype(config.floatX))
+            else:
+                result.append(piece)
+        return tuple(result)
+
+
+class Filter(Transformer):
     """Filters samples that meet a predicate.
 
     Parameters
@@ -237,15 +127,15 @@ class DataStreamFilter(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, predicate):
-        super(DataStreamFilter, self).__init__(data_stream)
+        super(Filter, self).__init__(data_stream)
         self.predicate = predicate
 
     def get_epoch_iterator(self, **kwargs):
-        super(DataStreamFilter, self).get_epoch_iterator(**kwargs)
+        super(Filter, self).get_epoch_iterator(**kwargs)
         return ifilter(self.predicate, self.child_epoch_iterator)
 
 
-class CachedDataStream(DataStreamWrapper):
+class Cache(Transformer):
     """Cache examples when sequentially reading a dataset.
 
     Given a data stream which reads large chunks of data, this data
@@ -270,7 +160,7 @@ class CachedDataStream(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, iteration_scheme):
-        super(CachedDataStream, self).__init__(
+        super(Cache, self).__init__(
             data_stream, iteration_scheme=iteration_scheme)
         self.cache = [[] for _ in self.sources]
 
@@ -285,14 +175,41 @@ class CachedDataStream(DataStreamWrapper):
 
     def get_epoch_iterator(self, **kwargs):
         self.cache = [[] for _ in self.sources]
-        return super(CachedDataStream, self).get_epoch_iterator(**kwargs)
+        return super(Cache, self).get_epoch_iterator(**kwargs)
 
     def _cache(self):
         for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
             cache.extend(data)
 
 
-class BatchDataStream(DataStreamWrapper):
+class SortMapping(object):
+    """Callable class for creating sorting mappings.
+
+    This class can be used to create a callable that can be used by the
+    :class:`Mapping` constructor.
+
+    Parameters
+    ----------
+    key : callable
+        The mapping that returns the value to sort on. Its input will be
+        a tuple that contains a single data point for each source.
+    reverse : boolean value that indicates whether the sort order should
+        be reversed.
+
+    """
+    def __init__(self, key, reverse=False):
+        self.key = key
+        self.reverse = reverse
+
+    def __call__(self, batch):
+        output = sorted(zip(*batch), key=self.key, reverse=self.reverse)
+        output = tuple(numpy.asarray(i) if isinstance(j, numpy.ndarray)
+                       else list(i)
+                       for i, j in zip(zip(*output), batch))
+        return output
+
+
+class Batch(Transformer):
     """Creates minibatches from data streams providing single examples.
 
     Some datasets only return one example at at time e.g. when reading text
@@ -316,7 +233,7 @@ class BatchDataStream(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, iteration_scheme, strictness=0):
-        super(BatchDataStream, self).__init__(
+        super(Batch, self).__init__(
             data_stream, iteration_scheme=iteration_scheme)
         self.strictness = strictness
 
@@ -341,7 +258,7 @@ class BatchDataStream(DataStreamWrapper):
         return tuple(numpy.asarray(source_data) for source_data in data)
 
 
-class PaddingDataStream(DataStreamWrapper):
+class Padding(Transformer):
     """Adds padding to variable-length sequences.
 
     When your batches consist of variable-length sequences, use this class
@@ -367,7 +284,7 @@ class PaddingDataStream(DataStreamWrapper):
 
     """
     def __init__(self, data_stream, mask_sources=None, mask_dtype=None):
-        super(PaddingDataStream, self).__init__(data_stream)
+        super(Padding, self).__init__(data_stream)
         if mask_sources is None:
             mask_sources = self.data_stream.sources
         self.mask_sources = mask_sources
@@ -412,30 +329,119 @@ class PaddingDataStream(DataStreamWrapper):
             data_with_masks.append(padded_data)
 
             mask = numpy.zeros((len(source_data), max_sequence_length),
-                                self.mask_dtype)
+                               self.mask_dtype)
             for i, sequence_length in enumerate(lengths):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)
 
 
-class ForceFloatX(DataStreamWrapper):
-    """Force all floating point numpy arrays to be floatX."""
-    def __init__(self, data_stream):
-        super(ForceFloatX, self).__init__(data_stream)
+class Merge(Transformer):
+    """Merges several datastreams into a single one.
+
+    Parameters
+    ----------
+    data_streams : iterable
+        The data streams to merge.
+    sources : iterable
+        A collection of strings, determining what sources should be called.
+
+    Examples
+    --------
+    >>> from fuel.datasets import IterableDataset
+    >>> english = IterableDataset(['Hello world!'])
+    >>> french = IterableDataset(['Bonjour le monde!'])
+    >>> streams = (english.get_example_stream(),
+    ...            french.get_example_stream())
+    >>> merged_stream = Merge(streams, ('english', 'french'))
+    >>> merged_stream.sources
+    ('english', 'french')
+    >>> next(merged_stream.get_epoch_iterator())
+    ('Hello world!', 'Bonjour le monde!')
+
+    """
+    def __init__(self, data_streams, sources):
+        self.data_streams = data_streams
+        if len(list(chain(*[data_stream.sources for data_stream
+                            in data_streams]))) != len(sources):
+            raise ValueError("wrong number of sources given")
+        self.sources = sources
+
+    def get_epoch_iterator(self, **kwargs):
+        batches = chain.from_iterable(
+            izip(*[data_stream.get_epoch_iterator()
+                   for data_stream in self.data_streams]))
+        return partition(len(self.sources), chain.from_iterable(batches))
+
+
+class BackgroundProcess(object):
+    """A background process that reads batches and stores them in a queue.
+
+    The :meth:`main` method needs to be called in order to start reading
+    batches into the queue. Note that this process will run infinitely;
+    start it as a :attr:`~multiprocessing.Process.daemon` to make sure it
+    will get killed when the main process exits.
+
+    Parameters
+    ----------
+    data_stream : :class:`.DataStream` or :class:`Transformer`
+        The data stream from which to read batches.
+    max_batches : int
+        The maximum number of batches to store in the queue. If reached,
+        the process wil block until a batch is popped from the queue.
+
+    """
+    def __init__(self, data_stream, max_batches):
+        self.data_stream = data_stream
+        self.batches = Queue(max_batches)
+        self.run_background = True
+
+    def main(self):
+        while True:
+            iterator = self.data_stream.get_epoch_iterator()
+            for batch in iterator:
+                self.batches.put(batch)
+            self.batches.put(StopIteration)
+
+    def get_next_data(self):
+        return self.batches.get()
+
+
+class MultiProcessing(Transformer):
+    """Cache batches from the stream in a separate process.
+
+    To speed up training of your model, it can be worthwhile to load and
+    process data in separate process. This is a simple implementation of
+    such an approach that makes use of Python's :mod:`multiprocessing`
+    module.
+
+    Parameters
+    ----------
+    data_stream : :class:`DataStream` or :class:`Transformer`
+        The data stream to read batches from in the separate process.
+    max_store : int, optional
+        The maximum number of batches to keep in the queue.
+
+    Notes
+    -----
+    This approach incurs an overhead from the need to serialize batches in
+    order to send them to the main process. This should be acceptable if
+    your model's training calls take significantly longer than reading a
+    batch of data does, but for fast models or slow data pipelines a more
+    robust approach might need to be considered.
+
+    """
+    def __init__(self, data_stream, max_store=100):
+        super(MultiProcessing, self).__init__(data_stream)
+        self.background = BackgroundProcess(data_stream, max_store)
+        self.proc = Process(target=self.background.main)
+        self.proc.daemon = True
+        self.proc.start()
 
     def get_data(self, request=None):
         if request is not None:
             raise ValueError
-        data = next(self.child_epoch_iterator)
-        result = []
-        for piece in data:
-            if (isinstance(piece, numpy.ndarray) and
-                    piece.dtype.kind == "f" and
-                    piece.dtype != config.floatX):
-                result.append(piece.astype(config.floatX))
-            else:
-                result.append(piece)
-        return tuple(result)
-
-
+        data = self.background.get_next_data()
+        if data == StopIteration:
+            raise StopIteration
+        return data

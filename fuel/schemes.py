@@ -1,7 +1,9 @@
 from abc import ABCMeta, abstractmethod
+from collections import Iterable
 
 import numpy
-from picklable_itertools import chain, repeat, imap, islice, _iter
+from picklable_itertools import chain, repeat, imap, iter_
+from picklable_itertools.extras import partition_all
 from six import add_metaclass
 from six.moves import xrange
 
@@ -57,12 +59,44 @@ class BatchScheme(IterationScheme):
     to be kept in memory, like MNIST) we can provide slices or lists of
     labels to the dataset.
 
+    Parameters
+    ----------
+    examples : int or list
+        Defines which examples from the dataset are iterated.
+        If list, its items are the indices of examples.
+        If an integer, it will use that many examples from the beginning
+        of the dataset, i.e. it is interpreted as range(examples)
+    batch_size : int
+        The request iterator will return slices or list of indices in
+        batches of size `batch_size` until the end of `examples` is
+        reached.
+        Note that this means that the last batch size returned could be
+        smaller than `batch_size`. If you want to ensure all batches are
+        of equal size, then ensure len(`examples`) or `examples` is a
+        multiple of `batch_size`.
+
     """
-    def __init__(self, num_examples, batch_size):
-        self.num_examples = num_examples
+    def __init__(self, examples, batch_size):
+        if isinstance(examples, Iterable):
+            self.indices = examples
+        else:
+            self.indices = xrange(examples)
         self.batch_size = batch_size
-        d, r = divmod(self.num_examples, self.batch_size)
-        self.num_batches = d + bool(r)
+
+
+@add_metaclass(ABCMeta)
+class IndexScheme(IterationScheme):
+    """Iteration schemes that return single indices.
+
+    This is for datasets that support indexing (like :class:`BatchScheme`)
+    but where we want to return single examples instead of batches.
+
+    """
+    def __init__(self, examples):
+        if isinstance(examples, Iterable):
+            self.indices = examples
+        else:
+            self.indices = xrange(examples)
 
 
 class ConstantScheme(BatchSizeScheme):
@@ -113,9 +147,7 @@ class SequentialScheme(BatchScheme):
 
     """
     def get_request_iterator(self):
-        return imap(list, imap(
-            islice, repeat(_iter(xrange(self.num_examples)), self.num_batches),
-            repeat(self.batch_size, self.num_batches)))
+        return imap(list, partition_all(self.batch_size, self.indices))
 
 
 class ShuffledScheme(BatchScheme):
@@ -140,8 +172,34 @@ class ShuffledScheme(BatchScheme):
         super(ShuffledScheme, self).__init__(*args, **kwargs)
 
     def get_request_iterator(self):
-        indices = list(range(self.num_examples))
+        indices = list(self.indices)
         self.rng.shuffle(indices)
-        return imap(list, imap(
-            islice, repeat(_iter(indices), self.num_batches),
-            repeat(self.batch_size, self.num_batches)))
+        return imap(list, partition_all(self.batch_size, indices))
+
+
+class SequentialExampleScheme(IndexScheme):
+    """Sequential examples iterator.
+
+    Returns examples in order.
+
+    """
+    def get_request_iterator(self):
+        return iter_(self.indices)
+
+
+class ShuffledExampleScheme(IndexScheme):
+    """Shuffled examples iterator.
+
+    Returns examples in random order.
+
+    """
+    def __init__(self, *args, **kwargs):
+        self.rng = kwargs.pop('rng', None)
+        if self.rng is None:
+            self.rng = numpy.random.RandomState(config.default_seed)
+        super(ShuffledExampleScheme, self).__init__(*args, **kwargs)
+
+    def get_request_iterator(self):
+        indices = list(self.indices)
+        self.rng.shuffle(indices)
+        return iter_(indices)
