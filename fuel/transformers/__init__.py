@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from multiprocessing import Process, Queue
 
 import numpy
 from picklable_itertools import chain, ifilter, izip
@@ -371,3 +372,61 @@ class Merge(Transformer):
             izip(*[data_stream.get_epoch_iterator()
                    for data_stream in self.data_streams]))
         return partition(len(self.sources), chain.from_iterable(batches))
+
+
+class BackgroudProcess(object):
+    """A background process that reads batches and stores them in a queue."""
+    def __init__(self, data_stream, max_batches):
+        self.data_stream = data_stream
+        self.batches = Queue(max_batches)
+        self.run_background = True
+
+    def main(self):
+        while self.run_background:
+            iterator = self.data_stream.get_epoch_iterator()
+            for batch in iterator:
+                self.batches.put(batch)
+            self.batches.put(StopIteration)
+
+    def get_next_data(self):
+        return self.batches.get()
+
+
+class MultiProcessing(Transformer):
+    """Cache batches from the stream in a separate process.
+
+    To speed up training of your model, it can be worthwhile to load and
+    process data in separate process. This is a simple implementation of
+    such an approach that makes use of Python's :mod:`multiprocessing`
+    module.
+
+    Parameters
+    ----------
+    data_stream : :class:`DataStream` or :class:`Transformer`
+        The data stream to read batches from in the separate process.
+    max_store : int, optional
+        The maximum number of batches to keep in the queue.
+
+    Notes
+    -----
+    This approach incurs an overhead from the need to serialize batches in
+    order to send them to the main process. This should be acceptable if
+    your model's training calls take significantly longer than reading a
+    batch of data does, but for fast models or slow data pipelines a more
+    robust approach might need to be considered.
+
+    """
+    def __init__(self, data_stream, max_store=100):
+        super(MultiProcessing, self).__init__(data_stream)
+        self.background = BackgroudProcess(data_stream, max_store)
+        self.proc = Process(target=self.background.main)
+        self.proc.daemon = True
+        self.proc.start()
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = self.background.get_next_data()
+        if data == StopIteration:
+            raise StopIteration
+        return data
