@@ -286,7 +286,7 @@ def test_hdf5_datset():
     num_rows = 500
     filters = tables.Filters(complib='blosc', complevel=5)
 
-    h5file = tables.open_file("test.h5", mode = "w", title = "Test file",
+    h5file = tables.open_file("test.h5", mode="w", title="Test file",
                               filters=filters)
     group = h5file.create_group("/", 'Data')
     atom = tables.UInt8Atom()

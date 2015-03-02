@@ -6,7 +6,7 @@ from fuel.utils import do_not_pickle_attributes
 
 @do_not_pickle_attributes('nodes')
 class Hdf5Dataset(Dataset):
-    """An HDF5 dataset
+    """An HDF5 dataset.
 
     Parameters
     ----------
