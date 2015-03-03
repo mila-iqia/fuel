@@ -3,6 +3,7 @@ cache:
   directories:
     - $TRAVIS_BUILD_DIR/mnist
     - $TRAVIS_BUILD_DIR/cifar10
+    - $TRAVIS_BUILD_DIR/SVHN
     - $TRAVIS_BUILD_DIR/binarized_mnist
 branches:
   only:
@@ -40,12 +41,25 @@ before_install:
              -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_test.amat
         cd -
       fi
-    # Download CIFAR10 for tests if not loaded from cache
+  # Download CIFAR10 for tests if not loaded from cache
   - |
       if find cifar10 -empty | read; then
         mkdir cifar10
         cd cifar10
         curl http://www.cs.utoronto.ca/~kriz/cifar-10-python.tar.gz | tar xzf -
+        cd -
+      fi
+  # Download SVHN format2 for tests if not loaded from cache
+  - |
+      if find SVHN -empty | read; then
+        mkdir SVHN
+        cd SVHN
+        mkdir format2
+        cd -
+        cd SVHN/format2
+        curl -O http://ufldl.stanford.edu/housenumbers/train_32x32.mat \
+             -O http://ufldl.stanford.edu/housenumbers/extra_32x32.mat \
+             -O http://ufldl.stanford.edu/housenumbers/test_32x32.mat
         cd -
       fi
   - export FUEL_DATA_PATH=$PWD
