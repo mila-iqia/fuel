@@ -2,23 +2,23 @@ import numpy
 from numpy.testing import assert_raises
 from six.moves import cPickle
 
-from fuel.datasets import SVHN
+from fuel.datasets import SVHNFormat2
 
 
 def test_svhn():
-    svhn_train = SVHN('train', start=20000)
+    svhn_train = SVHNFormat2('train', start=20000)
     assert len(svhn_train.features) == 53257
     assert len(svhn_train.targets) == 53257
     assert svhn_train.num_examples == 53257
-    svhn_extra = SVHN('extra', start=10000)
+    svhn_extra = SVHNFormat2('extra', start=10000)
     assert len(svhn_extra.features) == 521131
     assert len(svhn_extra.targets) == 521131
     assert svhn_extra.num_examples == 521131
-    svhn_full_train = SVHN('full_train', start=1000)
+    svhn_full_train = SVHNFormat2('full_train', start=1000)
     assert len(svhn_full_train.features) == 603388
     assert len(svhn_full_train.targets) == 603388
     assert svhn_full_train.num_examples == 603388
-    svhn_test = SVHN('test', sources=('targets',))
+    svhn_test = SVHNFormat2('test', sources=('targets',))
     assert len(svhn_test.targets) == 26032
     assert svhn_test.num_examples == 26032
 
@@ -31,10 +31,10 @@ def test_svhn():
     first_target, = svhn_test.get_data(request=[0, 1])
     assert first_target.shape == (2, 1)
 
-    assert_raises(ValueError, SVHN, 'valid')
+    assert_raises(ValueError, SVHNFormat2, 'valid')
 
     svhn_test = cPickle.loads(cPickle.dumps(svhn_test))
     assert len(svhn_test.targets) == 26032
 
-    cifar_10_test_unflattened = SVHN('test', flatten=False)
+    cifar_10_test_unflattened = SVHNFormat2('test', flatten=False)
     cifar_10_test_unflattened.features.shape == (26032, 3, 32, 32)
