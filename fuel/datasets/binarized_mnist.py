@@ -81,6 +81,6 @@ class BinarizedMNIST(IndexableDataset):
                         .format(self.which_set))
             images = numpy.loadtxt(self.data_path[:-3] + 'amat',
                                    dtype=config.floatX)
-            if not self.flatten:
-                images = images.reshape((len(images), 28, 28))
+        if not self.flatten:
+            images = images.reshape((len(images), 28, 28))
         return [images]
