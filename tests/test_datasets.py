@@ -201,7 +201,7 @@ def test_cache():
         for i, (features,) in enumerate(epoch):
             assert len(cached_stream.cache[0]) == cache_sizes[i]
             assert len(features) == 7
-            assert numpy.all(range(100)[i * 7:(i + 1) * 7] == features)
+            assert numpy.all(list(range(100))[i * 7:(i + 1) * 7] == features)
         assert i == 2
 
 
