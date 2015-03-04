@@ -13,5 +13,5 @@ def test_unpack_transformer():
     stream = Unpack(stream)
     epoch = stream.get_epoch_iterator()
     for i, v in enumerate(epoch):
-        assert(numpy.shape(v)[0] == 1)
-        assert(v[0] == i)
+        assert numpy.shape(v)[0] == 1
+        assert v[0] == i
