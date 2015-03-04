@@ -258,6 +258,33 @@ class Batch(Transformer):
         return tuple(numpy.asarray(source_data) for source_data in data)
 
 
+class Unpack(Transformer):
+    """Unpacks batches to compose a stream of examples.
+
+    This class is the inverse of the Batch class: it turns a minibatch into
+    a stream of examples.
+
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream` instance
+        The data stream to unpack
+
+    """
+    def __init__(self, data_stream):
+        super(Unpack, self).__init__(data_stream)
+        self.data = None
+
+    def get_data(self, request=None):
+        if not self.data:
+            data = next(self.child_epoch_iterator)
+            self.data = izip(*data)
+        try:
+            return next(self.data)
+        except StopIteration:
+            self.data = None
+            return self.get_data()
+
+
 class Padding(Transformer):
     """Adds padding to variable-length sequences.
 
