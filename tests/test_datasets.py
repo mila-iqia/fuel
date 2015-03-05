@@ -1,13 +1,16 @@
+import pickle
+import tables
 from collections import OrderedDict
 
 import numpy
 import operator
-from six.moves import zip
+from six.moves import zip, range
 from nose.tools import assert_raises
 from picklable_itertools import repeat
 
 from fuel import config
 from fuel.datasets import IterableDataset, IndexableDataset
+from fuel.datasets.hdf5 import Hdf5Dataset
 from fuel.streams import DataStream
 from fuel.transformers import (Cache, Mapping, Batch, Padding, Filter,
                                ForceFloatX, SortMapping)
@@ -198,7 +201,7 @@ def test_cache():
         for i, (features,) in enumerate(epoch):
             assert len(cached_stream.cache[0]) == cache_sizes[i]
             assert len(features) == 7
-            assert numpy.all(range(100)[i * 7:(i + 1) * 7] == features)
+            assert numpy.all(list(range(100))[i * 7:(i + 1) * 7] == features)
         assert i == 2
 
 
@@ -277,3 +280,26 @@ def test_num_examples():
     assert dataset.num_examples == 5
     assert_raises(ValueError, IndexableDataset,
                   {'features': x, 'targets': y[:4]})
+
+
+def test_hdf5_datset():
+    num_rows = 500
+    filters = tables.Filters(complib='blosc', complevel=5)
+
+    h5file = tables.open_file("test.h5", mode="w", title="Test file",
+                              filters=filters)
+    group = h5file.create_group("/", 'Data')
+    atom = tables.UInt8Atom()
+    y = h5file.create_carray(group, 'y', atom=atom, title='Data targets',
+                             shape=(num_rows, 1), filters=filters)
+    for i in range(num_rows):
+        y[i] = i
+    h5file.flush()
+    h5file.close()
+
+    dataset = Hdf5Dataset(['y'], 0, 500, 'test.h5')
+    assert numpy.all(dataset.get_data(request=slice(0, 10))[0] ==
+                     numpy.arange(10).reshape(10, 1))
+    # Test if pickles
+    dump = pickle.dumps(dataset)
+    pickle.loads(dump)

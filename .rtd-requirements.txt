@@ -1,2 +1,3 @@
 markupsafe
 sphinxcontrib-napoleon
+pytables
