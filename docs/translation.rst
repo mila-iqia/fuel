@@ -69,11 +69,11 @@ Mege data streams
 -----------------
 
 Repeat the above process to create a dictionary of French words as well. Now
-let's use the :class:`.FileDataset` to create a dataset that will read the text
+let's use the :class:`.TextFile` to create a dataset that will read the text
 using the dictionary we just created.
 
->>> from fuel.datasets import FileDataset
->>> dataset = FileDataset(files, limited_vocab)
+>>> from fuel.datasets import TextFile
+>>> dataset = TextFile(files, limited_vocab)
 >>> stream = dataset.get_example_stream()
 >>> next(stream.get_epoch_iterator())
 ([1, 1206, 34, 2399, 500, 19, 3157, 15, 4812, 48648, 2],)
