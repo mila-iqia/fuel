@@ -21,7 +21,7 @@ Creating a dictionary
 
 Let's begin with creating a dictionary of English words and their frequency.
 
->>> files - ['commoncrawl.fr-en.en',
+>>> files = ['commoncrawl.fr-en.en',
 ...          'news-commentary-v10.fr-en.en',
 ...          'giga-fren.release2.en',
 ...          'training/europarl-v7.fr-en.en',
