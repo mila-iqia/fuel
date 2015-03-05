@@ -31,7 +31,7 @@ We count the frequency of all words.
 
 >>> from collections import Counter
 >>> from itertools import chain
->>> counter - Counter()
+>>> counter = Counter()
 >>> for filename in _files:
 ...     with open(filename) as f:
 ...         words = chain.from_iterable(line.split() for line in f)
