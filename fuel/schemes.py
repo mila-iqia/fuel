@@ -25,7 +25,7 @@ class IterationScheme(object):
     implements the `iterator protocol`_).
 
     Stochastic iteration schemes should generally not be shared between
-    different data schemes, because it would make experiments harder to
+    different data streams, because it would make experiments harder to
     reproduce.
 
     .. _iterator protocol:
