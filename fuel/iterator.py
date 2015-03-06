@@ -23,9 +23,15 @@ class DataIterator(six.Iterator):
 
     def __next__(self):
         if self.request_iterator is not None:
-            data = self.data_stream.get_data(next(self.request_iterator))
+            if self.data_stream.batch :
+                data = self.data_stream.get_batch(next(self.request_iterator))
+            else : 
+                data = self.data_stream.get_example(next(self.request_iterator))
         else:
-            data = self.data_stream.get_data()
+            if self.data_stream.batch :
+                data = self.data_stream.get_batch()
+            else :
+                data = self.data_stream.get_example()
         if self.as_dict:
             return dict(zip(self.data_stream.sources, data))
         else:

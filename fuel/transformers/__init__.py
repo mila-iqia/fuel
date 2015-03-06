@@ -23,9 +23,10 @@ class Transformer(AbstractDataStream):
         by calling ``next(self.child_epoch_iterator)``.
 
     """
-    def __init__(self, data_stream, **kwargs):
+    def __init__(self, data_stream, batch=False, **kwargs):
         super(Transformer, self).__init__(**kwargs)
         self.data_stream = data_stream
+        self.batch = batch
 
     @property
     def sources(self):
@@ -61,6 +62,7 @@ class Transformer(AbstractDataStream):
         return super(Transformer, self).get_epoch_iterator(**kwargs)
 
 
+
 class Mapping(Transformer):
     """Applies a mapping to the data of the wrapped data stream.
 
@@ -75,8 +77,8 @@ class Mapping(Transformer):
         data under source names `add_sources`.
 
     """
-    def __init__(self, data_stream, mapping, add_sources=None):
-        super(Mapping, self).__init__(data_stream)
+    def __init__(self, data_stream, mapping, batch=False, add_sources=None):
+        super(Mapping, self).__init__(data_stream, batch)
         self.mapping = mapping
         self.add_sources = add_sources
 
@@ -93,12 +95,18 @@ class Mapping(Transformer):
         if not self.add_sources:
             return image
         return data + image
+    
+    def get_example(self, request=None):
+        return self.get_data(request)
+
+    def get_batch(self,request=None):
+        return self.get_data(request)
 
 
 class ForceFloatX(Transformer):
     """Force all floating point numpy arrays to be floatX."""
-    def __init__(self, data_stream):
-        super(ForceFloatX, self).__init__(data_stream)
+    def __init__(self, data_stream, batch=False):
+        super(ForceFloatX, self).__init__(data_stream, batch)
 
     def get_data(self, request=None):
         if request is not None:
@@ -114,6 +122,11 @@ class ForceFloatX(Transformer):
                 result.append(piece)
         return tuple(result)
 
+    def get_example(self, request=None):
+        return self.get_data(request)
+
+    def get_batch(self,request=None):
+        return self.get_data(request)
 
 class Filter(Transformer):
     """Filters samples that meet a predicate.
@@ -159,9 +172,9 @@ class Cache(Transformer):
         refilled when needed through the :meth:`get_data` method.
 
     """
-    def __init__(self, data_stream, iteration_scheme):
+    def __init__(self, data_stream, iteration_scheme, batch=False):
         super(Cache, self).__init__(
-            data_stream, iteration_scheme=iteration_scheme)
+            data_stream, batch=batch, iteration_scheme=iteration_scheme)
         self.cache = [[] for _ in self.sources]
 
     def get_data(self, request=None):
@@ -180,6 +193,12 @@ class Cache(Transformer):
     def _cache(self):
         for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
             cache.extend(data)
+
+    def get_example(self, request=None):
+        return self.get_data(request)
+
+    def get_batch(self,request=None):
+        return self.get_data(request)
 
 
 class SortMapping(object):
@@ -232,9 +251,9 @@ class Batch(Transformer):
         raised if a batch of the requested size cannot be provided.
 
     """
-    def __init__(self, data_stream, iteration_scheme, strictness=0):
+    def __init__(self, data_stream, iteration_scheme, strictness=0, batch=True):
         super(Batch, self).__init__(
-            data_stream, iteration_scheme=iteration_scheme)
+            data_stream, batch=batch, iteration_scheme=iteration_scheme)
         self.strictness = strictness
 
     def get_data(self, request=None):
@@ -256,6 +275,44 @@ class Batch(Transformer):
                     raise ValueError
                 raise
         return tuple(numpy.asarray(source_data) for source_data in data)
+
+    def get_example(self, request=None):
+        raise AttributeError(str(type(self)) + 
+        "is a batch method only")
+
+    def get_batch(self,request=None):
+        return self.get_data(request)
+
+
+class Unpack(Transformer):
+    """Unpacks batches to compose a stream of examples.
+    This class is the inverse of the Batch class: it turns a minibatch into
+    a stream of examples.
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream` instance
+        The data stream to unpack
+    """
+    def __init__(self, data_stream, batch=False):
+        super(Unpack, self).__init__(data_stream, batch)
+        self.data = None
+
+    def get_data(self, request=None):
+        if not self.data:
+            data = next(self.child_epoch_iterator)
+            self.data = izip(*data)
+        try:
+            return next(self.data)
+        except StopIteration:
+            self.data = None
+            return self.get_data()
+
+    def get_example(self, request=None):
+        return self.get_data(request)
+
+    def get_batch(self,request=None):
+        raise AttributeError(str(type(self)) + 
+        "is an example method only")
 
 
 class Padding(Transformer):
@@ -283,8 +340,8 @@ class Padding(Transformer):
         be used.
 
     """
-    def __init__(self, data_stream, mask_sources=None, mask_dtype=None):
-        super(Padding, self).__init__(data_stream)
+    def __init__(self, data_stream, mask_sources=None, mask_dtype=None, batch=True):
+        super(Padding, self).__init__(data_stream, batch)
         if mask_sources is None:
             mask_sources = self.data_stream.sources
         self.mask_sources = mask_sources
@@ -335,6 +392,16 @@ class Padding(Transformer):
             data_with_masks.append(mask)
         return tuple(data_with_masks)
 
+    def get_example(self, request=None):
+        """
+        raise AttributeError(str(type(self)) + 
+        "is a batch method only")
+        """
+        return self.get_data(request)
+
+    def get_batch(self,request=None):
+        return self.get_batch(request)
+
 
 class Merge(Transformer):
     """Merges several datastreams into a single one.
@@ -360,7 +427,7 @@ class Merge(Transformer):
     ('Hello world!', 'Bonjour le monde!')
 
     """
-    def __init__(self, data_streams, sources):
+    def __init__(self, data_streams, sources, batch=False):
         self.data_streams = data_streams
         if len(list(chain(*[data_stream.sources for data_stream
                             in data_streams]))) != len(sources):
@@ -431,8 +498,8 @@ class MultiProcessing(Transformer):
     robust approach might need to be considered.
 
     """
-    def __init__(self, data_stream, max_store=100):
-        super(MultiProcessing, self).__init__(data_stream)
+    def __init__(self, data_stream, max_store=100, batch=True):
+        super(MultiProcessing, self).__init__(data_stream, batch)
         self.background = BackgroundProcess(data_stream, max_store)
         self.proc = Process(target=self.background.main)
         self.proc.daemon = True
@@ -445,3 +512,10 @@ class MultiProcessing(Transformer):
         if data == StopIteration:
             raise StopIteration
         return data
+
+    def get_example(self, request=None):
+        raise AttributeError(str(type(self)) + 
+        "is a batch method only")
+
+    def get_batch(self,request=None):
+        return self.get_batch(request)
