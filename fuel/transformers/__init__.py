@@ -342,7 +342,7 @@ class Padding(Transformer):
                 sources.append(source + '_mask')
         return tuple(sources)
 
-    def get_data(self, request=None):
+    def get_batch(self, request=None):
         if request is not None:
             raise ValueError
         data = list(next(self.child_epoch_iterator))
