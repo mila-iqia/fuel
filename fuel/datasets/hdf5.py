@@ -102,7 +102,7 @@ class H5PYDataset(Dataset):
         self.driver = driver
 
         handle = self.open()
-        self.provides_sources = handle[self.which_set].keys()
+        self.provides_sources = list(handle[self.which_set].keys())
         shapes = [data_source.shape for data_source in
                   handle[self.which_set].values()]
         if any(s[0] != shapes[0][0] for s in shapes):
