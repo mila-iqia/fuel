@@ -69,6 +69,7 @@ class Hdf5Dataset(Dataset):
         return data
 
 
+@do_not_pickle_attributes('data_sources')
 class H5PYDataset(Dataset):
     """An h5py-fueled HDF5 dataset.
 
@@ -96,22 +97,14 @@ class H5PYDataset(Dataset):
     ref_counts = dict()
 
     def __init__(self, path, which_set, start=None, stop=None,
-                 driver=None, **kwargs):
+                 load_in_memory=False, driver=None, **kwargs):
         self.path = path
         self.which_set = which_set
+        self.start = start
+        self.stop = stop
+        self.load_in_memory = load_in_memory
         self.driver = driver
-
-        handle = self.open()
-        self.provides_sources = list(handle[self.which_set].keys())
-        shapes = [data_source.shape for data_source in
-                  handle[self.which_set].values()]
-        if any(s[0] != shapes[0][0] for s in shapes):
-            raise ValueError("data sources vary in length")
-        self.start = 0 if start is None else start
-        self.stop = shapes[0][0] if stop is None else stop
-        self.num_examples = self.stop - self.start
-        self.close(handle)
-
+        self.load()
         super(H5PYDataset, self).__init__(**kwargs)
 
     def _get_file_id(self):
@@ -121,19 +114,61 @@ class H5PYDataset(Dataset):
         except StopIteration:
             return self.path
 
+    def load(self):
+        handle = self._out_of_memory_open()
+        self.provides_sources = list(handle[self.which_set].keys())
+        shapes = [data_source.shape for data_source in
+                  handle[self.which_set].values()]
+        if any(s[0] != shapes[0][0] for s in shapes):
+            raise ValueError("sources have different lenghts")
+        self.start = 0 if self.start is None else self.start
+        self.stop = shapes[0][0] if self.stop is None else self.stop
+        self.num_examples = self.stop - self.start
+        self.data_sources = ([data_source[self.start: self.stop] for
+                              data_source in handle[self.which_set].values()]
+                             if self.load_in_memory else None)
+        self._out_of_memory_close(handle)
+
+
     def open(self):
+        return (self._in_memory_open() if self.load_in_memory
+                else self._out_of_memory_open())
+
+    def _in_memory_open(self):
+        return None
+
+    def _out_of_memory_open(self):
         file_id = self._get_file_id()
         state = h5py.File(name=file_id, mode="r", driver=self.driver)
         self.ref_counts[state.id] = self.ref_counts.get(state.id, 0) + 1
         return state
 
     def close(self, state):
+        close_method = (self._in_memory_close if self.load_in_memory
+                        else self._out_of_memory_close)
+        close_method(state=state)
+
+    def _in_memory_close(self, state):
+        pass
+
+    def _out_of_memory_close(self, state):
         self.ref_counts[state.id] -= 1
         if not self.ref_counts[state.id]:
             del self.ref_counts[state.id]
             state.close()
 
     def get_data(self, state=None, request=None):
+        get_data_method = (self._in_memory_get_data if self.load_in_memory
+                           else self._out_of_memory_get_data)
+        return get_data_method(state=state, request=request)
+
+    def _in_memory_get_data(self, state=None, request=None):
+        if state is not None or request is None:
+            raise ValueError
+        return self.filter_sources([data_source[request] for data_source
+                                    in self.data_sources])
+
+    def _out_of_memory_get_data(self, state=None, request=None):
         if isinstance(request, slice):
             request = slice(request.start + self.start,
                             request.stop + self.start, request.step)

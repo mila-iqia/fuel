@@ -307,7 +307,7 @@ def test_hdf5_datset():
     pickle.loads(dump)
 
 
-def test_h5py_dataset():
+def test_h5py_dataset_out_of_memory():
     h5file = h5py.File(name='tmp.hdf5', mode="w")
     train_features = h5file.create_dataset(
         'train/features', (10, 5), dtype='float32')
@@ -324,9 +324,57 @@ def test_h5py_dataset():
     h5file.flush()
     h5file.close()
 
-    train_set = H5PYDataset(path='tmp.hdf5', which_set='train')
+    train_set = H5PYDataset(path='tmp.hdf5', which_set='train',
+                            load_in_memory=False)
     train_handle = train_set.open()
-    test_set = H5PYDataset(path='tmp.hdf5', which_set='test', driver='core')
+    test_set = H5PYDataset(path='tmp.hdf5', which_set='test',
+                           load_in_memory=False)
+    test_handle = test_set.open()
+
+    assert numpy.all(
+        train_set.get_data(state=train_handle, request=slice(0, 10))[0] ==
+        numpy.arange(50).reshape((10, 5)))
+    assert numpy.all(
+        train_set.get_data(state=train_handle, request=slice(0, 10))[1] ==
+        numpy.zeros(shape=(10,)))
+    assert numpy.all(
+        test_set.get_data(state=test_handle, request=slice(0, 3))[0] ==
+        numpy.arange(15).reshape((3, 5)))
+    assert numpy.all(
+        test_set.get_data(state=test_handle, request=slice(0, 3))[1] ==
+        numpy.ones(shape=(3,)))
+
+    # Test if pickles
+    pickle.loads(pickle.dumps(train_set))
+
+    train_set.close(train_handle)
+    test_set.close(test_handle)
+
+    os.remove('tmp.hdf5')
+
+
+def test_h5py_dataset_in_memory():
+    h5file = h5py.File(name='tmp.hdf5', mode="w")
+    train_features = h5file.create_dataset(
+        'train/features', (10, 5), dtype='float32')
+    train_features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
+    train_targets = h5file.create_dataset(
+        'train/targets', (10,), dtype='uint8')
+    train_targets[...] = numpy.zeros(shape=(10,), dtype='uint8')
+    test_features = h5file.create_dataset(
+        'test/features', (3, 5), dtype='float32')
+    test_features[...] = numpy.arange(15, dtype='float32').reshape((3, 5))
+    test_targets = h5file.create_dataset(
+        'test/targets', (3,), dtype='uint8')
+    test_targets[...] = numpy.ones(shape=(3,), dtype='uint8')
+    h5file.flush()
+    h5file.close()
+
+    train_set = H5PYDataset(path='tmp.hdf5', which_set='train',
+                            load_in_memory=True)
+    train_handle = train_set.open()
+    test_set = H5PYDataset(path='tmp.hdf5', which_set='test',
+                           load_in_memory=True)
     test_handle = test_set.open()
 
     assert numpy.all(
