@@ -327,7 +327,7 @@ def test_h5py_dataset():
     train_set = H5PYDataset(path='tmp.hdf5', which_set='train')
     train_handle = train_set.open()
     test_set = H5PYDataset(path='tmp.hdf5', which_set='test', driver='core')
-    test_handle = train_set.open()
+    test_handle = test_set.open()
 
     assert numpy.all(
         train_set.get_data(state=train_handle, request=slice(0, 10))[0] ==
