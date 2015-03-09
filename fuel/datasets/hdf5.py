@@ -129,7 +129,6 @@ class H5PYDataset(Dataset):
                              if self.load_in_memory else None)
         self._out_of_memory_close(handle)
 
-
     def open(self):
         return (self._in_memory_open() if self.load_in_memory
                 else self._out_of_memory_open())
