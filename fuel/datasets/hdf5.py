@@ -1,5 +1,6 @@
 import h5py
 import tables
+from six.moves import filter
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
@@ -113,9 +114,11 @@ class H5PYDataset(Dataset):
         super(H5PYDataset, self).__init__(**kwargs)
 
     def _get_file_id(self):
-        file_ids = filter(lambda x: x.name == self.path,
-                          self.ref_counts.keys())
-        return file_ids[0] if file_ids else self.path
+        try:
+            return filter(
+                lambda x: x.name == self.path, self.ref_counts.keys()).next()
+        except StopIteration:
+            return self.path
 
     def open(self):
         file_id = self._get_file_id()
