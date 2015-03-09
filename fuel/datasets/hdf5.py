@@ -1,5 +1,6 @@
 import h5py
 import tables
+from six import next
 from six.moves import filter
 
 from fuel.datasets import Dataset
@@ -115,8 +116,8 @@ class H5PYDataset(Dataset):
 
     def _get_file_id(self):
         try:
-            return filter(
-                lambda x: x.name == self.path, self.ref_counts.keys()).next()
+            return next(
+                filter(lambda x: x.name == self.path, self.ref_counts.keys()))
         except StopIteration:
             return self.path
 
