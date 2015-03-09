@@ -1,3 +1,4 @@
+import h5py
 import tables
 
 from fuel.datasets import Dataset
@@ -64,3 +65,58 @@ class Hdf5Dataset(Dataset):
                 raise ValueError
         data = [node[request] for node in self.nodes]
         return data
+
+
+class H5PYDataset(Dataset):
+    """An h5py-fueled HDF5 dataset.
+
+    This dataset class assumes a particular file layout:
+
+    * All splits reside in the same file, as subgroups of the root.
+    * Data sources, such as features or targets, are children of the
+      split subgroups, and their names define the source names.
+
+    Parameters
+    ----------
+    path : str
+        Path to the HDF5 file.
+    which_set : str
+        Which subgroup to use.
+    driver : str, optional
+        Low-level driver to use. Defaults to `None`. See h5py
+        documentation for a complete list of available options.
+
+    """
+    ref_counts = dict()
+
+    def __init__(self, path, which_set, driver=None, **kwargs):
+        self.path = path
+        self.which_set = which_set
+        self.driver = driver
+
+        handle = self.open()
+        self.provides_sources = handle[self.which_set].keys()
+        self.close(handle)
+
+        super(H5PYDataset, self).__init__(**kwargs)
+
+    def _get_file_id(self):
+        file_ids = filter(lambda x: x.name == self.path,
+                          self.ref_counts.keys())
+        return file_ids[0] if file_ids else self.path
+
+    def open(self):
+        file_id = self._get_file_id()
+        state = h5py.File(name=file_id, mode="r", driver=self.driver)
+        self.ref_counts[state.id] = self.ref_counts.get(state.id, 0) + 1
+        return state
+
+    def close(self, state):
+        self.ref_counts[state.id] -= 1
+        if not self.ref_counts[state.id]:
+            del self.ref_counts[state.id]
+            state.close()
+
+    def get_data(self, state=None, request=None):
+        return self.filter_sources([data_source[request] for data_source in
+                                    state[self.which_set].values()])
