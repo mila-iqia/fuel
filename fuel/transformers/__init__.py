@@ -61,6 +61,20 @@ class Transformer(AbstractDataStream):
         self.child_epoch_iterator = self.data_stream.get_epoch_iterator()
         return super(Transformer, self).get_epoch_iterator(**kwargs)
 
+    def get_data(self, request=None):
+        if self.batch:
+            return self.get_batch(request)
+        else:
+            return self.get_example(request)
+
+    def get_example(self, request=None):
+        raise NotImplementedError(str(type(self)) + 
+        "does not have an example method")
+
+    def get_batch(self,request=None):
+        raise NotImplementedError(str(type(self)) + 
+        "does not have a batch method")
+
 
 
 class Mapping(Transformer):
@@ -95,12 +109,6 @@ class Mapping(Transformer):
         if not self.add_sources:
             return image
         return data + image
-    
-    def get_example(self, request=None):
-        return self.get_data(request)
-
-    def get_batch(self,request=None):
-        return self.get_data(request)
 
 
 class ForceFloatX(Transformer):
@@ -122,11 +130,6 @@ class ForceFloatX(Transformer):
                 result.append(piece)
         return tuple(result)
 
-    def get_example(self, request=None):
-        return self.get_data(request)
-
-    def get_batch(self,request=None):
-        return self.get_data(request)
 
 class Filter(Transformer):
     """Filters samples that meet a predicate.
@@ -194,12 +197,6 @@ class Cache(Transformer):
         for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
             cache.extend(data)
 
-    def get_example(self, request=None):
-        return self.get_data(request)
-
-    def get_batch(self,request=None):
-        return self.get_data(request)
-
 
 class SortMapping(object):
     """Callable class for creating sorting mappings.
@@ -256,7 +253,7 @@ class Batch(Transformer):
             data_stream, batch=batch, iteration_scheme=iteration_scheme)
         self.strictness = strictness
 
-    def get_data(self, request=None):
+    def get_batch(self, request=None):
         """Get data from the dataset."""
         if request is None:
             raise ValueError
@@ -276,13 +273,6 @@ class Batch(Transformer):
                 raise
         return tuple(numpy.asarray(source_data) for source_data in data)
 
-    def get_example(self, request=None):
-        raise AttributeError(str(type(self)) + 
-        "is a batch method only")
-
-    def get_batch(self,request=None):
-        return self.get_data(request)
-
 
 class Unpack(Transformer):
     """Unpacks batches to compose a stream of examples.
@@ -297,7 +287,7 @@ class Unpack(Transformer):
         super(Unpack, self).__init__(data_stream, batch)
         self.data = None
 
-    def get_data(self, request=None):
+    def get_example(self, request=None):
         if not self.data:
             data = next(self.child_epoch_iterator)
             self.data = izip(*data)
@@ -306,13 +296,6 @@ class Unpack(Transformer):
         except StopIteration:
             self.data = None
             return self.get_data()
-
-    def get_example(self, request=None):
-        return self.get_data(request)
-
-    def get_batch(self,request=None):
-        raise AttributeError(str(type(self)) + 
-        "is an example method only")
 
 
 class Padding(Transformer):
@@ -391,16 +374,6 @@ class Padding(Transformer):
                 mask[i, :sequence_length] = 1
             data_with_masks.append(mask)
         return tuple(data_with_masks)
-
-    def get_example(self, request=None):
-        """
-        raise AttributeError(str(type(self)) + 
-        "is a batch method only")
-        """
-        return self.get_data(request)
-
-    def get_batch(self,request=None):
-        return self.get_batch(request)
 
 
 class Merge(Transformer):
@@ -505,7 +478,7 @@ class MultiProcessing(Transformer):
         self.proc.daemon = True
         self.proc.start()
 
-    def get_data(self, request=None):
+    def get_batch(self, request=None):
         if request is not None:
             raise ValueError
         data = self.background.get_next_data()
@@ -513,9 +486,3 @@ class MultiProcessing(Transformer):
             raise StopIteration
         return data
 
-    def get_example(self, request=None):
-        raise AttributeError(str(type(self)) + 
-        "is a batch method only")
-
-    def get_batch(self,request=None):
-        return self.get_batch(request)
