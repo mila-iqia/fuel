@@ -82,6 +82,10 @@ class H5PYDataset(Dataset):
         Path to the HDF5 file.
     which_set : str
         Which subgroup to use.
+    start : int
+        Start index
+    stop : int
+        Stop index
     driver : str, optional
         Low-level driver to use. Defaults to `None`. See h5py
         documentation for a complete list of available options.
@@ -89,13 +93,21 @@ class H5PYDataset(Dataset):
     """
     ref_counts = dict()
 
-    def __init__(self, path, which_set, driver=None, **kwargs):
+    def __init__(self, path, which_set, start=None, stop=None,
+                 driver=None, **kwargs):
         self.path = path
         self.which_set = which_set
         self.driver = driver
 
         handle = self.open()
         self.provides_sources = handle[self.which_set].keys()
+        shapes = [data_source.shape for data_source in
+                  handle[self.which_set].values()]
+        if any(s[0] != shapes[0][0] for s in shapes):
+            raise ValueError("data sources vary in length")
+        self.start = 0 if start is None else start
+        self.stop = shapes[0][0] if stop is None else stop
+        self.num_examples = self.stop - self.start
         self.close(handle)
 
         super(H5PYDataset, self).__init__(**kwargs)
@@ -118,5 +130,12 @@ class H5PYDataset(Dataset):
             state.close()
 
     def get_data(self, state=None, request=None):
+        if isinstance(request, slice):
+            request = slice(request.start + self.start,
+                            request.stop + self.start, request.step)
+        elif isinstance(request, list):
+            request = [index + self.start for index in request]
+        else:
+            raise ValueError
         return self.filter_sources([data_source[request] for data_source in
                                     state[self.which_set].values()])
