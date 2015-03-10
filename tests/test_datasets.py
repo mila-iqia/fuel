@@ -309,18 +309,13 @@ def test_hdf5_datset():
 
 def test_h5py_dataset_out_of_memory():
     h5file = h5py.File(name='tmp.hdf5', mode="w")
-    train_features = h5file.create_dataset(
-        'train/features', (10, 5), dtype='float32')
-    train_features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
-    train_targets = h5file.create_dataset(
-        'train/targets', (10,), dtype='uint8')
-    train_targets[...] = numpy.zeros(shape=(10,), dtype='uint8')
-    test_features = h5file.create_dataset(
-        'test/features', (3, 5), dtype='float32')
-    test_features[...] = numpy.arange(15, dtype='float32').reshape((3, 5))
-    test_targets = h5file.create_dataset(
-        'test/targets', (3,), dtype='uint8')
-    test_targets[...] = numpy.ones(shape=(3,), dtype='uint8')
+    features = h5file.create_dataset(
+        'features', (10, 5), dtype='float32')
+    features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
+    targets = h5file.create_dataset('targets', (10,), dtype='uint8')
+    targets[...] = numpy.arange(10, dtype='uint8')
+    h5file.attrs['train'] = [0, 8]
+    h5file.attrs['test'] = [8, 10]
     h5file.flush()
     h5file.close()
 
@@ -332,17 +327,17 @@ def test_h5py_dataset_out_of_memory():
     test_handle = test_set.open()
 
     assert numpy.all(
-        train_set.get_data(state=train_handle, request=slice(0, 10))[0] ==
-        numpy.arange(50).reshape((10, 5)))
+        train_set.get_data(state=train_handle, request=slice(0, 8))[0] ==
+        numpy.arange(50).reshape((10, 5))[:8])
     assert numpy.all(
-        train_set.get_data(state=train_handle, request=slice(0, 10))[1] ==
-        numpy.zeros(shape=(10,)))
+        train_set.get_data(state=train_handle, request=slice(0, 8))[1] ==
+        numpy.arange(10)[:8])
     assert numpy.all(
-        test_set.get_data(state=test_handle, request=slice(0, 3))[0] ==
-        numpy.arange(15).reshape((3, 5)))
+        test_set.get_data(state=test_handle, request=slice(0, 2))[0] ==
+        numpy.arange(50).reshape((10, 5))[8:])
     assert numpy.all(
-        test_set.get_data(state=test_handle, request=slice(0, 3))[1] ==
-        numpy.ones(shape=(3,)))
+        test_set.get_data(state=test_handle, request=slice(0, 2))[1] ==
+        numpy.arange(10)[8:])
 
     # Test if pickles
     pickle.loads(pickle.dumps(train_set))
@@ -355,18 +350,13 @@ def test_h5py_dataset_out_of_memory():
 
 def test_h5py_dataset_in_memory():
     h5file = h5py.File(name='tmp.hdf5', mode="w")
-    train_features = h5file.create_dataset(
-        'train/features', (10, 5), dtype='float32')
-    train_features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
-    train_targets = h5file.create_dataset(
-        'train/targets', (10,), dtype='uint8')
-    train_targets[...] = numpy.zeros(shape=(10,), dtype='uint8')
-    test_features = h5file.create_dataset(
-        'test/features', (3, 5), dtype='float32')
-    test_features[...] = numpy.arange(15, dtype='float32').reshape((3, 5))
-    test_targets = h5file.create_dataset(
-        'test/targets', (3,), dtype='uint8')
-    test_targets[...] = numpy.ones(shape=(3,), dtype='uint8')
+    features = h5file.create_dataset(
+        'features', (10, 5), dtype='float32')
+    features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
+    targets = h5file.create_dataset('targets', (10,), dtype='uint8')
+    targets[...] = numpy.arange(10, dtype='uint8')
+    h5file.attrs['train'] = [0, 8]
+    h5file.attrs['test'] = [8, 10]
     h5file.flush()
     h5file.close()
 
@@ -378,17 +368,17 @@ def test_h5py_dataset_in_memory():
     test_handle = test_set.open()
 
     assert numpy.all(
-        train_set.get_data(state=train_handle, request=slice(0, 10))[0] ==
-        numpy.arange(50).reshape((10, 5)))
+        train_set.get_data(state=train_handle, request=slice(0, 8))[0] ==
+        numpy.arange(50).reshape((10, 5))[:8])
     assert numpy.all(
-        train_set.get_data(state=train_handle, request=slice(0, 10))[1] ==
-        numpy.zeros(shape=(10,)))
+        train_set.get_data(state=train_handle, request=slice(0, 8))[1] ==
+        numpy.arange(10)[:8])
     assert numpy.all(
-        test_set.get_data(state=test_handle, request=slice(0, 3))[0] ==
-        numpy.arange(15).reshape((3, 5)))
+        test_set.get_data(state=test_handle, request=slice(0, 2))[0] ==
+        numpy.arange(50).reshape((10, 5))[8:])
     assert numpy.all(
-        test_set.get_data(state=test_handle, request=slice(0, 3))[1] ==
-        numpy.ones(shape=(3,)))
+        test_set.get_data(state=test_handle, request=slice(0, 2))[1] ==
+        numpy.arange(10)[8:])
 
     # Test if pickles
     pickle.loads(pickle.dumps(train_set))

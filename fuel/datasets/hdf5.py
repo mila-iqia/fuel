@@ -75,20 +75,33 @@ class H5PYDataset(Dataset):
 
     This dataset class assumes a particular file layout:
 
-    * All splits reside in the same file, as subgroups of the root.
-    * Data sources, such as features or targets, are children of the
-      split subgroups, and their names define the source names.
+    * Data sources reside in the root group, and their names define the
+      source names.
+    * The dataset is not explicitly split. Instead, splits are defined as
+      attributes of the root group. They're expected to be numpy arrays of
+      shape (2,), with the first element being the starting point
+      (inclusive) of the split and the last element being the stopping
+      point (exclusive) of the split.
+
+    The `which_set`, `start` and `stop` parameters work together in the
+    following way:
+
+    * `which_set` is resolved first. If it is `None`, the whole dataset is
+      used.
+    * `start` and `stop` define a slice *within the context of*
+      `which_set`.
 
     Parameters
     ----------
     path : str
         Path to the HDF5 file.
-    which_set : str
-        Which subgroup to use.
+    which_set : str, optional
+        Name of the root group attribute containing the split information.
+        Defaults to `None`, in which case the whole dataset is used.
     start : int
-        Start index
+        Start index *within the split*.
     stop : int
-        Stop index
+        Stop index *within the split*.
     driver : str, optional
         Low-level driver to use. Defaults to `None`. See h5py
         documentation for a complete list of available options.
@@ -96,7 +109,7 @@ class H5PYDataset(Dataset):
     """
     ref_counts = dict()
 
-    def __init__(self, path, which_set, start=None, stop=None,
+    def __init__(self, path, which_set=None, start=None, stop=None,
                  load_in_memory=False, driver=None, **kwargs):
         self.path = path
         self.which_set = which_set
@@ -116,16 +129,17 @@ class H5PYDataset(Dataset):
 
     def load(self):
         handle = self._out_of_memory_open()
-        self.provides_sources = list(handle[self.which_set].keys())
-        shapes = [data_source.shape for data_source in
-                  handle[self.which_set].values()]
+        self.provides_sources = list(handle.keys())
+        shapes = [data_source.shape for data_source in handle.values()]
         if any(s[0] != shapes[0][0] for s in shapes):
             raise ValueError("sources have different lenghts")
-        self.start = 0 if self.start is None else self.start
-        self.stop = shapes[0][0] if self.stop is None else self.stop
-        self.num_examples = self.stop - self.start
-        self.data_sources = ([data_source[self.start: self.stop] for
-                              data_source in handle[self.which_set].values()]
+        start, stop = (handle.attrs[self.which_set] if self.which_set
+                       else (0, shapes[0][0]))
+        self._start = start if self.start is None else start + self.start
+        self._stop = stop if self.stop is None else start + self.stop
+        self.num_examples = self._stop - self._start
+        self.data_sources = ([data_source[self._start: self._stop] for
+                              data_source in handle.values()]
                              if self.load_in_memory else None)
         self._out_of_memory_close(handle)
 
@@ -169,11 +183,11 @@ class H5PYDataset(Dataset):
 
     def _out_of_memory_get_data(self, state=None, request=None):
         if isinstance(request, slice):
-            request = slice(request.start + self.start,
-                            request.stop + self.start, request.step)
+            request = slice(request.start + self._start,
+                            request.stop + self._start, request.step)
         elif isinstance(request, list):
             request = [index + self.start for index in request]
         else:
             raise ValueError
         return self.filter_sources([data_source[request] for data_source in
-                                    state[self.which_set].values()])
+                                    state.values()])
