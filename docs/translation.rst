@@ -50,7 +50,7 @@ indices for the unknown, beginning-of-sentence and end-of-sentence tokens.
    the ``protocol-pickle.HIGHEST_PROTOCOL`` flag for :meth:`pickle.dump`.
 
 >>> from itertools import chain, count
->>> freq_words = zip(*counter.most_common())[0]
+>>> freq_words = list(zip(*counter.most_common()))[0]
 >>> vocab = OrderedDict(zip(chain(['<UNK>', '<S>', '</S>'], freq_words), count()))
 
 You might want to save the vocabulary so that we can easily re-use it later.
