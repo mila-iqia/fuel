@@ -50,7 +50,7 @@ indices for the unknown, beginning-of-sentence and end-of-sentence tokens.
    the ``protocol-pickle.HIGHEST_PROTOCOL`` flag for :meth:`pickle.dump`.
 
 >>> from collections import OrderedDict
->>> from itertools import chain, count
+>>> from itertools import count
 >>> freq_words = list(zip(*counter.most_common()))[0]
 >>> vocab = OrderedDict(zip(chain(['<UNK>', '<S>', '</S>'], freq_words), count()))
 
@@ -64,6 +64,7 @@ easily restrict the vocabulary to a given size. For example, to limit our
 vocabulary to the 25,000 most frequent words (including the special ``UNK``,
 ``EOS`` and ``BOS`` tokens), we use:
 
+>>> from itertools import islice
 >>> limited_vocab = OrderedDict(islice(vocab.items(), 25000))
 
 Mege data streams
