@@ -49,6 +49,7 @@ indices for the unknown, beginning-of-sentence and end-of-sentence tokens.
    :meth:`~collections.OrderedDict.items`. You should also consider using
    the ``protocol-pickle.HIGHEST_PROTOCOL`` flag for :meth:`pickle.dump`.
 
+>>> from collections import OrderedDict
 >>> from itertools import chain, count
 >>> freq_words = list(zip(*counter.most_common()))[0]
 >>> vocab = OrderedDict(zip(chain(['<UNK>', '<S>', '</S>'], freq_words), count()))
