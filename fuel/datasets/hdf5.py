@@ -98,10 +98,10 @@ class H5PYDataset(Dataset):
     which_set : str, optional
         Name of the root group attribute containing the split information.
         Defaults to `None`, in which case the whole dataset is used.
-    start : int
-        Start index *within the split*.
-    stop : int
-        Stop index *within the split*.
+    subset : slice, optional
+        A slice of data *within the context of the split* to use. Defaults
+        to `None`, in which case the whole split is used. **Note:
+        at the moment, `slice.step` must be either 1 or `None`.**
     load_in_memory : bool, optional
         Whether to load the data in main memory. Defaults to `False`.
     driver : str, optional
@@ -111,12 +111,11 @@ class H5PYDataset(Dataset):
     """
     ref_counts = dict()
 
-    def __init__(self, path, which_set=None, start=None, stop=None,
-                 load_in_memory=False, driver=None, **kwargs):
+    def __init__(self, path, which_set=None, subset=None, load_in_memory=False,
+                 driver=None, **kwargs):
         self.path = path
         self.which_set = which_set
-        self.start = start
-        self.stop = stop
+        self.subset = subset if subset else slice(None, None, None)
         self.load_in_memory = load_in_memory
         self.driver = driver
         self.load()
@@ -135,12 +134,16 @@ class H5PYDataset(Dataset):
         shapes = [data_source.shape for data_source in handle.values()]
         if any(s[0] != shapes[0][0] for s in shapes):
             raise ValueError("sources have different lengths")
+        if self.subset.step not in (1, None):
+            raise ValueError("subset.step must be either 1 or None")
         start, stop = (handle.attrs[self.which_set] if self.which_set
                        else (0, shapes[0][0]))
-        self._start = start if self.start is None else start + self.start
-        self._stop = stop if self.stop is None else start + self.stop
-        self.num_examples = self._stop - self._start
-        self.data_sources = ([data_source[self._start: self._stop] for
+        self.subset = slice(
+            start if self.subset.start is None else self.subset.start,
+            stop if self.subset.stop is None else self.subset.stop,
+            self.subset.step)
+        self.num_examples = self.subset.stop - self.subset.start
+        self.data_sources = ([data_source[self.subset] for
                               data_source in handle.values()]
                              if self.load_in_memory else None)
         self._out_of_memory_close(handle)
@@ -177,10 +180,10 @@ class H5PYDataset(Dataset):
 
     def _out_of_memory_get_data(self, state=None, request=None):
         if isinstance(request, slice):
-            request = slice(request.start + self._start,
-                            request.stop + self._start, request.step)
+            request = slice(request.start + self.subset.start,
+                            request.stop + self.subset.start, request.step)
         elif isinstance(request, list):
-            request = [index + self.start for index in request]
+            request = [index + self.subset.start for index in request]
         else:
             raise ValueError
         return self.filter_sources([data_source[request] for data_source in
