@@ -26,4 +26,4 @@ Fuel provides your machine learning models with the data they need to learn.
 Fuel is developed primarily for use by Blocks_, a Theano toolkit that helps you train neural networks.
 
 .. _picklable_itertools: http://github.com/dwf/picklable_itertools
-.. _Blocks: http://github.com/bartvm/fuel
+.. _Blocks: http://github.com/bartvm/blocks
