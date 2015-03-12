@@ -134,7 +134,7 @@ class H5PYDataset(Dataset):
         self.provides_sources = list(handle.keys())
         shapes = [data_source.shape for data_source in handle.values()]
         if any(s[0] != shapes[0][0] for s in shapes):
-            raise ValueError("sources have different lenghts")
+            raise ValueError("sources have different lengths")
         start, stop = (handle.attrs[self.which_set] if self.which_set
                        else (0, shapes[0][0]))
         self._start = start if self.start is None else start + self.start
