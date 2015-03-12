@@ -71,12 +71,16 @@ class Transformer(AbstractDataStream):
             return self.get_data_from_example(request)
 
     def get_data_from_example(self, request=None):
-        raise NotImplementedError(str(type(self)) + 
-            "does not have an example method")
+        raise NotImplementedError(
+            str(type(self)) +
+            "does not have an example method"
+        )
 
     def get_data_from_batch(self, request=None):
-        raise NotImplementedError(str(type(self)) +
-            "does not have a batch input method")
+        raise NotImplementedError(
+            str(type(self)) +
+            "does not have a batch input method"
+        )
 
 
 class Mapping(Transformer):
