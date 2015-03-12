@@ -102,6 +102,8 @@ class H5PYDataset(Dataset):
         Start index *within the split*.
     stop : int
         Stop index *within the split*.
+    load_in_memory : bool, optional
+        Whether to load the data in main memory. Defaults to `False`.
     driver : str, optional
         Low-level driver to use. Defaults to `None`. See h5py
         documentation for a complete list of available options.
