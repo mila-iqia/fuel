@@ -66,17 +66,20 @@ class Transformer(AbstractDataStream):
 
     def get_data(self, request=None):
         if self.batch_input:
-            return self.get_data_from_example(request)
-        else:
             return self.get_data_from_batch(request)
+        else:
+            return self.get_data_from_example(request)
 
     def get_data_from_example(self, request=None):
-        raise NotImplementedError(str(type(self))
-                                    + " does not implement get_data_from_example")
+        raise NotImplementedError(str(type(self)) + 
+        "does not have an example method")
 
-    def get_data_from_batch(self, request=None):
-        raise NotImplementedError(str(type(self))
-                                    + " does not implement get_data_from_batch")
+    def get_data_from_batch(self,request=None):
+        raise NotImplementedError(str(type(self)) + 
+        "does not have a batch input method")
+
+
+
 
 class Mapping(Transformer):
     """Applies a mapping to the data of the wrapped data stream.
@@ -278,13 +281,16 @@ class Batch(Transformer):
 class Unpack(Transformer):
     """Unpacks batches to compose a stream of examples.
 
+
     This class is the inverse of the Batch class: it turns a minibatch into
     a stream of examples.
+
 
     Parameters
     ----------
     data_stream : :class:`AbstractDataStream` instance
         The data stream to unpack
+
 
     """
     def __init__(self, data_stream):
@@ -489,3 +495,4 @@ class MultiProcessing(Transformer):
         if data == StopIteration:
             raise StopIteration
         return data
+
