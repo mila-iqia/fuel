@@ -72,13 +72,11 @@ class Transformer(AbstractDataStream):
 
     def get_data_from_example(self, request=None):
         raise NotImplementedError(str(type(self)) + 
-        "does not have an example method")
+            "does not have an example method")
 
-    def get_data_from_batch(self,request=None):
-        raise NotImplementedError(str(type(self)) + 
-        "does not have a batch input method")
-
-
+    def get_data_from_batch(self, request=None):
+        raise NotImplementedError(str(type(self)) +
+            "does not have a batch input method")
 
 
 class Mapping(Transformer):
@@ -495,4 +493,3 @@ class MultiProcessing(Transformer):
         if data == StopIteration:
             raise StopIteration
         return data
-
