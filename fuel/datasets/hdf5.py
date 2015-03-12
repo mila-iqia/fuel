@@ -144,11 +144,7 @@ class H5PYDataset(Dataset):
         self._out_of_memory_close(handle)
 
     def open(self):
-        return (self._in_memory_open() if self.load_in_memory
-                else self._out_of_memory_open())
-
-    def _in_memory_open(self):
-        return None
+        return None if self.load_in_memory else self._out_of_memory_open()
 
     def _out_of_memory_open(self):
         file_id = self._get_file_id()
@@ -157,12 +153,8 @@ class H5PYDataset(Dataset):
         return state
 
     def close(self, state):
-        close_method = (self._in_memory_close if self.load_in_memory
-                        else self._out_of_memory_close)
-        close_method(state=state)
-
-    def _in_memory_close(self, state):
-        pass
+        if not self.load_in_memory:
+            self._out_of_memory_close(state)
 
     def _out_of_memory_close(self, state):
         self.ref_counts[state.id] -= 1
