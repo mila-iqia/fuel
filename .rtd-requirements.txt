@@ -1,3 +1,3 @@
 markupsafe
-sphinxcontrib-napoleon
+sphinxcontrib-napoleon==0.2.9
 pytables
