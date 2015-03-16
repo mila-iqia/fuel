@@ -60,7 +60,7 @@ class Transformer(AbstractDataStream):
         """
         self.child_epoch_iterator = self.data_stream.get_epoch_iterator()
         return super(Transformer, self).get_epoch_iterator(**kwargs)
-    
+
     def get_data(self, request=None):
         if self.batch_input:
             return self.get_data_from_batch(request)
