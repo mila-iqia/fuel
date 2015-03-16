@@ -256,7 +256,7 @@ class Batch(Transformer):
             data_stream, iteration_scheme=iteration_scheme)
         self.strictness = strictness
 
-    def get_data(self, request=None):
+    def get_data_from_example(self, request=None):
         """Get data from the dataset."""
         if request is None:
             raise ValueError
