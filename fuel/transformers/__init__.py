@@ -21,7 +21,8 @@ class Transformer(AbstractDataStream):
         automatically requested from the wrapped data stream and stored in
         this attribute. Use it to access data from the wrapped data stream
         by calling ``next(self.child_epoch_iterator)``.
-
+    batch_input : boolean
+        Specification whether the input stream is on example or batch 
     """
     def __init__(self, data_stream, batch_input=False,  **kwargs):
         super(Transformer, self).__init__(**kwargs)
@@ -69,14 +70,14 @@ class Transformer(AbstractDataStream):
 
     def get_data_from_example(self, request=None):
         raise NotImplementedError(
-            str(type(self)) +
-            "does not have an example method"
+            "`{}` does not support examples as inputs, '\
+            but `batch_input` was set to `False`".format(type(self))
         )
 
     def get_data_from_batch(self, request=None):
         raise NotImplementedError(
-            str(type(self)) +
-            "does not have a batch input method"
+            "`{}` does not support batches as inputs, '\
+            but `batch_input` was set to `False`".format(type(self))
         )
 
 
@@ -180,10 +181,10 @@ class Cache(Transformer):
     """
     def __init__(self, data_stream, iteration_scheme):
         super(Cache, self).__init__(
-            data_stream, iteration_scheme=iteration_scheme)
+            data_stream, iteration_scheme=iteration_scheme, batch_input=True)
         self.cache = [[] for _ in self.sources]
 
-    def get_data(self, request=None):
+    def get_data_from_batch(self, request=None):
         if request > len(self.cache[0]):
             self._cache()
         data = []
@@ -478,13 +479,13 @@ class MultiProcessing(Transformer):
 
     """
     def __init__(self, data_stream, max_store=100):
-        super(MultiProcessing, self).__init__(data_stream, batch_input=True)
+        super(MultiProcessing, self).__init__(data_stream)
         self.background = BackgroundProcess(data_stream, max_store)
         self.proc = Process(target=self.background.main)
         self.proc.daemon = True
         self.proc.start()
 
-    def get_data_from_batch(self, request=None):
+    def get_data(self, request=None):
         if request is not None:
             raise ValueError
         data = self.background.get_next_data()
