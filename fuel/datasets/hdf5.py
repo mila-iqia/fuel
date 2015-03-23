@@ -2,8 +2,6 @@ from collections import defaultdict
 
 import h5py
 import tables
-from six import next
-from six.moves import filter
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
