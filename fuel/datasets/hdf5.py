@@ -122,11 +122,11 @@ class H5PYDataset(Dataset):
         super(H5PYDataset, self).__init__(**kwargs)
 
     def _get_file_id(self):
-        try:
-            return next(
-                filter(lambda x: x.name == self.path, self.ref_counts.keys()))
-        except StopIteration:
+        file_id = [f for f in self.ref_counts.keys() if f.name == self.path]
+        if not file_id:
             return self.path
+        file_id, = file_id
+        return file_id
 
     def load(self):
         handle = self._out_of_memory_open()
