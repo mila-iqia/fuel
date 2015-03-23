@@ -170,9 +170,10 @@ class H5PYDataset(Dataset):
             state.close()
 
     def get_data(self, state=None, request=None):
-        get_data_method = (self._in_memory_get_data if self.load_in_memory
-                           else self._out_of_memory_get_data)
-        return get_data_method(state=state, request=request)
+        if self.load_in_memory:
+            return self._in_memory_get_data(state=state, request=request)
+        else:
+            return self._out_of_memory_get_data(state=state, request=request)
 
     def _in_memory_get_data(self, state=None, request=None):
         if state is not None or request is None:
