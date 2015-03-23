@@ -118,8 +118,10 @@ class H5PYDataset(Dataset):
         self.subset = subset if subset else slice(None, None, None)
         self.load_in_memory = load_in_memory
         self.driver = driver
-        self.load()
+
         super(H5PYDataset, self).__init__(**kwargs)
+
+        self.load()
 
     def _get_file_id(self):
         file_id = [f for f in self.ref_counts.keys() if f.name == self.path]
@@ -128,9 +130,16 @@ class H5PYDataset(Dataset):
         file_id, = file_id
         return file_id
 
+    @property
+    def provides_sources(self):
+        if not hasattr(self, '_provides_sources'):
+            handle = self._out_of_memory_open()
+            self._provides_sources = list(handle.keys())
+            self._out_of_memory_close(handle)
+        return self._provides_sources
+
     def load(self):
         handle = self._out_of_memory_open()
-        self.provides_sources = list(handle.keys())
         shapes = [data_source.shape for data_source in handle.values()]
         if any(s[0] != shapes[0][0] for s in shapes):
             raise ValueError("sources have different lengths")
@@ -143,9 +152,12 @@ class H5PYDataset(Dataset):
             stop if self.subset.stop is None else self.subset.stop,
             self.subset.step)
         self.num_examples = self.subset.stop - self.subset.start
-        self.data_sources = ([data_source[self.subset] for
-                              data_source in handle.values()]
-                             if self.load_in_memory else None)
+        if self.load_in_memory:
+            self.data_sources = [data_source[self.subset] for
+                                 source_name, data_source in handle.items()
+                                 if source_name in self.sources]
+        else:
+            self.data_sources = None
         self._out_of_memory_close(handle)
 
     def open(self):
