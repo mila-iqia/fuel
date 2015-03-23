@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import h5py
 import tables
 from six import next
@@ -109,7 +111,7 @@ class H5PYDataset(Dataset):
         documentation for a complete list of available options.
 
     """
-    ref_counts = dict()
+    ref_counts = defaultdict(int)
 
     def __init__(self, path, which_set=None, subset=None, load_in_memory=False,
                  driver=None, **kwargs):
@@ -154,7 +156,7 @@ class H5PYDataset(Dataset):
     def _out_of_memory_open(self):
         file_id = self._get_file_id()
         state = h5py.File(name=file_id, mode="r", driver=self.driver)
-        self.ref_counts[state.id] = self.ref_counts.get(state.id, 0) + 1
+        self.ref_counts[state.id] += 1
         return state
 
     def close(self, state):
