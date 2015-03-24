@@ -29,10 +29,13 @@ Pylearn2_ neural network libraries.
    Fuel is a new project which is still under development. As such, certain
    (all) parts of the framework are subject to change.
 
-   That said, if you are interested in using Fuel and run into any problems,
-   don't hesitate to file bug reports, feature requests, or simply ask for help,
-   by `making a GitHub issue`_.
+.. tip::
 
+   That said, if you are interested in using Fuel and run into any problems,
+   feel free to ask your question on the `mailing list`_. Also, don't hesitate
+   to file bug reports and feature requests by `making a GitHub issue`_.
+
+.. _mailing list: https://groups.google.com/d/forum/fuel-users
 .. _making a GitHub issue: https://github.com/bartvm/fuel/issues/new
 .. _Blocks: https://github.com/bartvm/blocks
 .. _Pylearn2: https://github.com/lisa-lab/pylearb2
