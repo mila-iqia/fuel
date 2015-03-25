@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+import h5py
 import tables
 
 from fuel.datasets import Dataset
@@ -64,3 +67,137 @@ class Hdf5Dataset(Dataset):
                 raise ValueError
         data = [node[request] for node in self.nodes]
         return data
+
+
+@do_not_pickle_attributes('data_sources')
+class H5PYDataset(Dataset):
+    """An h5py-fueled HDF5 dataset.
+
+    This dataset class assumes a particular file layout:
+
+    * Data sources reside in the root group, and their names define the
+      source names.
+    * The dataset is not explicitly split. Instead, splits are defined as
+      attributes of the root group. They're expected to be numpy arrays of
+      shape (2,), with the first element being the starting point
+      (inclusive) of the split and the last element being the stopping
+      point (exclusive) of the split.
+
+    The `which_set`, `start` and `stop` parameters work together in the
+    following way:
+
+    * `which_set` is resolved first. If it is `None`, the whole dataset is
+      used.
+    * `start` and `stop` define a slice *within the context of*
+      `which_set`.
+
+    Parameters
+    ----------
+    path : str
+        Path to the HDF5 file.
+    which_set : str, optional
+        Name of the root group attribute containing the split information.
+        Defaults to `None`, in which case the whole dataset is used.
+    subset : slice, optional
+        A slice of data *within the context of the split* to use. Defaults
+        to `None`, in which case the whole split is used. **Note:
+        at the moment, `slice.step` must be either 1 or `None`.**
+    load_in_memory : bool, optional
+        Whether to load the data in main memory. Defaults to `False`.
+    driver : str, optional
+        Low-level driver to use. Defaults to `None`. See h5py
+        documentation for a complete list of available options.
+
+    """
+    ref_counts = defaultdict(int)
+
+    def __init__(self, path, which_set=None, subset=None, load_in_memory=False,
+                 driver=None, **kwargs):
+        self.path = path
+        self.which_set = which_set
+        self.subset = subset if subset else slice(None, None, None)
+        self.load_in_memory = load_in_memory
+        self.driver = driver
+
+        super(H5PYDataset, self).__init__(**kwargs)
+
+        self.load()
+
+    def _get_file_id(self):
+        file_id = [f for f in self.ref_counts.keys() if f.name == self.path]
+        if not file_id:
+            return self.path
+        file_id, = file_id
+        return file_id
+
+    @property
+    def provides_sources(self):
+        if not hasattr(self, '_provides_sources'):
+            handle = self._out_of_memory_open()
+            self._provides_sources = list(handle.keys())
+            self._out_of_memory_close(handle)
+        return self._provides_sources
+
+    def load(self):
+        handle = self._out_of_memory_open()
+        shapes = [data_source.shape for data_source in handle.values()]
+        if any(s[0] != shapes[0][0] for s in shapes):
+            raise ValueError("sources have different lengths")
+        if self.subset.step not in (1, None):
+            raise ValueError("subset.step must be either 1 or None")
+        start, stop = (handle.attrs[self.which_set] if self.which_set
+                       else (0, shapes[0][0]))
+        self.subset = slice(
+            start if self.subset.start is None else self.subset.start,
+            stop if self.subset.stop is None else self.subset.stop,
+            self.subset.step)
+        self.num_examples = self.subset.stop - self.subset.start
+        if self.load_in_memory:
+            self.data_sources = [data_source[self.subset] for
+                                 source_name, data_source in handle.items()
+                                 if source_name in self.sources]
+        else:
+            self.data_sources = None
+        self._out_of_memory_close(handle)
+
+    def open(self):
+        return None if self.load_in_memory else self._out_of_memory_open()
+
+    def _out_of_memory_open(self):
+        file_id = self._get_file_id()
+        state = h5py.File(name=file_id, mode="r", driver=self.driver)
+        self.ref_counts[state.id] += 1
+        return state
+
+    def close(self, state):
+        if not self.load_in_memory:
+            self._out_of_memory_close(state)
+
+    def _out_of_memory_close(self, state):
+        self.ref_counts[state.id] -= 1
+        if not self.ref_counts[state.id]:
+            del self.ref_counts[state.id]
+            state.close()
+
+    def get_data(self, state=None, request=None):
+        if self.load_in_memory:
+            return self._in_memory_get_data(state=state, request=request)
+        else:
+            return self._out_of_memory_get_data(state=state, request=request)
+
+    def _in_memory_get_data(self, state=None, request=None):
+        if state is not None or request is None:
+            raise ValueError
+        return self.filter_sources([data_source[request] for data_source
+                                    in self.data_sources])
+
+    def _out_of_memory_get_data(self, state=None, request=None):
+        if isinstance(request, slice):
+            request = slice(request.start + self.subset.start,
+                            request.stop + self.subset.start, request.step)
+        elif isinstance(request, list):
+            request = [index + self.subset.start for index in request]
+        else:
+            raise ValueError
+        return self.filter_sources([data_source[request] for data_source in
+                                    state.values()])
