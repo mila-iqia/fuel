@@ -158,7 +158,7 @@ The available data sources are defined by the names of the datasets in the root
 node of the HDF5 file, and :class:`~.datasets.hdf5.H5PYDataset` automatically
 picked them up for us:
 
->>> print(train_set.provides_sources)
+>>> print(train_set.provides_sources) # doctest: +SKIP
 [u'image_features', u'targets', u'vector_features']
 
 We can request data as usual:
@@ -195,7 +195,7 @@ what you requested, and nothing more.
 ...     'dataset.hdf5', which_set='train', subset=slice(0, 80),
 ...     sources=['vector_features'], load_in_memory=True)
 >>> data, = in_memory_train_vector_features.data_sources
->>> print(type(data))
+>>> print(type(data)) # doctest: +SKIP
 <type 'numpy.ndarray'>
 >>> print(data.shape)
 (80, 10)
