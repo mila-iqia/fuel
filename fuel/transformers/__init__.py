@@ -24,6 +24,9 @@ class Transformer(AbstractDataStream):
     batch_input : boolean
         Specification whether the input stream is on example or batch
 
+    batch : boolean
+        Determine wheter the model is working on examples or on batches
+
     """
     def __init__(self, data_stream, batch_input=False,  **kwargs):
         super(Transformer, self).__init__(**kwargs)
@@ -71,14 +74,14 @@ class Transformer(AbstractDataStream):
 
     def get_data_from_example(self, request=None):
         raise NotImplementedError(
-            "`{}` does not support examples as inputs, '\
-            but `batch_input` was set to `False`".format(type(self))
+            "`{}` does not support examples as inputs, "
+            "but `batch_input` was set to `False`".format(type(self))
         )
 
     def get_data_from_batch(self, request=None):
         raise NotImplementedError(
-            "`{}` does not support batches as inputs, '\
-            but `batch_input` was set to `False`".format(type(self))
+            "`{}` does not support batches as inputs, "
+            "but `batch_input` was set to `False`".format(type(self))
         )
 
 
