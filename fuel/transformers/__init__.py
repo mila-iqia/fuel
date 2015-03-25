@@ -22,7 +22,9 @@ class Transformer(AbstractDataStream):
         this attribute. Use it to access data from the wrapped data stream
         by calling ``next(self.child_epoch_iterator)``.
     batch_input : boolean
-        Specification whether the input stream is working on example or batch
+        Specification whether the input stream
+        is working on example or batch
+
     """
     def __init__(self, data_stream, batch_input=False,  **kwargs):
         super(Transformer, self).__init__(**kwargs)
