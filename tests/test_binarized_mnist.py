@@ -1,5 +1,4 @@
 from numpy.testing import assert_raises
-from six.moves import cPickle
 
 from fuel.datasets import BinarizedMNIST
 from tests import skip_if_not_available

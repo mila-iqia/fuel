@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-from collections import OrderedDict
-
-import numpy
 
 from fuel import config
 from fuel.datasets import H5PYDataset
-from fuel.utils import do_not_pickle_attributes
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +45,8 @@ class BinarizedMNIST(H5PYDataset):
     folder = 'binarized_mnist'
     filename = 'binarized_mnist.hdf5'
 
-    def __init__(self, which_set, load_in_memory=True, flatten=False, **kwargs):
+    def __init__(self, which_set, load_in_memory=True, flatten=False,
+                 **kwargs):
         if which_set not in ('train', 'valid', 'test'):
             raise ValueError("available splits are 'train', 'valid' and "
                              "'test'")

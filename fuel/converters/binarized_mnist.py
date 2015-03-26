@@ -11,13 +11,13 @@ default_save_path = os.path.join(default_directory, 'binarized_mnist.hdf5')
 def convert(directory=None, save_path=None):
     """Converts the binarized MNIST dataset to HDF5.
 
-    Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN paper
-    [DBN] to an HDF5 dataset compatible with
+    Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN
+    paper [DBN] to an HDF5 dataset compatible with
     :class:`fuel.datasets.binarized_mnist.BinarizedMNIST`.
 
     This method assumes the existence of the files
-    `binarized_mnist_{train,valid,test}.amat`, which are accessible through
-    Hugo Larochelle's website [HUGO].
+    `binarized_mnist_{train,valid,test}.amat`, which are accessible
+    through Hugo Larochelle's website [HUGO].
 
     .. [DBN] Ruslan Salakhutdinov and Iain Murray, *On the Quantitative
        Analysis of Deep Belief Networks*, Proceedings of the 25th
@@ -36,6 +36,7 @@ def convert(directory=None, save_path=None):
         Where to save the converted dataset. Defaults to `None`, in which
         case `'$FUEL_DATA_PATH/binarized_mnist/binarized_mnist.hdf5'` is
         used.
+
     """
     if directory is None:
         directory = default_directory
