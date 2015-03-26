@@ -8,7 +8,7 @@ default_directory = os.path.join(fuel.config.data_path, 'binarized_mnist')
 default_save_path = os.path.join(default_directory, 'binarized_mnist.hdf5')
 
 
-def convert(directory=default_directory, save_path=default_save_path):
+def convert(directory=None, save_path=None):
     """Converts the binarized MNIST dataset to HDF5.
 
     Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN paper
@@ -37,6 +37,11 @@ def convert(directory=default_directory, save_path=default_save_path):
         case `'$FUEL_DATA_PATH/binarized_mnist/binarized_mnist.hdf5'` is
         used.
     """
+    if directory is None:
+        directory = default_directory
+    if save_path is None:
+        save_path = default_save_path
+
     train_set = numpy.loadtxt(
         os.path.join(directory, 'binarized_mnist_train.amat'))
     valid_set = numpy.loadtxt(
@@ -46,8 +51,10 @@ def convert(directory=default_directory, save_path=default_save_path):
 
     f = h5py.File(save_path, mode="w")
 
-    features = f.create_dataset('features', (70000, 784), dtype='uint8')
-    features[...] = numpy.vstack([train_set, valid_set, test_set])
+    features = f.create_dataset('features', (70000, 1, 28, 28), dtype='uint8')
+    features[...] = numpy.vstack([train_set.reshape((-1, 1, 28, 28)),
+                                  valid_set.reshape((-1, 1, 28, 28)),
+                                  test_set.reshape((-1, 1, 28, 28))])
     f.attrs['train'] = [0, 50000]
     f.attrs['valid'] = [50000, 60000]
     f.attrs['test'] = [60000, 70000]
