@@ -7,7 +7,7 @@ import six
 if six.PY3:
     buffer_ = memoryview
 else:
-    buffer_ = buffer
+    buffer_ = buffer  # noqa
 
 
 def lazy_property_factory(lazy_property):
