@@ -141,15 +141,14 @@ class DataStream(AbstractDataStream):
 
 
 class ServerDataStream(AbstractDataStream):
-    iteration_scheme = None
-
     def __init__(self, sources, min_buffer=10, host='localhost', port=5559):
+        super(ServerDataStream, self).__init__()
         self.sources = sources
 
         # Connect to server
         context = zmq.Context()
         self.socket = socket = context.socket(zmq.REQ)
-        socket.connect("tcp://localhost:5559")
+        socket.connect("tcp://{}:{}".format(host, port))
 
         # Buffer
         while True:

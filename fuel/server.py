@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level='INFO')
 
 
-def send_arrays(socket, arrays, flags=0, copy=True, track=False, stop=False):
-    """Send a NumPy array using the buffer interface and some metadata.
+def send_arrays(socket, arrays, stop=False):
+    """Send NumPy arrays using the buffer interface and some metadata.
 
     Parameters
     ----------
@@ -26,10 +26,6 @@ def send_arrays(socket, arrays, flags=0, copy=True, track=False, stop=False):
         with a single `stop` key. The :func:`recv_arrays` will raise
         ``StopIteration`` when it receives this.
 
-    See Also
-    --------
-    :meth:`zmq.Socket.send` for other arguments
-
     Notes
     -----
     The protocol is very simple: A single JSON object that contains the
@@ -40,18 +36,18 @@ def send_arrays(socket, arrays, flags=0, copy=True, track=False, stop=False):
     """
     if stop:
         mds = {'stop': True}
-        return socket.send_json(mds, flags)
+        return socket.send_json(mds)
     else:
         mds = [{'dtype': str(array.dtype), 'shape': array.shape}
                for array in arrays]
-        socket.send_json(mds, flags | zmq.SNDMORE)
+        socket.send_json(mds, zmq.SNDMORE)
         for array in arrays[:-1]:
-            socket.send(array, flags | zmq.SNDMORE, copy=copy, track=track)
-        return socket.send(arrays[-1], flags, copy=copy, track=track)
+            socket.send(array, zmq.SNDMORE)
+        return socket.send(arrays[-1])
 
 
-def recv_arrays(socket, flags=0, copy=True, track=False):
-    """Receive a NumPy array.
+def recv_arrays(socket):
+    """Receive a list of NumPy arrays.
 
     Parameters
     ----------
@@ -68,19 +64,13 @@ def recv_arrays(socket, flags=0, copy=True, track=False):
     StopIteration
         If the first JSON object received contains the key `stop`.
 
-    See Also
-    --------
-    :func:`send_arrays` for an explanation of the protocol used to transfer
-    arrays, and :meth:`zmq.Socket.recv` for an explanation of the other
-    arguments.
-
     """
-    mds = socket.recv_json(flags=flags)
+    mds = socket.recv_json()
     if 'stop' in mds:
         raise StopIteration
     arrays = []
     for md in mds:
-        data = socket.recv(flags=flags, copy=copy, track=track)
+        data = socket.recv()
         buf = buffer_(data)
         array = numpy.frombuffer(buf, dtype=md['dtype'])
         arrays.append(array.reshape(md['shape']))
@@ -175,14 +165,3 @@ def start_server(data_stream, server_port=5560, client_port=5559):
     """
     Process(target=broker, args=(server_port, client_port)).start()
     server(data_stream, server_port)
-
-if __name__ == "__main__":
-    # A sample server that returns MNIST batches
-    from fuel.datasets import MNIST
-    from fuel.streams import DataStream
-    from fuel.schemes import SequentialScheme
-    mnist = MNIST('train')
-    data_stream = DataStream(
-        mnist, iteration_scheme=SequentialScheme(1500, 500)
-    )
-    start_server(data_stream)
