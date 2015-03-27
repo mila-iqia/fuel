@@ -5,7 +5,7 @@ import zmq
 from six import add_metaclass
 
 from fuel.iterator import DataIterator
-from fuel.server import recv_array
+from fuel.server import recv_arrays
 
 
 @add_metaclass(ABCMeta)
@@ -163,8 +163,8 @@ class ServerDataStream(AbstractDataStream):
         if request is not None:
             raise ValueError
         self.socket.send(b'next')
-        data = recv_array(self.socket)
-        return (data,)
+        data = recv_arrays(self.socket)
+        return tuple(data)
 
     def get_epoch_iterator(self, **kwargs):
         return super(ServerDataStream, self).get_epoch_iterator(**kwargs)

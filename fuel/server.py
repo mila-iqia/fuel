@@ -12,25 +12,32 @@ LOGGER = logging.getLogger('server')
 logging.basicConfig(level='INFO')
 
 
-def send_array(socket, A, flags=0, copy=True, track=False, stop=False):
+def send_arrays(socket, arrays, flags=0, copy=True, track=False, stop=False):
     """Send a NumPy array using the buffer interface and some metadata."""
     if stop:
-        md = {'stop': True}
+        mds = {'stop': True}
+        socket.send_json(mds, flags)
     else:
-        md = {'dtype': str(A.dtype), 'shape': A.shape}
-    socket.send_json(md, flags | zmq.SNDMORE)
-    return socket.send(A, flags, copy=copy, track=track)
+        mds = [{'dtype': str(array.dtype), 'shape': array.shape}
+               for array in arrays]
+        socket.send_json(mds, flags | zmq.SNDMORE)
+        for array in arrays[:-1]:
+            socket.send(array, flags | zmq.SNDMORE, copy=copy, track=track)
+        return socket.send(arrays[-1], flags, copy=copy, track=track)
 
 
-def recv_array(socket, flags=0, copy=True, track=False):
+def recv_arrays(socket, flags=0, copy=True, track=False):
     """Receive a NumPy array."""
-    md = socket.recv_json(flags=flags)
-    data = socket.recv(flags=flags, copy=copy, track=track)
-    if 'stop' in md:
+    mds = socket.recv_json(flags=flags)
+    if 'stop' in mds:
         raise StopIteration
-    buf = buffer_(data)
-    A = numpy.frombuffer(buf, dtype=md['dtype'])
-    return A.reshape(md['shape'])
+    arrays = []
+    for md in mds:
+        data = socket.recv(flags=flags, copy=copy, track=track)
+        buf = buffer_(data)
+        array = numpy.frombuffer(buf, dtype=md['dtype'])
+        arrays.append(array.reshape(md['shape']))
+    return arrays
 
 
 def server(data_stream):
@@ -49,9 +56,9 @@ def server(data_stream):
             stop = False
         except StopIteration:
             it = data_stream.get_epoch_iterator()
-            data = (numpy.empty((0,)),)
+            data = None
             stop = True
-        send_array(socket, data[0], stop=stop)
+        send_arrays(socket, data, stop=stop)
 
 
 def broker():
@@ -115,6 +122,6 @@ if __name__ == "__main__":
     from fuel.schemes import SequentialScheme
     mnist = MNIST('train')
     data_stream = DataStream(
-        mnist, iteration_scheme=SequentialScheme(mnist.num_examples, 500)
+        mnist, iteration_scheme=SequentialScheme(1500, 500)
     )
     start_server(data_stream)
