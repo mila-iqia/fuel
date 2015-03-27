@@ -215,8 +215,10 @@ class H5PYDataset(Dataset):
             raise ValueError
         rval = []
         for source_name, data_source in state.items():
+            if source_name not in self.sources:
+                continue
             data = data_source[request]
             if source_name in self.flatten:
                 data = data.reshape((data.shape[0], -1))
             rval.append(data)
-        return self.filter_sources(rval)
+        return tuple(rval)
