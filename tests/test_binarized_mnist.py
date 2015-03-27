@@ -1,8 +1,5 @@
-import os
-
 from numpy.testing import assert_raises
 
-from fuel import config
 from fuel.datasets import BinarizedMNIST
 from tests import skip_if_not_available
 
