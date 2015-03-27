@@ -1,9 +1,5 @@
-import os
-import pickle
-import tables
 from collections import OrderedDict
 
-import h5py
 import numpy
 import operator
 from six.moves import zip, range
@@ -12,7 +8,6 @@ from picklable_itertools import repeat
 
 from fuel import config
 from fuel.datasets import IterableDataset, IndexableDataset
-from fuel.datasets.hdf5 import Hdf5Dataset, H5PYDataset
 from fuel.streams import DataStream
 from fuel.transformers import (Cache, Mapping, Batch, Padding, Filter,
                                ForceFloatX, SortMapping)
