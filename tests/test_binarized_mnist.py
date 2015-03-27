@@ -4,17 +4,11 @@ from numpy.testing import assert_raises
 
 from fuel import config
 from fuel.datasets import BinarizedMNIST
-from fuel.converters.binarized_mnist import convert
 from tests import skip_if_not_available
 
 
 def test_binarized_mnist():
     skip_if_not_available(datasets=['binarized_mnist'])
-
-    file_dir = os.path.join(config.data_path, 'binarized_mnist')
-    file_path = os.path.join(file_dir, 'binarized_mnist.hdf5')
-    if not os.path.exists(file_path):
-        convert(file_dir, file_path)
 
     mnist_train = BinarizedMNIST('train')
     handle = mnist_train.open()
