@@ -95,6 +95,7 @@ def server(data_stream, server_port):
 
     it = data_stream.get_epoch_iterator()
 
+    logger.info('server started')
     while True:
         socket.recv()
         try:
@@ -127,7 +128,7 @@ def broker(server_port, client_port):
     queue = deque()
     to_buffer = 0
 
-    logger.debug('broker started successfully')
+    logger.info('broker started')
     while True:
         socks = dict(poller.poll())
 
