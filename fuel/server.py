@@ -6,6 +6,8 @@ import numpy
 import six
 import zmq
 
+from fuel.utils import buffer_
+
 LOGGER = logging.getLogger('server')
 logging.basicConfig(level='INFO')
 
@@ -26,7 +28,7 @@ def recv_array(socket, flags=0, copy=True, track=False):
     data = socket.recv(flags=flags, copy=copy, track=track)
     if 'stop' in md:
         raise StopIteration
-    buf = buffer(data)
+    buf = buffer_(data)
     A = numpy.frombuffer(buf, dtype=md['dtype'])
     return A.reshape(md['shape'])
 
@@ -76,7 +78,7 @@ def broker():
 
         if socks.get(frontend) == zmq.POLLIN:
             message = frontend.recv_multipart()
-            if message[2] == "buffer":
+            if message[2] == six.b("buffer"):
                 LOGGER.info("Received buffering request.")
                 to_buffer += 1
             else:

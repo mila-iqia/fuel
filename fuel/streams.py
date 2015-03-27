@@ -155,7 +155,7 @@ class ServerDataStream(AbstractDataStream):
         while True:
             socket.send(b"buffer")
             message, = socket.recv_multipart()
-            buffer_size = six.byte2int(message[0])
+            buffer_size = six.byte2int(message)
             if buffer_size >= min_buffer:
                 break
 
