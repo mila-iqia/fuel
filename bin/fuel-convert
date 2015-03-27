@@ -7,7 +7,8 @@ from fuel import converters
 
 
 if __name__ == "__main__":
-    dataset_options = dict((fn.__name__, fn) for fn in converters.__all__)
+    dataset_options = dict(
+        (name, getattr(converters, name)) for name in converters.__all__)
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset", help="what dataset to convert",
                         choices=dataset_options.keys())

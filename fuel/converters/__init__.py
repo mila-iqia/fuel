@@ -17,4 +17,4 @@ Conversion methods accept two arguments:
 """
 from fuel.converters.binarized_mnist import binarized_mnist
 
-__all__ = (binarized_mnist,)
+__all__ = ('binarized_mnist',)
