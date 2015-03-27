@@ -134,7 +134,7 @@ class H5PYDataset(Dataset):
     def provides_sources(self):
         if not hasattr(self, '_provides_sources'):
             handle = self._out_of_memory_open()
-            self._provides_sources = list(handle.keys())
+            self._provides_sources = tuple(handle.keys())
             self._out_of_memory_close(handle)
         return self._provides_sources
 
