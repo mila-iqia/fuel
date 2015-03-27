@@ -8,7 +8,7 @@ default_directory = os.path.join(fuel.config.data_path, 'binarized_mnist')
 default_save_path = os.path.join(default_directory, 'binarized_mnist.hdf5')
 
 
-def convert(directory=None, save_path=None):
+def binarized_mnist(directory=None, save_path=None):
     """Converts the binarized MNIST dataset to HDF5.
 
     Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN

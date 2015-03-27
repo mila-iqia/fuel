@@ -7,18 +7,15 @@ from fuel import converters
 
 
 if __name__ == "__main__":
-    dataset_options = [
-        m[1] for m in pkgutil.iter_modules(converters.__path__) if not m[2]]
+    dataset_options = dict((fn.__name__, fn) for fn in converters.__all__)
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset", help="what dataset to convert",
-                        choices=dataset_options)
+                        choices=dataset_options.keys())
     parser.add_argument("-d", "--directory", help="directory in which input " +
                         "files reside", type=str, default=None)
     parser.add_argument("-o", "--output-file", help="where to save the " +
                         "dataset", type=str, default=None)
     args = parser.parse_args()
 
-    converter_module = importlib.import_module(
-        'fuel.converters.{}'.format(args.dataset))
-    converter_module.convert(directory=args.directory,
-                             save_path=args.output_file)
+    dataset_options[args.dataset](
+        directory=args.directory, save_path=args.output_file)
