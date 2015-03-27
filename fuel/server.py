@@ -10,9 +10,12 @@ LOGGER = logging.getLogger('server')
 logging.basicConfig(level='INFO')
 
 
-def send_array(socket, A, flags=0, copy=True, track=False):
+def send_array(socket, A, flags=0, copy=True, track=False, stop=False):
     """Send a NumPy array using the buffer interface and some metadata."""
-    md = {'dtype': str(A.dtype), 'shape': A.shape}
+    if stop:
+        md = {'stop': True}
+    else:
+        md = {'dtype': str(A.dtype), 'shape': A.shape}
     socket.send_json(md, flags | zmq.SNDMORE)
     return socket.send(A, flags, copy=copy, track=track)
 
@@ -21,6 +24,8 @@ def recv_array(socket, flags=0, copy=True, track=False):
     """Receive a NumPy array."""
     md = socket.recv_json(flags=flags)
     data = socket.recv(flags=flags, copy=copy, track=track)
+    if 'stop' in md:
+        raise StopIteration
     buf = buffer(data)
     A = numpy.frombuffer(buf, dtype=md['dtype'])
     return A.reshape(md['shape'])
@@ -39,10 +44,12 @@ def server(data_stream):
         LOGGER.info("Sending NumPy array.")
         try:
             data = next(it)
+            stop = False
         except StopIteration:
             it = data_stream.get_epoch_iterator()
-            data = next(it)
-        send_array(socket, data[0])
+            data = (numpy.empty((0,)),)
+            stop = True
+        send_array(socket, data[0], stop=stop)
 
 
 def broker():
@@ -100,12 +107,12 @@ def start_server(data_stream):
     server(data_stream)
 
 if __name__ == "__main__":
-    # A sample server that returns small MNIST batches
+    # A sample server that returns MNIST batches
     from fuel.datasets import MNIST
     from fuel.streams import DataStream
     from fuel.schemes import SequentialScheme
     mnist = MNIST('train')
     data_stream = DataStream(
-        mnist, iteration_scheme=SequentialScheme(mnist.num_examples, 4)
+        mnist, iteration_scheme=SequentialScheme(mnist.num_examples, 500)
     )
     start_server(data_stream)

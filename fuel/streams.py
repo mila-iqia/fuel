@@ -1,8 +1,11 @@
 from abc import ABCMeta, abstractmethod
 
+import six
+import zmq
 from six import add_metaclass
 
 from fuel.iterator import DataIterator
+from fuel.server import recv_array
 
 
 @add_metaclass(ABCMeta)
@@ -135,3 +138,42 @@ class DataStream(AbstractDataStream):
         else:
             self._fresh_state = False
         return super(DataStream, self).get_epoch_iterator(**kwargs)
+
+
+class ServerDataStream(AbstractDataStream):
+    iteration_scheme = None
+
+    def __init__(self, sources, min_buffer=10, host='localhost', port=5559):
+        self.sources = sources
+
+        # Connect to server
+        context = zmq.Context()
+        self.socket = socket = context.socket(zmq.REQ)
+        socket.connect("tcp://localhost:5559")
+
+        # Buffer
+        while True:
+            socket.send(b"buffer")
+            message, = socket.recv_multipart()
+            buffer_size = six.byte2int(message[0])
+            if buffer_size >= min_buffer:
+                break
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        self.socket.send(b'next')
+        data = recv_array(self.socket)
+        return (data,)
+
+    def get_epoch_iterator(self, **kwargs):
+        return super(ServerDataStream, self).get_epoch_iterator(**kwargs)
+
+    def close(self):
+        pass
+
+    def next_epoch(self):
+        pass
+
+    def reset(self):
+        pass
