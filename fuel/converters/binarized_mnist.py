@@ -13,7 +13,7 @@ def binarized_mnist(directory=None, save_path=None):
 
     Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN
     paper [DBN] to an HDF5 dataset compatible with
-    :class:`fuel.datasets.binarized_mnist.BinarizedMNIST`.
+    :class:`fuel.datasets.BinarizedMNIST`.
 
     This method assumes the existence of the files
     `binarized_mnist_{train,valid,test}.amat`, which are accessible
