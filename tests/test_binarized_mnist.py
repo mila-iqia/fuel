@@ -31,7 +31,7 @@ def test_binarized_mnist():
     assert_raises(ValueError, BinarizedMNIST, 'dummy')
 
     mnist_test_flattened = BinarizedMNIST(
-        'test', flatten=True, load_in_memory=True)
+        'test', flatten=['features'], load_in_memory=True)
     handle = mnist_test_flattened.open()
     data = mnist_test_flattened.get_data(handle, slice(0, 10000))[0]
     assert data.shape == (10000, 784)

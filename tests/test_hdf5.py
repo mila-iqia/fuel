@@ -4,6 +4,7 @@ import tables
 
 import h5py
 import numpy
+from numpy.testing import assert_equal, assert_raises
 from six.moves import range
 
 from fuel.datasets.hdf5 import Hdf5Dataset, H5PYDataset
@@ -113,4 +114,60 @@ def test_h5py_dataset_in_memory():
     train_set.close(train_handle)
     test_set.close(test_handle)
 
+    os.remove('tmp.hdf5')
+
+
+def test_h5py_flatten_in_memory():
+    h5file = h5py.File(name='tmp.hdf5', mode="w")
+    features = h5file.create_dataset(
+        'features', (10, 2, 3), dtype='float32')
+    features[...] = numpy.arange(60, dtype='float32').reshape((10, 2, 3))
+    targets = h5file.create_dataset('targets', (10,), dtype='uint8')
+    targets[...] = numpy.arange(10, dtype='uint8')
+    h5file.flush()
+    h5file.close()
+    dataset = H5PYDataset(
+        path='tmp.hdf5', load_in_memory=True, flatten=['features'])
+    handle = dataset.open()
+    assert_equal(
+        dataset.get_data(state=handle, request=slice(0, 10))[0],
+        numpy.arange(60).reshape((10, 6)))
+    dataset.close(handle)
+    os.remove('tmp.hdf5')
+
+
+def test_h5py_flatten_out_of_memory():
+    h5file = h5py.File(name='tmp.hdf5', mode="w")
+    features = h5file.create_dataset(
+        'features', (10, 2, 3), dtype='float32')
+    features[...] = numpy.arange(60, dtype='float32').reshape((10, 2, 3))
+    targets = h5file.create_dataset('targets', (10,), dtype='uint8')
+    targets[...] = numpy.arange(10, dtype='uint8')
+    h5file.flush()
+    h5file.close()
+    dataset = H5PYDataset(
+        path='tmp.hdf5', load_in_memory=False, flatten=['features'])
+    handle = dataset.open()
+    assert_equal(
+        dataset.get_data(state=handle, request=slice(0, 10))[0],
+        numpy.arange(60).reshape((10, 6)))
+    dataset.close(handle)
+    os.remove('tmp.hdf5')
+
+
+def test_h5py_flatten_raises_error_on_invalid_name():
+    h5file = h5py.File(name='tmp.hdf5', mode="w")
+    features = h5file.create_dataset(
+        'features', (10, 2, 3), dtype='float32')
+    features[...] = numpy.arange(60, dtype='float32').reshape((10, 2, 3))
+    targets = h5file.create_dataset('targets', (10,), dtype='uint8')
+    targets[...] = numpy.arange(10, dtype='uint8')
+    h5file.flush()
+    h5file.close()
+    dataset = H5PYDataset(
+        path='tmp.hdf5', load_in_memory=False, flatten=['features'])
+    handle = dataset.open()
+    assert_raises(
+        ValueError, H5PYDataset, 'tmp.hdf5', None, None, False, 'foo', None)
+    dataset.close(handle)
     os.remove('tmp.hdf5')

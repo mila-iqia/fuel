@@ -45,12 +45,10 @@ class BinarizedMNIST(H5PYDataset):
     folder = 'binarized_mnist'
     filename = 'binarized_mnist.hdf5'
 
-    def __init__(self, which_set, load_in_memory=True, flatten=False,
-                 **kwargs):
+    def __init__(self, which_set, load_in_memory=True, **kwargs):
         if which_set not in ('train', 'valid', 'test'):
             raise ValueError("available splits are 'train', 'valid' and "
                              "'test'")
-        self.flatten = flatten
         super(BinarizedMNIST, self).__init__(
             path=self.data_path, which_set=which_set,
             load_in_memory=load_in_memory, **kwargs)
@@ -58,11 +56,3 @@ class BinarizedMNIST(H5PYDataset):
     @property
     def data_path(self):
         return os.path.join(config.data_path, self.folder, self.filename)
-
-    def get_data(self, state=None, request=None):
-        data = super(BinarizedMNIST, self).get_data(state, request)
-        if 'features' in self.sources and self.flatten:
-            i = self.sources.index('features')
-            data = (data[:i] + (data[i].reshape((data[i].shape[0], 784)),) +
-                    data[i + 1:])
-        return data
