@@ -29,16 +29,6 @@ before_install:
         gunzip *-ubyte.gz
         cd -
       fi
-  # Download binarized MNIST for tests if not loaded from cache
-  - |
-      if find binarized_mnist -empty | read; then
-        mkdir binarized_mnist
-        cd binarized_mnist
-        curl -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_train.amat \
-             -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_valid.amat \
-             -O http://www.cs.toronto.edu/~larocheh/public/datasets/binarized_mnist/binarized_mnist_test.amat
-        cd -
-      fi
     # Download CIFAR10 for tests if not loaded from cache
   - |
       if find cifar10 -empty | read; then
