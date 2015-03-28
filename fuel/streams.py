@@ -1,8 +1,10 @@
 from abc import ABCMeta, abstractmethod
 
+import zmq
 from six import add_metaclass
 
 from fuel.iterator import DataIterator
+from fuel.server import recv_arrays
 
 
 @add_metaclass(ABCMeta)
@@ -135,3 +137,51 @@ class DataStream(AbstractDataStream):
         else:
             self._fresh_state = False
         return super(DataStream, self).get_epoch_iterator(**kwargs)
+
+
+class ServerDataStream(AbstractDataStream):
+    """A data stream that receives batches from a Fuel server.
+
+    Parameters
+    ----------
+    host : str, optional
+        The host to connect to. Defaults to ``localhost``.
+    port : int, optional
+        The port to connect on. Defaults to 5557.
+    hwm : int, optional
+        The `ZeroMQ high-water mark (HWM)
+        <http://zguide.zeromq.org/page:all#High-Water-Marks>`_ on the
+        receiving socket. Increasing this increases the buffer, which can
+        be useful if your data preprocessing times are very random.
+        However, it will increase memory usage. There is no easy way to
+        tell how many batches will actually be queued with a particular
+        HWM. Defaults to 10. Be sure to set the corresponding HWM on the
+        server's end as well.
+
+    """
+    def __init__(self, sources, host='localhost', port=5557, hwm=10):
+        super(ServerDataStream, self).__init__()
+        self.sources = sources
+
+        context = zmq.Context()
+        self.socket = socket = context.socket(zmq.PULL)
+        socket.set_hwm(hwm)
+        socket.connect("tcp://{}:{}".format(host, port))
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = recv_arrays(self.socket)
+        return tuple(data)
+
+    def get_epoch_iterator(self, **kwargs):
+        return super(ServerDataStream, self).get_epoch_iterator(**kwargs)
+
+    def close(self):
+        pass
+
+    def next_epoch(self):
+        pass
+
+    def reset(self):
+        pass

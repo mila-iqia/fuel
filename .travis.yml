@@ -52,7 +52,7 @@ before_install:
 install:
   # Install all Python dependencies
   - conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six toolz pytables h5py
-  - pip install -q nose2[coverage-plugin] coveralls
+  - pip install -q coveralls
 script:
   - pip install . -r requirements.txt
   - |

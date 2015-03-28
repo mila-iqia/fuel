@@ -1,5 +1,14 @@
 import collections
 
+import six
+
+
+# See http://python3porting.com/differences.html#buffer
+if six.PY3:
+    buffer_ = memoryview
+else:
+    buffer_ = buffer  # noqa
+
 
 def lazy_property_factory(lazy_property):
     """Create properties that perform lazy loading of attributes."""
