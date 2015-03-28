@@ -1,6 +1,6 @@
 """Download modules for built-in datasets.
 
-Download methods accept a single argument, `save_path`, which tells
+Download methods accept a single argument, `save_directory`, which tells
 where to save the downloaded files.
 
 """

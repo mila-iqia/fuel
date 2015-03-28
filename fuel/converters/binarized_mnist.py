@@ -4,16 +4,14 @@ import fuel
 import h5py
 import numpy
 
-default_directory = os.path.join(fuel.config.data_path, 'binarized_mnist')
-default_save_path = os.path.join(default_directory, 'binarized_mnist.hdf5')
 
-
-def binarized_mnist(directory=None, save_path=None):
+def binarized_mnist(input_directory, save_directory):
     """Converts the binarized MNIST dataset to HDF5.
 
     Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN
     paper [DBN] to an HDF5 dataset compatible with
-    :class:`fuel.datasets.BinarizedMNIST`.
+    :class:`fuel.datasets.BinarizedMNIST`. The converted dataset is
+    saved as 'binarized_mnist.hdf5'.
 
     This method assumes the existence of the files
     `binarized_mnist_{train,valid,test}.amat`, which are accessible
@@ -28,27 +26,21 @@ def binarized_mnist(directory=None, save_path=None):
 
     Parameters
     ----------
-    directory : str, optional
-        Base directory in which the required input files reside. Defaults
-        to `None`, in which case `'$FUEL_DATA_PATH/binarized_mnist'` is
-        used.
-    save_path : str, optional
-        Where to save the converted dataset. Defaults to `None`, in which
-        case `'$FUEL_DATA_PATH/binarized_mnist/binarized_mnist.hdf5'` is
-        used.
+    input_directory : str
+        Directory in which the required input files reside.
+    save_directory : str
+        Directory in which the the converted dataset is saved.
 
     """
-    if directory is None:
-        directory = default_directory
-    if save_path is None:
-        save_path = default_save_path
+    file_name = 'binarized_mnist.hdf5'
+    save_path = os.path.join(save_directory, file_name)
 
     train_set = numpy.loadtxt(
-        os.path.join(directory, 'binarized_mnist_train.amat'))
+        os.path.join(input_directory, 'binarized_mnist_train.amat'))
     valid_set = numpy.loadtxt(
-        os.path.join(directory, 'binarized_mnist_valid.amat'))
+        os.path.join(input_directory, 'binarized_mnist_valid.amat'))
     test_set = numpy.loadtxt(
-        os.path.join(directory, 'binarized_mnist_test.amat'))
+        os.path.join(input_directory, 'binarized_mnist_test.amat'))
 
     f = h5py.File(save_path, mode="w")
 
