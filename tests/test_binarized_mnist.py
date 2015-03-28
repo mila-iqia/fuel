@@ -1,30 +1,38 @@
 from numpy.testing import assert_raises
-from six.moves import cPickle
 
 from fuel.datasets import BinarizedMNIST
 from tests import skip_if_not_available
 
 
-def test_mnist():
+def test_binarized_mnist():
     skip_if_not_available(datasets=['binarized_mnist'])
-    mnist_train = BinarizedMNIST('train')
-    assert len(mnist_train.features) == 50000
-    assert mnist_train.num_examples == 50000
-    mnist_valid = BinarizedMNIST('valid')
-    assert len(mnist_valid.features) == 10000
-    assert mnist_valid.num_examples == 10000
-    mnist_test = BinarizedMNIST('test')
-    assert len(mnist_test.features) == 10000
-    assert mnist_test.num_examples == 10000
 
-    first_feature, = mnist_train.get_data(request=[0])
-    assert first_feature.shape == (1, 784)
-    assert first_feature.dtype.kind == 'f'
+    mnist_train = BinarizedMNIST('train')
+    handle = mnist_train.open()
+    data = mnist_train.get_data(handle, slice(0, 50000))[0]
+    assert data.shape == (50000, 1, 28, 28)
+    assert mnist_train.num_examples == 50000
+    mnist_train.close(handle)
+
+    mnist_valid = BinarizedMNIST('valid')
+    handle = mnist_valid.open()
+    data = mnist_valid.get_data(handle, slice(0, 10000))[0]
+    assert data.shape == (10000, 1, 28, 28)
+    assert mnist_valid.num_examples == 10000
+    mnist_valid.close(handle)
+
+    mnist_test = BinarizedMNIST('test')
+    handle = mnist_test.open()
+    data = mnist_test.get_data(handle, slice(0, 10000))[0]
+    assert data.shape == (10000, 1, 28, 28)
+    assert mnist_test.num_examples == 10000
+    mnist_test.close(handle)
 
     assert_raises(ValueError, BinarizedMNIST, 'dummy')
 
-    mnist_test = cPickle.loads(cPickle.dumps(mnist_test))
-    assert len(mnist_test.features) == 10000
-
-    mnist_test_unflattened = BinarizedMNIST('test', flatten=False)
-    assert mnist_test_unflattened.features.shape == (10000, 28, 28)
+    mnist_test_flattened = BinarizedMNIST(
+        'test', flatten=['features'], load_in_memory=True)
+    handle = mnist_test_flattened.open()
+    data = mnist_test_flattened.get_data(handle, slice(0, 10000))[0]
+    assert data.shape == (10000, 784)
+    mnist_test_flattened.close(handle)

@@ -104,6 +104,8 @@ class H5PYDataset(Dataset):
         at the moment, `slice.step` must be either 1 or `None`.**
     load_in_memory : bool, optional
         Whether to load the data in main memory. Defaults to `False`.
+    flatten : list of str, optional
+        Which sources to flatten as a 2D array, if any. Defaults to `None`.
     driver : str, optional
         Low-level driver to use. Defaults to `None`. See h5py
         documentation for a complete list of available options.
@@ -112,14 +114,21 @@ class H5PYDataset(Dataset):
     ref_counts = defaultdict(int)
 
     def __init__(self, path, which_set=None, subset=None, load_in_memory=False,
-                 driver=None, **kwargs):
+                 flatten=None, driver=None, **kwargs):
         self.path = path
         self.which_set = which_set
         self.subset = subset if subset else slice(None, None, None)
         self.load_in_memory = load_in_memory
+        self.flatten = [] if flatten is None else flatten
         self.driver = driver
 
         super(H5PYDataset, self).__init__(**kwargs)
+
+        for source in self.flatten:
+            if source not in self.provides_sources:
+                raise ValueError("trying to flatten source " +
+                                 "'{}' which is not part of ".format(source) +
+                                 "the provided sources")
 
         self.load()
 
@@ -153,9 +162,14 @@ class H5PYDataset(Dataset):
             self.subset.step)
         self.num_examples = self.subset.stop - self.subset.start
         if self.load_in_memory:
-            self.data_sources = [data_source[self.subset] for
-                                 source_name, data_source in handle.items()
-                                 if source_name in self.sources]
+            data_sources = []
+            for source_name, data_source in handle.items():
+                if source_name in self.sources:
+                    data = data_source[self.subset]
+                    if source_name in self.flatten:
+                        data = data.reshape((data.shape[0], -1))
+                    data_sources.append(data)
+            self.data_sources = data_sources
         else:
             self.data_sources = None
         self._out_of_memory_close(handle)
@@ -199,5 +213,12 @@ class H5PYDataset(Dataset):
             request = [index + self.subset.start for index in request]
         else:
             raise ValueError
-        return self.filter_sources([data_source[request] for data_source in
-                                    state.values()])
+        rval = []
+        for source_name, data_source in state.items():
+            if source_name not in self.sources:
+                continue
+            data = data_source[request]
+            if source_name in self.flatten:
+                data = data.reshape((data.shape[0], -1))
+            rval.append(data)
+        return tuple(rval)

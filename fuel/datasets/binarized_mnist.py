@@ -1,19 +1,14 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-from collections import OrderedDict
-
-import numpy
 
 from fuel import config
-from fuel.datasets import IndexableDataset
-from fuel.utils import do_not_pickle_attributes
+from fuel.datasets import H5PYDataset
 
 logger = logging.getLogger(__name__)
 
 
-@do_not_pickle_attributes('indexables')
-class BinarizedMNIST(IndexableDataset):
+class BinarizedMNIST(H5PYDataset):
     u"""Binarized, unlabeled MNIST dataset.
 
     MNIST (Mixed National Institute of Standards and Technology) [LBBH] is
@@ -47,40 +42,17 @@ class BinarizedMNIST(IndexableDataset):
         set (10,000 samples) or the test set (10,000 samples).
 
     """
-    provides_sources = ('features',)
     folder = 'binarized_mnist'
-    files = {set_: 'binarized_mnist_{}.npy'.format(set_) for set_ in
-             ('train', 'valid', 'test')}
+    filename = 'binarized_mnist.hdf5'
 
-    def __init__(self, which_set, flatten=True, **kwargs):
+    def __init__(self, which_set, load_in_memory=True, **kwargs):
         if which_set not in ('train', 'valid', 'test'):
             raise ValueError("available splits are 'train', 'valid' and "
                              "'test'")
-        self.which_set = which_set
-        self.flatten = flatten
-
         super(BinarizedMNIST, self).__init__(
-            OrderedDict(zip(self.provides_sources,
-                            self._load_binarized_mnist())), **kwargs)
+            path=self.data_path, which_set=which_set,
+            load_in_memory=load_in_memory, **kwargs)
 
     @property
     def data_path(self):
-        return os.path.join(config.data_path, self.folder,
-                            self.files[self.which_set])
-
-    def load(self):
-        indexable, = self._load_binarized_mnist()
-        self.indexables = [indexable[self.start:self.stop]]
-
-    def _load_binarized_mnist(self):
-        if os.path.isfile(self.data_path):
-            images = numpy.load(self.data_path).astype(config.floatX)
-        else:
-            logger.warn("The faster .npy version of binarized_mnist_{} isn't "
-                        "available, falling back to the .amat version."
-                        .format(self.which_set))
-            images = numpy.loadtxt(self.data_path[:-3] + 'amat',
-                                   dtype=config.floatX)
-            if not self.flatten:
-                images = images.reshape((len(images), 28, 28))
-        return [images]
+        return os.path.join(config.data_path, self.folder, self.filename)
