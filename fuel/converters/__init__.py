@@ -7,7 +7,7 @@ Conversion functions accept two arguments:
 
 * `input_directory` : Directory containing input files expected by the
                       conversion function.
-* `save_directory`  : Directory in which the converted data is saved.
+* `save_path`  : Where to save the converted dataset.
 
 """
 from fuel.converters.binarized_mnist import binarized_mnist

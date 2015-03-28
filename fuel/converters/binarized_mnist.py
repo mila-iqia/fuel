@@ -4,7 +4,7 @@ import h5py
 import numpy
 
 
-def binarized_mnist(input_directory, save_directory):
+def binarized_mnist(input_directory, save_path):
     """Converts the binarized MNIST dataset to HDF5.
 
     Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN
@@ -27,13 +27,10 @@ def binarized_mnist(input_directory, save_directory):
     ----------
     input_directory : str
         Directory in which the required input files reside.
-    save_directory : str
-        Directory in which the the converted dataset is saved.
+    save_path : str
+        Where to save the converted dataset.
 
     """
-    file_name = 'binarized_mnist.hdf5'
-    save_path = os.path.join(save_directory, file_name)
-
     train_set = numpy.loadtxt(
         os.path.join(input_directory, 'binarized_mnist_train.amat'))
     valid_set = numpy.loadtxt(
