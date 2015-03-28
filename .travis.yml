@@ -3,7 +3,6 @@ cache:
   directories:
     - $TRAVIS_BUILD_DIR/mnist
     - $TRAVIS_BUILD_DIR/cifar10
-    - $TRAVIS_BUILD_DIR/binarized_mnist
 branches:
   only:
     - master
@@ -56,10 +55,12 @@ install:
 script:
   - pip install . -r requirements.txt
   - |
-      if [ ! -f binarized_mnist/binarized_mnist.hdf5 ]; then
-        fuel-convert binarized_mnist \
-                     -d binarized_mnist \
-                     -o binarized_mnist/binarized_mnist.hdf5
+      if [ ! -f binarized_mnist_train.amat ]; then
+        fuel-download binarized_mnist
+      fi
+  - |
+      if [ ! -f binarized_mnist.hdf5 ]; then
+        fuel-convert binarized_mnist
       fi
   # With Fuel installed we can install Blocks
   - pip install -e git+git://github.com/bartvm/blocks.git#egg=blocks[test,plot] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt

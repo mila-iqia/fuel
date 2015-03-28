@@ -42,7 +42,6 @@ class BinarizedMNIST(H5PYDataset):
         set (10,000 samples) or the test set (10,000 samples).
 
     """
-    folder = 'binarized_mnist'
     filename = 'binarized_mnist.hdf5'
 
     def __init__(self, which_set, load_in_memory=True, **kwargs):
@@ -55,4 +54,4 @@ class BinarizedMNIST(H5PYDataset):
 
     @property
     def data_path(self):
-        return os.path.join(config.data_path, self.folder, self.filename)
+        return os.path.join(config.data_path, self.filename)
