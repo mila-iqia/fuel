@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import argparse
-import importlib
-import pkgutil
 
 from fuel import converters
 
