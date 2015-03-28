@@ -31,5 +31,5 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=['six', 'picklable_itertools', 'toolz', 'pyyaml', 'h5py',
                       'tables'],
-    scripts=['bin/fuel-convert']
+    scripts=['bin/fuel-convert', 'bin/fuel-download']
 )
