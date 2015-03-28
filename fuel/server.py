@@ -5,6 +5,7 @@ from multiprocessing import Process
 import numpy
 import six
 import zmq
+from numpy.lib.format import header_data_from_array_1_0
 
 from fuel.utils import buffer_
 
@@ -28,19 +29,18 @@ def send_arrays(socket, arrays, stop=False):
 
     Notes
     -----
-    The protocol is very simple: A single JSON object that contains the
-    shape and data type for each array is transferred first. Subsequently
-    the arrays are sent as bytestreams (through NumPy's support of the
-    buffering protocol).
+    The protocol is very simple: A single JSON object describing the array
+    format (using the same specification as ``.npy`` files) is sent first.
+    Subsequently the arrays are sent as bytestreams (through NumPy's
+    support of the buffering protocol).
 
     """
     if stop:
-        mds = {'stop': True}
-        return socket.send_json(mds)
+        headers = {'stop': True}
+        return socket.send_json(headers)
     else:
-        mds = [{'dtype': str(array.dtype), 'shape': array.shape}
-               for array in arrays]
-        socket.send_json(mds, zmq.SNDMORE)
+        headers = [header_data_from_array_1_0(array) for array in arrays]
+        socket.send_json(headers, zmq.SNDMORE)
         for array in arrays[:-1]:
             socket.send(array, zmq.SNDMORE)
         return socket.send(arrays[-1])
@@ -65,15 +65,19 @@ def recv_arrays(socket):
         If the first JSON object received contains the key `stop`.
 
     """
-    mds = socket.recv_json()
-    if 'stop' in mds:
+    headers = socket.recv_json()
+    if 'stop' in headers:
         raise StopIteration
     arrays = []
-    for md in mds:
+    for header in headers:
         data = socket.recv()
         buf = buffer_(data)
-        array = numpy.frombuffer(buf, dtype=md['dtype'])
-        arrays.append(array.reshape(md['shape']))
+        array = numpy.frombuffer(buf, dtype=numpy.dtype(header['descr']))
+        array.shape = header['shape']
+        if header['fortran_order']:
+            array.shape = header['shape'][::-1]
+            array = array.transpose()
+        arrays.append(array)
     return arrays
 
 
