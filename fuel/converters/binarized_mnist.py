@@ -1,6 +1,5 @@
 import os
 
-import fuel
 import h5py
 import numpy
 
