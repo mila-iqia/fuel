@@ -1,9 +1,6 @@
 import logging
-from collections import deque
-from multiprocessing import Process
 
 import numpy
-import six
 import zmq
 from numpy.lib.format import header_data_from_array_1_0
 
@@ -35,15 +32,18 @@ def send_arrays(socket, arrays, stop=False):
     support of the buffering protocol).
 
     """
+    if arrays:
+        # The buffer protocol only works on contiguous arrays
+        arrays = [numpy.ascontiguousarray(array) for array in arrays]
     if stop:
         headers = {'stop': True}
-        return socket.send_json(headers)
+        socket.send_json(headers)
     else:
         headers = [header_data_from_array_1_0(array) for array in arrays]
         socket.send_json(headers, zmq.SNDMORE)
         for array in arrays[:-1]:
             socket.send(array, zmq.SNDMORE)
-        return socket.send(arrays[-1])
+        socket.send(arrays[-1])
 
 
 def recv_arrays(socket):
@@ -62,7 +62,8 @@ def recv_arrays(socket):
     Raises
     ------
     StopIteration
-        If the first JSON object received contains the key `stop`.
+        If the first JSON object received contains the key `stop`,
+        signifying that the server has finished a single epoch.
 
     """
     headers = socket.recv_json()
@@ -81,74 +82,7 @@ def recv_arrays(socket):
     return arrays
 
 
-def server(data_stream, server_port):
-    """The main process that processes and sends data."""
-    context = zmq.Context()
-    socket = context.socket(zmq.REP)
-    socket.connect("tcp://localhost:{}".format(server_port))
-
-    it = data_stream.get_epoch_iterator()
-
-    logger.info('server started')
-    while True:
-        socket.recv()
-        try:
-            data = next(it)
-            stop = False
-            logger.info("sending {} arrays".format(len(data)))
-        except StopIteration:
-            it = data_stream.get_epoch_iterator()
-            data = None
-            stop = True
-            logger.info("sending StopIteration")
-        send_arrays(socket, data, stop=stop)
-
-
-def broker(server_port, client_port):
-    """The broker is run in a separate process and holds the queue."""
-    logger.debug('binding broker to sockets')
-    context = zmq.Context()
-    frontend = context.socket(zmq.ROUTER)
-    backend = context.socket(zmq.DEALER)
-    frontend.bind("tcp://*:{}".format(client_port))
-    backend.bind("tcp://*:{}".format(server_port))
-
-    logger.debug('broker starting to poll')
-    poller = zmq.Poller()
-    poller.register(frontend, zmq.POLLIN)
-    poller.register(backend, zmq.POLLIN)
-
-    # Create queue
-    queue = deque()
-    to_buffer = 0
-
-    logger.info('broker started')
-    while True:
-        socks = dict(poller.poll())
-
-        if socks.get(frontend) == zmq.POLLIN:
-            message = frontend.recv_multipart()
-            if message[2] == six.b("buffer"):
-                logger.debug("broker received request to buffer")
-                to_buffer += 1
-            else:
-                logger.debug("broker responding to data request from client")
-                frontend.send_multipart(queue.popleft())
-            logger.debug("broker requesting data from server")
-            backend.send_multipart(message)
-
-        if socks.get(backend) == zmq.POLLIN:
-            logger.debug("broker receiving data from server")
-            message = backend.recv_multipart()
-            queue.append(message)
-            if to_buffer:
-                logger.debug("broker buffering data")
-                frontend.send_multipart(message[:2] +
-                                        [six.int2byte(len(queue))])
-                to_buffer -= 1
-
-
-def start_server(data_stream, server_port=5560, client_port=5559):
+def start_server(data_stream, server_port=5557, hwm=10):
     """Start a data processing server.
 
     This command starts a server in the current process that performs the
@@ -161,11 +95,36 @@ def start_server(data_stream, server_port=5560, client_port=5559):
     ----------
     data_stream : :class:`.DataStream`
         The data stream to return examples from.
-    server_port : int
-        The port the server and the broker will use to communicate.
-    client_port : int
-        The port that the broker will communicate with the client on.
+    port : int, optional
+        The port the server and the client (training loop) will use to
+        communicate. Defaults to 5557.
+    hwm : int, optional
+        The `ZeroMQ high-water mark (HWM)
+        <http://zguide.zeromq.org/page:all#High-Water-Marks>`_ on the
+        sending socket. Increasing this increases the buffer, which can be
+        useful if your data preprocessing times are very random.  However,
+        it will increase memory usage. There is no easy way to tell how
+        many batches will actually be queued with a particular HWM.
+        Defaults to 10. Be sure to set the corresponding HWM on the
+        receiving end as well.
 
     """
-    Process(target=broker, args=(server_port, client_port)).start()
-    server(data_stream, server_port)
+    context = zmq.Context()
+    socket = context.socket(zmq.PUSH)
+    socket.set_hwm(hwm)
+    socket.bind('tcp://*:{}'.format(server_port))
+
+    it = data_stream.get_epoch_iterator()
+
+    logger.info('server started')
+    while True:
+        try:
+            data = next(it)
+            stop = False
+            logger.info("sending {} arrays".format(len(data)))
+        except StopIteration:
+            it = data_stream.get_epoch_iterator()
+            data = None
+            stop = True
+            logger.info("sending StopIteration")
+        send_arrays(socket, data, stop=stop)

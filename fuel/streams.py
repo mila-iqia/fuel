@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 
-import six
 import zmq
 from six import add_metaclass
 
@@ -141,27 +140,37 @@ class DataStream(AbstractDataStream):
 
 
 class ServerDataStream(AbstractDataStream):
-    def __init__(self, sources, min_buffer=10, host='localhost', port=5559):
+    """A data stream that receives batches from a Fuel server.
+
+    Parameters
+    ----------
+    host : str, optional
+        The host to connect to. Defaults to ``localhost``.
+    port : int, optional
+        The port to connect on. Defaults to 5557.
+    hwm : int, optional
+        The `ZeroMQ high-water mark (HWM)
+        <http://zguide.zeromq.org/page:all#High-Water-Marks>`_ on the
+        receiving socket. Increasing this increases the buffer, which can
+        be useful if your data preprocessing times are very random.
+        However, it will increase memory usage. There is no easy way to
+        tell how many batches will actually be queued with a particular
+        HWM. Defaults to 10. Be sure to set the corresponding HWM on the
+        server's end as well.
+
+    """
+    def __init__(self, sources, host='localhost', port=5557, hwm=10):
         super(ServerDataStream, self).__init__()
         self.sources = sources
 
-        # Connect to server
         context = zmq.Context()
-        self.socket = socket = context.socket(zmq.REQ)
+        self.socket = socket = context.socket(zmq.PULL)
+        socket.set_hwm(hwm)
         socket.connect("tcp://{}:{}".format(host, port))
-
-        # Buffer
-        while True:
-            socket.send(b"buffer")
-            message, = socket.recv_multipart()
-            buffer_size = six.byte2int(message)
-            if buffer_size >= min_buffer:
-                break
 
     def get_data(self, request=None):
         if request is not None:
             raise ValueError
-        self.socket.send(b'next')
         data = recv_arrays(self.socket)
         return tuple(data)
 
