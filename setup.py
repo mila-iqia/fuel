@@ -30,6 +30,6 @@ setup(
     keywords='dataset data iteration pipeline processing',
     packages=find_packages(exclude=['tests']),
     install_requires=['six', 'picklable_itertools', 'toolz', 'pyyaml', 'h5py',
-                      'tables', 'urllib3'],
+                      'tables', 'urllib3', 'certifi'],
     scripts=['bin/fuel-convert', 'bin/fuel-download']
 )

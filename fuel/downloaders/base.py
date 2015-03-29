@@ -1,6 +1,7 @@
 import os
 import shutil
 
+import certifi
 import urllib3
 from urllib3.util.url import parse_url
 
@@ -17,7 +18,8 @@ def download(url, path=None):
         case the current working directory is used.
 
     """
-    http = urllib3.PoolManager()
+    http = urllib3.PoolManager(
+        cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     with http.request('GET', url, preload_content=False) as response:
         if not path:
             path = os.getcwd()
