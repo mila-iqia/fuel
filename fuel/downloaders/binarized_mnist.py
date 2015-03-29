@@ -1,5 +1,3 @@
-import os
-
 from fuel.downloaders.base import default_manager
 
 
