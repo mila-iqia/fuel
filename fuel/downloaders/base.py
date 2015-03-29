@@ -33,3 +33,27 @@ def download(url, path=None):
             path = os.path.join(path, filename)
         with open(path, 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
+
+
+def default_manager(urls, filenames):
+    """Returns a function to download or clear files from a list of URLs.
+
+    Parameters
+    ----------
+    urls : list of str
+        URLs to download from.
+    filenames : list of str
+        Files to save to.
+
+    """
+    def manager_fn(args):
+        save_directory = args.directory
+        files = [os.path.join(save_directory, f) for f in filenames]
+        if args.clear:
+            for f in files:
+                if os.path.isfile(f):
+                    os.remove(f)
+        else:
+            for url, f in zip(urls, files):
+                download(url, f)
+    return manager_fn
