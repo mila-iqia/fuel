@@ -1,6 +1,5 @@
 import os
 import shutil
-from subprocess import call
 
 import fuel
 from six.moves.urllib.request import urlopen
