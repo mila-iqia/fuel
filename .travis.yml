@@ -48,7 +48,7 @@ script:
       if [ ! -f binarized_mnist.hdf5 ]; then
         fuel-download binarized_mnist
         fuel-convert binarized_mnist
-        fuel-download --clear binarized_mnist
+        fuel-download binarized_mnist --clear
       fi
   # With Fuel installed we can install Blocks
   - pip install -e git+git://github.com/bartvm/blocks.git#egg=blocks[test,plot] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt

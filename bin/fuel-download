@@ -6,15 +6,13 @@ from fuel import downloaders
 
 
 if __name__ == "__main__":
-    dataset_options = dict(
+    built_in_datasets = dict(
         (name, getattr(downloaders, name)) for name in downloaders.__all__)
-    parser = argparse.ArgumentParser()
-    parser.add_argument("dataset", help="what dataset to download",
-                        choices=dataset_options.keys())
-    parser.add_argument("-d", "--directory", help="where to save the " +
-                        "downloaded files", type=str, default=os.getcwd())
-    parser.add_argument("--clear", help="clear the downloaded files",
-                        action='store_true')
+    parser = argparse.ArgumentParser(
+        description='Download script for built-in datasets.')
+    subparsers = parser.add_subparsers()
+    for name, subparser_fn in built_in_datasets.items():
+        subparser_fn(subparsers.add_parser(
+            name, help='Download the {} dataset'.format(name)))
     args = parser.parse_args()
-    dataset_options[args.dataset](
-        save_directory=args.directory, clear=args.clear)
+    args.func(args)
