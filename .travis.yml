@@ -18,8 +18,11 @@ before_install:
   - conda update -q --yes conda
   # Download MNIST for tests if not loaded from cache
   - |
-      if find $TRAVIS_BUILD_DIR/data/mnist -empty | read; then
+      if [ ! -d $TRAVIS_BUILD_DIR/data/mnist ]; then
         mkdir $TRAVIS_BUILD_DIR/data/mnist
+      fi
+  - |
+      if find $TRAVIS_BUILD_DIR/data/mnist -empty | read; then
         cd $TRAVIS_BUILD_DIR/data/mnist
         curl -O http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz \
              -O http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz \
@@ -30,8 +33,11 @@ before_install:
       fi
     # Download CIFAR10 for tests if not loaded from cache
   - |
-      if find $TRAVIS_BUILD_DIR/data/cifar10 -empty | read; then
+      if [ ! -d $TRAVIS_BUILD_DIR/data/cifar10 ]; then
         mkdir $TRAVIS_BUILD_DIR/data/cifar10
+      fi
+  - |
+      if find $TRAVIS_BUILD_DIR/data/cifar10 -empty | read; then
         cd $TRAVIS_BUILD_DIR/data/cifar10
         curl http://www.cs.utoronto.ca/~kriz/cifar-10-python.tar.gz | tar xzf -
         cd -
