@@ -1,8 +1,7 @@
 sudo: false
 cache:
   directories:
-    - $TRAVIS_BUILD_DIR/mnist
-    - $TRAVIS_BUILD_DIR/cifar10
+    - $TRAVIS_BUILD_DIR/data
 branches:
   only:
     - master
@@ -19,9 +18,9 @@ before_install:
   - conda update -q --yes conda
   # Download MNIST for tests if not loaded from cache
   - |
-      if find mnist -empty | read; then
-        mkdir mnist
-        cd mnist
+      if find $TRAVIS_BUILD_DIR/data/mnist -empty | read; then
+        mkdir $TRAVIS_BUILD_DIR/data/mnist
+        cd $TRAVIS_BUILD_DIR/data/mnist
         curl -O http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz \
              -O http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz \
              -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz \
@@ -31,24 +30,27 @@ before_install:
       fi
     # Download CIFAR10 for tests if not loaded from cache
   - |
-      if find cifar10 -empty | read; then
-        mkdir cifar10
-        cd cifar10
+      if find $TRAVIS_BUILD_DIR/data/cifar10 -empty | read; then
+        mkdir $TRAVIS_BUILD_DIR/data/cifar10
+        cd $TRAVIS_BUILD_DIR/data/cifar10
         curl http://www.cs.utoronto.ca/~kriz/cifar-10-python.tar.gz | tar xzf -
         cd -
       fi
-  - export FUEL_DATA_PATH=$PWD
+  - export FUEL_DATA_PATH=$TRAVIS_BUILD_DIR/data
 install:
   # Install all Python dependencies
   - conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl bokeh nose numpy pip coverage six toolz pytables h5py
   - pip install -q coveralls
 script:
   - pip install . -r requirements.txt
+  # Download and process binarized MNIST for tests if not loaded from cache
   - |
-      if [ ! -f binarized_mnist.hdf5 ]; then
+      if [ ! -f $FUEL_DATA_PATH/binarized_mnist.hdf5 ]; then
+        cd $FUEL_DATA_PATH
         fuel-download binarized_mnist
         fuel-convert binarized_mnist
-        fuel-download binarized_mnist --clear
+        fuel-download --clear binarized_mnist
+        cd -
       fi
   # With Fuel installed we can install Blocks
   - pip install -e git+git://github.com/bartvm/blocks.git#egg=blocks[test,plot] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
