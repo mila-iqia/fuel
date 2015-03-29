@@ -1,7 +1,9 @@
 """Download modules for built-in datasets.
 
-Download methods accept a single argument, `save_directory`, which tells
-where to save the downloaded files.
+Download methods accept two arguments:
+
+* `save_directory` : Where to save the downloaded files
+* `clear` : If `True`, clear the downloaded files. Defaults to `False`.
 
 """
 from fuel.downloaders.binarized_mnist import binarized_mnist

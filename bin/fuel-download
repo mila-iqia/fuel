@@ -13,5 +13,8 @@ if __name__ == "__main__":
                         choices=dataset_options.keys())
     parser.add_argument("-d", "--directory", help="where to save the " +
                         "downloaded files", type=str, default=os.getcwd())
+    parser.add_argument("--clear", help="clear the downloaded files",
+                        action='store_true')
     args = parser.parse_args()
-    dataset_options[args.dataset](save_directory=args.directory)
+    dataset_options[args.dataset](
+        save_directory=args.directory, clear=args.clear)
