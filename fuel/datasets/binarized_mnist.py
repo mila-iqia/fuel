@@ -44,8 +44,8 @@ class BinarizedMNIST(H5PYDataset):
     """
     filename = 'binarized_mnist.hdf5'
 
-    def __init__(self, which_set, load_in_memory=True, **kwargs):
-        if which_set not in ('train', 'valid', 'test'):
+    def __init__(self, which_set=None, load_in_memory=True, **kwargs):
+        if which_set and which_set not in ('train', 'valid', 'test'):
             raise ValueError("available splits are 'train', 'valid' and "
                              "'test'")
         super(BinarizedMNIST, self).__init__(

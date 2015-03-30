@@ -7,6 +7,17 @@ from fuel.datasets import BinarizedMNIST
 from tests import skip_if_not_available
 
 
+def test_binarized_mnist_no_split():
+    skip_if_not_available(datasets=['binarized_mnist'])
+
+    dataset = BinarizedMNIST()
+    handle = dataset.open()
+    data = dataset.get_data(handle, slice(0, 70000))[0]
+    assert data.shape == (70000, 1, 28, 28)
+    assert dataset.num_examples == 70000
+    dataset.close(handle)
+
+
 def test_binarized_mnist_train():
     skip_if_not_available(datasets=['binarized_mnist'])
 
@@ -45,5 +56,5 @@ def test_binarized_mnist_invalid_split():
 
 
 def test_binarized_mnist_data_path():
-    assert BinarizedMNIST('train').data_path == os.path.join(
+    assert BinarizedMNIST().data_path == os.path.join(
         config.data_path, 'binarized_mnist.hdf5')
