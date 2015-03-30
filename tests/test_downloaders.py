@@ -15,7 +15,8 @@ class DummyArgs:
 def test_download_no_path():
     download(iris_url)
     with open('iris.data', 'r') as f:
-        assert hashlib.sha256(f.read()).hexdigest() == iris_hash
+        assert hashlib.sha256(
+            f.read().encode('utf-8')).hexdigest() == iris_hash
     os.remove('iris.data')
 
 
@@ -23,7 +24,8 @@ def test_download_path_is_dir():
     os.mkdir('tmp')
     download(iris_url, 'tmp')
     with open('tmp/iris.data', 'r') as f:
-        assert hashlib.sha256(f.read()).hexdigest() == iris_hash
+        assert hashlib.sha256(
+            f.read().encode('utf-8')).hexdigest() == iris_hash
     os.remove('tmp/iris.data')
     os.rmdir('tmp')
 
@@ -31,7 +33,8 @@ def test_download_path_is_dir():
 def test_download_path_is_file():
     download(iris_url, 'iris_tmp.data')
     with open('iris_tmp.data', 'r') as f:
-        assert hashlib.sha256(f.read()).hexdigest() == iris_hash
+        assert hashlib.sha256(
+            f.read().encode('utf-8')).hexdigest() == iris_hash
     os.remove('iris_tmp.data')
 
 
@@ -41,7 +44,8 @@ def test_default_manager_save():
     args.clear = False
     default_manager([iris_url], ['iris.data'])(args)
     with open('iris.data', 'r') as f:
-        assert hashlib.sha256(f.read()).hexdigest() == iris_hash
+        assert hashlib.sha256(
+            f.read().encode('utf-8')).hexdigest() == iris_hash
     os.remove('iris.data')
 
 
