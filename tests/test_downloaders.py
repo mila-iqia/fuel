@@ -8,6 +8,10 @@ iris_url = ('https://archive.ics.uci.edu/ml/machine-learning-databases/' +
 iris_hash = "6f608b71a7317216319b4d27b4d9bc84e6abd734eda7872b71a458569e2656c0"
 
 
+class DummyArgs:
+    pass
+
+
 def test_download_no_path():
     download(iris_url)
     with open('iris.data', 'r') as f:
@@ -32,8 +36,6 @@ def test_download_path_is_file():
 
 
 def test_default_manager_save():
-    class DummyArgs:
-        pass
     args = DummyArgs()
     args.directory = '.'
     args.clear = False
@@ -45,8 +47,6 @@ def test_default_manager_save():
 
 def test_default_manager_clear():
     open('tmp.data', 'a').close()
-    class DummyArgs:
-        pass
     args = DummyArgs()
     args.directory = '.'
     args.clear = True
