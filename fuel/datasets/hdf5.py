@@ -4,7 +4,6 @@ from collections import defaultdict
 import h5py
 import numpy
 import tables
-from six.moves import xrange
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
