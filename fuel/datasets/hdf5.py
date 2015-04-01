@@ -142,7 +142,7 @@ class H5PYDataset(Dataset):
 
     @staticmethod
     def create_split_array(split_dict):
-        # Determine splits, sources and string lengths
+        # Determine maximum split, source and string lengths
         splits = tuple(split_dict.keys())
         split_len = max(len(split) for split in splits)
         sources = set()
@@ -157,7 +157,7 @@ class H5PYDataset(Dataset):
 
         # Instantiate empty split array
         split_array = numpy.empty(
-            (len(splits), len(sources)),
+            len(splits) * len(sources),
             dtype=numpy.dtype([
                 ('split', numpy.str_, split_len),
                 ('source', numpy.str_, source_len),
@@ -165,44 +165,36 @@ class H5PYDataset(Dataset):
                 ('available', numpy.bool, 1),
                 ('comment', numpy.str_, comment_len)]))
 
-        # Initialize split array
-        for i, split in enumerate(splits):
-            split_array[i, :]['split'] = split
-        for j, source in enumerate(sources):
-            split_array[:, j]['source'] = source
-        split_array[...]['start'] = 0
-        split_array[...]['stop'] = 0
-        split_array[...]['available'] = False
-        # Workaround for bug when pickling an empty string
-        split_array[...]['comment'] = '.'
-
         # Fill split array
-        for i, j in product(xrange(len(splits)), xrange(len(sources))):
-            split, source = splits[i], sources[j]
+        for i, (split, source) in enumerate(product(splits, sources)):
             if source in split_dict[split]:
                 start, stop = split_dict[split][source][:2]
-                split_array[i, j]['start'] = start
-                split_array[i, j]['stop'] = stop
-                split_array[i, j]['available'] = True
+                available = True
+                # Workaround for bug when pickling an empty string
+                comment = '.'
                 if len(split_dict[split][source]) == 3:
-                    # Workaround for bug when pickling an empty string
                     comment = split_dict[split][source][2]
                     if not comment:
                         comment = '.'
-                    split_array[i, j]['comment'] = comment
+            else:
+                (start, stop, available, comment) = (0, 0, False, '.')
+            split_array[i]['split'] = split
+            split_array[i]['source'] = source
+            split_array[i]['start'] = start
+            split_array[i]['stop'] = stop
+            split_array[i]['available'] = available
+            split_array[i]['comment'] = comment
 
         return split_array
 
     @staticmethod
     def parse_split_array(split_array):
-        split_dict = dict(
-            [(split, {}) for split in split_array[:, 0]['split']])
+        split_dict = defaultdict(dict)
         for row in split_array:
-            for column in row:
-                split, source, start, stop, available, comment = column
-                if available:
-                    split_dict[split][source] = (start, stop, comment)
-        return split_dict
+            split, source, start, stop, available, comment = row
+            if available:
+                split_dict[split][source] = (start, stop, comment)
+        return dict(split_dict)
 
     def _get_file_id(self):
         file_id = [f for f in self.ref_counts.keys() if f.name == self.path]
