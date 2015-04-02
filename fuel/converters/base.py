@@ -14,13 +14,15 @@ def fill_hdf5_file(h5file, data, source_names, shapes, dtypes,
     source_names : tuple of str
         Source names of the corresponding rows in `data`.
     shapes : tuple of tuples of int
-        Shape of the concatenated splits of the corresponding rows in `data`.
+        Shape of the concatenated splits of the corresponding rows in
+        `data`.
     dtypes : tuple of str
         Data types of the corresponding rows in `data`.
     split_names : tuple of str
         Split names of the corresponding columns in `data`.
     splits : tuple of :class:`numpy.ndarray`
-        Split start and stop indices of the corresponding columns in `data`.
+        Split start and stop indices of the corresponding columns in
+        `data`.
 
     """
     for name, split in zip(split_names, splits):
