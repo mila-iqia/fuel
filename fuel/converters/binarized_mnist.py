@@ -3,6 +3,8 @@ import os
 import h5py
 import numpy
 
+from fuel.converters.base import fill_hdf5_file
+
 
 def binarized_mnist(input_directory, save_path):
     """Converts the binarized MNIST dataset to HDF5.
@@ -31,22 +33,25 @@ def binarized_mnist(input_directory, save_path):
         Where to save the converted dataset.
 
     """
+    h5file = h5py.File(save_path, mode="w")
     train_set = numpy.loadtxt(
-        os.path.join(input_directory, 'binarized_mnist_train.amat'))
+        os.path.join(input_directory, 'binarized_mnist_train.amat')).reshape(
+            (-1, 1, 28, 28))
     valid_set = numpy.loadtxt(
-        os.path.join(input_directory, 'binarized_mnist_valid.amat'))
+        os.path.join(input_directory, 'binarized_mnist_valid.amat')).reshape(
+            (-1, 1, 28, 28))
     test_set = numpy.loadtxt(
-        os.path.join(input_directory, 'binarized_mnist_test.amat'))
+        os.path.join(input_directory, 'binarized_mnist_test.amat')).reshape(
+            (-1, 1, 28, 28))
+    data = ((train_set, valid_set, test_set),)
+    source_names = ('features',)
+    shapes = ((70000, 1, 28, 28),)
+    dtypes = ('uint8',)
+    split_names = ('train', 'valid', 'test')
+    splits = ((0, 50000), (50000, 60000), (60000, 70000))
 
-    f = h5py.File(save_path, mode="w")
+    fill_hdf5_file(
+        h5file, data, source_names, shapes, dtypes, split_names, splits)
 
-    features = f.create_dataset('features', (70000, 1, 28, 28), dtype='uint8')
-    features[...] = numpy.vstack([train_set.reshape((-1, 1, 28, 28)),
-                                  valid_set.reshape((-1, 1, 28, 28)),
-                                  test_set.reshape((-1, 1, 28, 28))])
-    f.attrs['train'] = [0, 50000]
-    f.attrs['valid'] = [50000, 60000]
-    f.attrs['test'] = [60000, 70000]
-
-    f.flush()
-    f.close()
+    h5file.flush()
+    h5file.close()
