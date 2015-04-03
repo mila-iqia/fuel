@@ -1,4 +1,4 @@
-from fuel.downloaders.base import default_manager
+from fuel.downloaders.base import default_downloader
 
 
 def binarized_mnist(subparser):
@@ -22,4 +22,4 @@ def binarized_mnist(subparser):
             'binarized_mnist/binarized_mnist_{}.amat'.format(s) for s in sets]
     filenames = ['binarized_mnist_{}.amat'.format(s) for s in sets]
     subparser.set_defaults(
-        func=default_manager(urls=urls, filenames=filenames))
+        func=default_downloader, urls=urls, filenames=filenames)

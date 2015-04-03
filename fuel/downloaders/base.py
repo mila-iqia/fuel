@@ -37,25 +37,30 @@ def download(url, path=None):
             shutil.copyfileobj(response, out_file)
 
 
-def default_manager(urls, filenames):
-    """Returns a function to download or clear files from a list of URLs.
+def default_downloader(args):
+    """Downloads or clears files from URLs and filenames.
+
+    This function takes an :class:`argparse.Namespace` instance as
+    argument and expects it to contain three attributes:
+
+    * `directory` : directory in which downloaded files are saved
+    * `urls` : list of URLs to download
+    * `filenames` : list of file names for the corresponding URLs
 
     Parameters
     ----------
-    urls : list of str
-        URLs to download from.
-    filenames : list of str
-        Files to save to.
+    args : :class:`argparse.Namespace`
+        Parsed command line arguments
 
     """
-    def manager_fn(args):
-        save_directory = args.directory
-        files = [os.path.join(save_directory, f) for f in filenames]
-        if args.clear:
-            for f in files:
-                if os.path.isfile(f):
-                    os.remove(f)
-        else:
-            for url, f in zip(urls, files):
-                download(url, f)
-    return manager_fn
+    urls = args.urls
+    save_directory = args.directory
+    filenames = args.filenames
+    files = [os.path.join(save_directory, f) for f in filenames]
+    if args.clear:
+        for f in files:
+            if os.path.isfile(f):
+                os.remove(f)
+    else:
+        for url, f in zip(urls, files):
+            download(url, f)

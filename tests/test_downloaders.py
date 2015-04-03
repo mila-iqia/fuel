@@ -1,7 +1,7 @@
 import hashlib
 import os
 
-from fuel.downloaders.base import download, default_manager
+from fuel.downloaders.base import download, default_downloader
 
 iris_url = ('https://archive.ics.uci.edu/ml/machine-learning-databases/' +
             'iris/iris.data')
@@ -9,7 +9,9 @@ iris_hash = "6f608b71a7317216319b4d27b4d9bc84e6abd734eda7872b71a458569e2656c0"
 
 
 class DummyArgs:
-    pass
+    def __init__(self, **kwargs):
+        for key, val in kwargs.items():
+            setattr(self, key, val)
 
 
 def test_download_no_path():
@@ -38,21 +40,19 @@ def test_download_path_is_file():
     os.remove('iris_tmp.data')
 
 
-def test_default_manager_save():
-    args = DummyArgs()
-    args.directory = '.'
-    args.clear = False
-    default_manager([iris_url], ['iris.data'])(args)
+def test_default_downloader_save():
+    args = DummyArgs(
+        directory='.', clear=False, urls=[iris_url], filenames=['iris.data'])
+    default_downloader(args)
     with open('iris.data', 'r') as f:
         assert hashlib.sha256(
             f.read().encode('utf-8')).hexdigest() == iris_hash
     os.remove('iris.data')
 
 
-def test_default_manager_clear():
+def test_default_downloader_clear():
     open('tmp.data', 'a').close()
-    args = DummyArgs()
-    args.directory = '.'
-    args.clear = True
-    default_manager([None], ['tmp.data'])(args)
+    args = DummyArgs(
+        directory='.', clear=True, urls=[None], filenames=['tmp.data'])
+    default_downloader(args)
     assert not os.path.isfile('tmp.data')
