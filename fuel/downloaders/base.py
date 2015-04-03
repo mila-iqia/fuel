@@ -80,5 +80,5 @@ def default_downloader(args):
                 os.remove(f)
     else:
         for url, f in zip(urls, files):
-            with open(f, 'w') as file_handle:
+            with open(f, 'wb') as file_handle:
                 download(url, file_handle)

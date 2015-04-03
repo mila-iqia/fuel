@@ -26,7 +26,7 @@ def test_download():
     f = tempfile.SpooledTemporaryFile()
     download(iris_url, f)
     f.seek(0)
-    assert hashlib.sha256(f.read().encode('utf-8')).hexdigest() == iris_hash
+    assert hashlib.sha256(f.read()).hexdigest() == iris_hash
     f.close()
 
 
