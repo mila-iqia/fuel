@@ -1,7 +1,11 @@
 import hashlib
 import os
+import shutil
+import tempfile
+from unittest import TestCase
 
-from fuel.downloaders.base import download, default_downloader
+from fuel.downloaders.base import (download, default_downloader,
+                                   filename_from_url)
 
 iris_url = ('https://archive.ics.uci.edu/ml/machine-learning-databases/' +
             'iris/iris.data')
@@ -14,45 +18,49 @@ class DummyArgs:
             setattr(self, key, val)
 
 
-def test_download_no_path():
-    download(iris_url)
-    with open('iris.data', 'r') as f:
-        assert hashlib.sha256(
-            f.read().encode('utf-8')).hexdigest() == iris_hash
-    os.remove('iris.data')
+def test_filename_from_url():
+    assert filename_from_url(iris_url) == 'iris.data'
 
 
-def test_download_path_is_dir():
-    os.mkdir('tmp')
-    download(iris_url, 'tmp')
-    with open('tmp/iris.data', 'r') as f:
-        assert hashlib.sha256(
-            f.read().encode('utf-8')).hexdigest() == iris_hash
-    os.remove('tmp/iris.data')
-    os.rmdir('tmp')
+def test_download():
+    f = tempfile.SpooledTemporaryFile()
+    download(iris_url, f)
+    f.seek(0)
+    assert hashlib.sha256(f.read().encode('utf-8')).hexdigest() == iris_hash
+    f.close()
 
 
-def test_download_path_is_file():
-    download(iris_url, 'iris_tmp.data')
-    with open('iris_tmp.data', 'r') as f:
-        assert hashlib.sha256(
-            f.read().encode('utf-8')).hexdigest() == iris_hash
-    os.remove('iris_tmp.data')
+class TestDefaultDownloader(TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
 
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
 
-def test_default_downloader_save():
-    args = DummyArgs(
-        directory='.', clear=False, urls=[iris_url], filenames=['iris.data'])
-    default_downloader(args)
-    with open('iris.data', 'r') as f:
-        assert hashlib.sha256(
-            f.read().encode('utf-8')).hexdigest() == iris_hash
-    os.remove('iris.data')
+    def test_default_downloader_save_with_filename(self):
+        iris_path = os.path.join(self.tempdir, 'iris.data')
+        args = DummyArgs(directory=self.tempdir, clear=False, urls=[iris_url],
+                         filenames=['iris.data'])
+        default_downloader(args)
+        with open(iris_path, 'r') as f:
+            assert hashlib.sha256(
+                f.read().encode('utf-8')).hexdigest() == iris_hash
+        os.remove(iris_path)
 
+    def test_default_downloader_save_no_filename(self):
+        iris_path = os.path.join(self.tempdir, 'iris.data')
+        args = DummyArgs(directory=self.tempdir, clear=False, urls=[iris_url],
+                         filenames=[None])
+        default_downloader(args)
+        with open(iris_path, 'r') as f:
+            assert hashlib.sha256(
+                f.read().encode('utf-8')).hexdigest() == iris_hash
+        os.remove(iris_path)
 
-def test_default_downloader_clear():
-    open('tmp.data', 'a').close()
-    args = DummyArgs(
-        directory='.', clear=True, urls=[None], filenames=['tmp.data'])
-    default_downloader(args)
-    assert not os.path.isfile('tmp.data')
+    def test_default_downloader_clear(self):
+        file_path = os.path.join(self.tempdir, 'tmp.data')
+        open(file_path, 'a').close()
+        args = DummyArgs(directory=self.tempdir, clear=True, urls=[None],
+                         filenames=['tmp.data'])
+        default_downloader(args)
+        assert not os.path.isfile(file_path)

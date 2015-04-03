@@ -6,35 +6,42 @@ import urllib3
 from urllib3.util.url import parse_url
 
 
-def download(url, path=None):
-    """Downloads a given URL to a specific directory or file.
+def filename_from_url(url, path=None):
+    """Parses a URL to determine a file name.
 
     Parameters
     ----------
     url : str
-        URL to download.
-    path : str, optional
-        Where to save the downloaded URL. Defaults to `None`, in which
-        case the current working directory is used.
+        URL to parse.
 
     """
     http = urllib3.PoolManager(
         cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     with http.request('GET', url, preload_content=False) as response:
-        if not path:
-            path = os.getcwd()
-        if os.path.isdir(path):
-            headers = response.getheaders()
-            if 'Content-Disposition' in headers:
-                filename = headers[
-                    'Content-Disposition'].split('filename=')[1].trim('"')
-            else:
-                filename = os.path.basename(parse_url(url).path)
-            if not filename:
-                raise ValueError("no filename given")
-            path = os.path.join(path, filename)
-        with open(path, 'wb') as out_file:
-            shutil.copyfileobj(response, out_file)
+        headers = response.getheaders()
+        if 'Content-Disposition' in headers:
+            filename = headers[
+                'Content-Disposition'].split('filename=')[1].trim('"')
+        else:
+            filename = os.path.basename(parse_url(url).path)
+    return filename
+
+
+def download(url, file_handle):
+    """Downloads a given URL to a specific file.
+
+    Parameters
+    ----------
+    url : str
+        URL to download.
+    file_handle : file
+        Where to save the downloaded URL.
+
+    """
+    http = urllib3.PoolManager(
+        cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
+    with http.request('GET', url, preload_content=False) as response:
+        shutil.copyfileobj(response, file_handle)
 
 
 def default_downloader(args):
@@ -56,11 +63,22 @@ def default_downloader(args):
     urls = args.urls
     save_directory = args.directory
     filenames = args.filenames
+
+    # Parse file names from URL if not provided
+    for i, url in enumerate(urls):
+        filename = filenames[i]
+        if not filename:
+            filename = filename_from_url(url)
+        if not filename:
+            raise ValueError("no filename available for URL '{}'".format(url))
+        filenames[i] = filename
     files = [os.path.join(save_directory, f) for f in filenames]
+
     if args.clear:
         for f in files:
             if os.path.isfile(f):
                 os.remove(f)
     else:
         for url, f in zip(urls, files):
-            download(url, f)
+            with open(f, 'w') as file_handle:
+                download(url, file_handle)
