@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import argparse
-import importlib
-import pkgutil
+import os
 
 from fuel import converters
 
@@ -13,10 +12,13 @@ if __name__ == "__main__":
     parser.add_argument("dataset", help="what dataset to convert",
                         choices=dataset_options.keys())
     parser.add_argument("-d", "--directory", help="directory in which input " +
-                        "files reside", type=str, default=None)
+                        "files reside", type=str, default=os.getcwd())
     parser.add_argument("-o", "--output-file", help="where to save the " +
                         "dataset", type=str, default=None)
     args = parser.parse_args()
 
+    output_file = args.output_file
+    if output_file is None:
+        output_file = os.path.join(os.getcwd(), '{}.hdf5'.format(args.dataset))
     dataset_options[args.dataset](
-        directory=args.directory, save_path=args.output_file)
+        input_directory=args.directory, save_path=output_file)

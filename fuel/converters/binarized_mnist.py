@@ -1,19 +1,18 @@
 import os
 
-import fuel
 import h5py
 import numpy
 
-default_directory = os.path.join(fuel.config.data_path, 'binarized_mnist')
-default_save_path = os.path.join(default_directory, 'binarized_mnist.hdf5')
+from fuel.converters.base import fill_hdf5_file
 
 
-def binarized_mnist(directory=None, save_path=None):
+def binarized_mnist(input_directory, save_path):
     """Converts the binarized MNIST dataset to HDF5.
 
     Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN
     paper [DBN] to an HDF5 dataset compatible with
-    :class:`fuel.datasets.BinarizedMNIST`.
+    :class:`fuel.datasets.BinarizedMNIST`. The converted dataset is
+    saved as 'binarized_mnist.hdf5'.
 
     This method assumes the existence of the files
     `binarized_mnist_{train,valid,test}.amat`, which are accessible
@@ -28,37 +27,31 @@ def binarized_mnist(directory=None, save_path=None):
 
     Parameters
     ----------
-    directory : str, optional
-        Base directory in which the required input files reside. Defaults
-        to `None`, in which case `'$FUEL_DATA_PATH/binarized_mnist'` is
-        used.
-    save_path : str, optional
-        Where to save the converted dataset. Defaults to `None`, in which
-        case `'$FUEL_DATA_PATH/binarized_mnist/binarized_mnist.hdf5'` is
-        used.
+    input_directory : str
+        Directory in which the required input files reside.
+    save_path : str
+        Where to save the converted dataset.
 
     """
-    if directory is None:
-        directory = default_directory
-    if save_path is None:
-        save_path = default_save_path
-
+    h5file = h5py.File(save_path, mode="w")
     train_set = numpy.loadtxt(
-        os.path.join(directory, 'binarized_mnist_train.amat'))
+        os.path.join(input_directory, 'binarized_mnist_train.amat')).reshape(
+            (-1, 1, 28, 28))
     valid_set = numpy.loadtxt(
-        os.path.join(directory, 'binarized_mnist_valid.amat'))
+        os.path.join(input_directory, 'binarized_mnist_valid.amat')).reshape(
+            (-1, 1, 28, 28))
     test_set = numpy.loadtxt(
-        os.path.join(directory, 'binarized_mnist_test.amat'))
+        os.path.join(input_directory, 'binarized_mnist_test.amat')).reshape(
+            (-1, 1, 28, 28))
+    data = ((train_set, valid_set, test_set),)
+    source_names = ('features',)
+    shapes = ((70000, 1, 28, 28),)
+    dtypes = ('uint8',)
+    split_names = ('train', 'valid', 'test')
+    splits = ((0, 50000), (50000, 60000), (60000, 70000))
 
-    f = h5py.File(save_path, mode="w")
+    fill_hdf5_file(
+        h5file, data, source_names, shapes, dtypes, split_names, splits)
 
-    features = f.create_dataset('features', (70000, 1, 28, 28), dtype='uint8')
-    features[...] = numpy.vstack([train_set.reshape((-1, 1, 28, 28)),
-                                  valid_set.reshape((-1, 1, 28, 28)),
-                                  test_set.reshape((-1, 1, 28, 28))])
-    f.attrs['train'] = [0, 50000]
-    f.attrs['valid'] = [50000, 60000]
-    f.attrs['test'] = [60000, 70000]
-
-    f.flush()
-    f.close()
+    h5file.flush()
+    h5file.close()

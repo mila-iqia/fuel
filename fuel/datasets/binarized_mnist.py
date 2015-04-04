@@ -42,11 +42,10 @@ class BinarizedMNIST(H5PYDataset):
         set (10,000 samples) or the test set (10,000 samples).
 
     """
-    folder = 'binarized_mnist'
     filename = 'binarized_mnist.hdf5'
 
-    def __init__(self, which_set, load_in_memory=True, **kwargs):
-        if which_set not in ('train', 'valid', 'test'):
+    def __init__(self, which_set=None, load_in_memory=True, **kwargs):
+        if which_set and which_set not in ('train', 'valid', 'test'):
             raise ValueError("available splits are 'train', 'valid' and "
                              "'test'")
         super(BinarizedMNIST, self).__init__(
@@ -55,4 +54,4 @@ class BinarizedMNIST(H5PYDataset):
 
     @property
     def data_path(self):
-        return os.path.join(config.data_path, self.folder, self.filename)
+        return os.path.join(config.data_path, self.filename)
