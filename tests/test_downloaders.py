@@ -9,7 +9,7 @@ from fuel.downloaders.base import (download, default_downloader,
 
 iris_url = ('https://archive.ics.uci.edu/ml/machine-learning-databases/' +
             'iris/iris.data')
-iris_hash = "6f608b71a7317216319b4d27b4d9bc84e6abd734eda7872b71a458569e2656c0"
+iris_hash = "42615765a885ddf54427f12c34a0a070"
 
 
 class DummyArgs:
@@ -26,7 +26,7 @@ def test_download():
     f = tempfile.SpooledTemporaryFile()
     download(iris_url, f)
     f.seek(0)
-    assert hashlib.sha256(f.read()).hexdigest() == iris_hash
+    assert hashlib.md5(f.read()).hexdigest() == iris_hash
     f.close()
 
 
@@ -43,7 +43,7 @@ class TestDefaultDownloader(TestCase):
                          filenames=['iris.data'])
         default_downloader(args)
         with open(iris_path, 'r') as f:
-            assert hashlib.sha256(
+            assert hashlib.md5(
                 f.read().encode('utf-8')).hexdigest() == iris_hash
         os.remove(iris_path)
 
@@ -53,7 +53,7 @@ class TestDefaultDownloader(TestCase):
                          filenames=[None])
         default_downloader(args)
         with open(iris_path, 'r') as f:
-            assert hashlib.sha256(
+            assert hashlib.md5(
                 f.read().encode('utf-8')).hexdigest() == iris_hash
         os.remove(iris_path)
 
