@@ -162,15 +162,23 @@ class ServerDataStream(AbstractDataStream):
     def __init__(self, sources, host='localhost', port=5557, hwm=10):
         super(ServerDataStream, self).__init__()
         self.sources = sources
+        self.host = host
+        self.port = port
+        self.hwm = hwm
+        self.connect()
 
+    def connect(self):
         context = zmq.Context()
         self.socket = socket = context.socket(zmq.PULL)
-        socket.set_hwm(hwm)
-        socket.connect("tcp://{}:{}".format(host, port))
+        socket.set_hwm(self.hwm)
+        socket.connect("tcp://{}:{}".format(self.host, self.port))
+        self.connected = True
 
     def get_data(self, request=None):
         if request is not None:
             raise ValueError
+        if not self.connected:
+            self.connect()
         data = recv_arrays(self.socket)
         return tuple(data)
 
@@ -185,3 +193,8 @@ class ServerDataStream(AbstractDataStream):
 
     def reset(self):
         pass
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['connected'] = False
+        del state['socket']
