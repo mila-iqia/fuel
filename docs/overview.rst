@@ -19,7 +19,7 @@ site, but can be very powerful powerful.
    { rank=same; RequestIterator, DataIterator }
 
 Datasets
-  Datasets provide an interface to the data we are trying to acces. This data
+  Datasets provide an interface to the data we are trying to access. This data
   is usually stored on disk, but can also be created on the fly (e.g. drawn
   from a distribution), requested from a database or server, etc. Datasets are
   largely *stateless*. Multiple data streams can be iterating over the same
