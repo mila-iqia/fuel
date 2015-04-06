@@ -133,7 +133,7 @@ class H5PYDataset(Dataset):
         self.load()
 
     def _get_file_id(self):
-        file_id = [f for f in self.ref_counts.keys() if f.name == self.path]
+        file_id = [f for f in H5PYDataset.ref_counts.keys() if f == self.path]
         if not file_id:
             return self.path
         file_id, = file_id
@@ -142,13 +142,15 @@ class H5PYDataset(Dataset):
     @property
     def provides_sources(self):
         if not hasattr(self, '_provides_sources'):
-            handle = self._out_of_memory_open()
+            ref = self._out_of_memory_open()
+            handle = H5PYDataset.ref_counts[ref][0]
             self._provides_sources = tuple(handle.keys())
-            self._out_of_memory_close(handle)
+            self._out_of_memory_close(ref)
         return self._provides_sources
 
     def load(self):
-        handle = self._out_of_memory_open()
+        ref = self._out_of_memory_open()
+        handle = H5PYDataset.ref_counts[ref][0]
         shapes = [data_source.shape for data_source in handle.values()]
         if any(s[0] != shapes[0][0] for s in shapes):
             raise ValueError("sources have different lengths")
@@ -172,26 +174,30 @@ class H5PYDataset(Dataset):
             self.data_sources = data_sources
         else:
             self.data_sources = None
-        self._out_of_memory_close(handle)
+        self._out_of_memory_close(ref)
 
     def open(self):
         return None if self.load_in_memory else self._out_of_memory_open()
 
     def _out_of_memory_open(self):
         file_id = self._get_file_id()
-        state = h5py.File(name=file_id, mode="r", driver=self.driver)
-        self.ref_counts[state.id] += 1
-        return state
+        if not H5PYDataset.ref_counts[file_id]:
+            # Load the file since it is not currently open
+            handle = h5py.File(name=file_id, mode="r", driver=self.driver)
+            H5PYDataset.ref_counts[file_id] = [handle, 1]
+        else:
+            handle = H5PYDataset.ref_counts[file_id][0]
+        return file_id
 
     def close(self, state):
         if not self.load_in_memory:
             self._out_of_memory_close(state)
 
     def _out_of_memory_close(self, state):
-        self.ref_counts[state.id] -= 1
-        if not self.ref_counts[state.id]:
-            del self.ref_counts[state.id]
-            state.close()
+        H5PYDataset.ref_counts[state][1] -= 1
+        if not H5PYDataset.ref_counts[state]:
+            H5PyDataset.ref_counts[state][0].close()
+            del H5PYDataset.ref_counts[state]
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:
@@ -213,8 +219,9 @@ class H5PYDataset(Dataset):
             request = [index + self.subset.start for index in request]
         else:
             raise ValueError
+        handle = H5PYDataset.ref_counts[state][0]
         rval = []
-        for source_name, data_source in state.items():
+        for source_name, data_source in handle.items():
             if source_name not in self.sources:
                 continue
             data = data_source[request]
