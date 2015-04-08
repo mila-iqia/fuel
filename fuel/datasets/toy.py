@@ -15,7 +15,7 @@ class Spiral(IndexableDataset):
     Parameters
     ----------
     n_datapoints : int
-        Number of datapoints to draw
+        Number of datapoints to create
     cycles : float
     sd : float
     """
@@ -29,9 +29,9 @@ class Spiral(IndexableDataset):
         features[:,0] = radius * numpy.sin(2*numpy.pi*pos)
         features[:,1] = radius * numpy.cos(2*numpy.pi*pos)
 
-        data = OrderedDict(
+        data = OrderedDict([
             ('features', features),
             ('position', pos),
-        )
+        ])
 
         super(Spiral, self).__init__(data, **kwargs)
