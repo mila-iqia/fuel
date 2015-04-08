@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import numpy 
+import numpy
 
 from collections import OrderedDict
 
-from fuel import config
 from fuel.datasets import IndexableDataset
-from fuel.utils import do_not_pickle_attributes
 
 
 class Spiral(IndexableDataset):
@@ -32,18 +30,19 @@ class Spiral(IndexableDataset):
     cycles : float
     sd : float
     """
-    def __init__(self, n_datapoints=1000, classes=1, cycles=1., sd=0.0, **kwargs):
+    def __init__(self, n_datapoints=1000, classes=1, cycles=1., sd=0.0,
+                 **kwargs):
         # Create dataset
-        pos = numpy.random.uniform(size=(n_datapoints,), low=0, high=cycles)
-        label = numpy.random.randint(size=(n_datapoints,), low=0, high=classes)
+        pos = numpy.random.uniform(size=n_datapoints, low=0, high=cycles)
+        label = numpy.random.randint(size=n_datapoints, low=0, high=classes)
 
         radius = (2*pos+1) / 3.
         phase_offset = label * (2*numpy.pi) / classes
-        
+
         features = numpy.zeros(shape=(n_datapoints, 2), dtype='float32')
 
-        features[:,0] = radius * numpy.sin(2*numpy.pi*pos + phase_offset)
-        features[:,1] = radius * numpy.cos(2*numpy.pi*pos + phase_offset)
+        features[:, 0] = radius * numpy.sin(2*numpy.pi*pos + phase_offset)
+        features[:, 1] = radius * numpy.cos(2*numpy.pi*pos + phase_offset)
 
         data = OrderedDict([
             ('features', features),
