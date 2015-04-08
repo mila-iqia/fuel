@@ -12,6 +12,19 @@ from fuel.utils import do_not_pickle_attributes
 class Spiral(IndexableDataset):
     u"""Simple toy dataset containing datapoints from a spiral on a 2d plane.
 
+    .. plot::
+
+        from fuel.datasets.toy import Spiral
+
+        ds = Spiral()
+        features, position = ds.get_data(None, slice(0, 100))
+
+        plt.title("Datapoints drawn from Spiral(classes=2)")
+        plt.scatter(features[:,0], features[:,1], c=position)
+        plt.xlim(-1.2, 1.2)
+        plt.ylim(-1.2, 1.2)
+        plt.show()
+
     Parameters
     ----------
     n_datapoints : int
