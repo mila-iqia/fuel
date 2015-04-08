@@ -8,7 +8,13 @@ from fuel.datasets import IndexableDataset
 
 
 class Spiral(IndexableDataset):
-    u"""Simple toy dataset containing datapoints from a spiral on a 2d plane.
+    u"""Toy dataset containing points sampled from spirals on a 2d plane.
+
+    The dataset contains 3 sources:
+
+    * features -- the (x, y) position of the datapoints
+    * position -- the relative position on the spiral arm
+    * label -- the class labels (spiral arm)
 
     .. plot::
 
@@ -18,17 +24,28 @@ class Spiral(IndexableDataset):
         features, position, label = ds.get_data(None, slice(0, 500))
 
         plt.title("Datapoints drawn from Spiral(classes=3)")
-        plt.scatter(features[:,0], features[:,1], c=position)
+        for l, m in enumerate(['o', '^', 'v']):
+            mask = label == l
+            plt.scatter(features[mask,0], features[mask,1],
+                        c=position[mask], marker=m, label="label==%d"%l)
         plt.xlim(-1.2, 1.2)
         plt.ylim(-1.2, 1.2)
+        plt.legend()
+        plt.colorbar()
+        plt.xlabel("features[:,0]")
+        plt.ylabel("features[:,1]")
         plt.show()
 
     Parameters
     ----------
     n_datapoints : int
         Number of datapoints to create
+    classes : int
+        Number of spiral arms
     cycles : float
     sd : float
+        Normal distributed noise with standard deviation *ds* is added to the
+        features.
     """
     def __init__(self, n_datapoints=1000, classes=1, cycles=1., sd=0.0,
                  **kwargs):
