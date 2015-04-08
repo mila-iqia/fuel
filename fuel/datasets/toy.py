@@ -38,25 +38,25 @@ class Spiral(IndexableDataset):
 
     Parameters
     ----------
-    n_datapoints : int
+    num_examples : int
         Number of datapoints to create
     classes : int
         Number of spiral arms
     cycles : float
     sd : float
-        Normal distributed noise with standard deviation *ds* is added to the
-        features.
+        Add normal distributed noise with standard deviation *ds*.
+
     """
-    def __init__(self, n_datapoints=1000, classes=1, cycles=1., sd=0.0,
+    def __init__(self, num_examples=1000, classes=1, cycles=1., sd=0.0,
                  **kwargs):
         # Create dataset
-        pos = numpy.random.uniform(size=n_datapoints, low=0, high=cycles)
-        label = numpy.random.randint(size=n_datapoints, low=0, high=classes)
+        pos = numpy.random.uniform(size=num_examples, low=0, high=cycles)
+        label = numpy.random.randint(size=num_examples, low=0, high=classes)
 
         radius = (2*pos+1) / 3.
         phase_offset = label * (2*numpy.pi) / classes
 
-        features = numpy.zeros(shape=(n_datapoints, 2), dtype='float32')
+        features = numpy.zeros(shape=(num_examples, 2), dtype='float32')
 
         features[:, 0] = radius * numpy.sin(2*numpy.pi*pos + phase_offset)
         features[:, 1] = radius * numpy.cos(2*numpy.pi*pos + phase_offset)
