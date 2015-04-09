@@ -79,19 +79,20 @@ class H5PYDataset(Dataset):
 
     * Data sources reside in the root group, and their names define the
       source names.
-    * The dataset is not explicitly split. Instead, splits are defined as
-      attributes of the root group. They're expected to be numpy arrays of
-      shape (2,), with the first element being the starting point
-      (inclusive) of the split and the last element being the stopping
-      point (exclusive) of the split.
+    * Data sources are not explicitly split. Instead, splits are defined
+      in the `split` attribute of the root group. It's expected to be a
+      1D numpy array of compound ``dtype`` with six fields, organized as
+      follows:
 
-    The `which_set`, `start` and `stop` parameters work together in the
-    following way:
-
-    * `which_set` is resolved first. If it is `None`, the whole dataset is
-      used.
-    * `start` and `stop` define a slice *within the context of*
-      `which_set`.
+      1. ``split`` : string identifier for the split name
+      2. ``source`` : string identifier for the source name
+      3. ``start`` : start index (inclusive) of the split in the source
+         array
+      4. ``stop`` : stop index (exclusive) of the split in the source
+         array
+      5. ``available`` : boolean, ``False`` is this split is not available
+         for this source
+      6. ``comment`` : comment string
 
     Parameters
     ----------
@@ -142,6 +143,20 @@ class H5PYDataset(Dataset):
 
     @staticmethod
     def create_split_array(split_dict):
+        """Create a valid array for the `split` attribute of the root node.
+
+        Parameters
+        ----------
+        split_dict : dict
+            Maps split names to dict. Those dict map source names to
+            tuples. Those tuples contain two or three elements:
+            the start index, the stop index and (optionally) a comment.
+            If a particular split/source combination isn't present
+            in the split dict, it's considered as unavailable and the
+            `available` element will be set to `False` it its split array
+            entry.
+
+        """
         # Determine maximum split, source and string lengths
         split_len = max(len(split) for split in split_dict)
         sources = set()
