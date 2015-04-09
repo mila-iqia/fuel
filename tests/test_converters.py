@@ -12,16 +12,12 @@ def test_fill_hdf5_file():
     test_features = numpy.arange(8, dtype='uint8').reshape((2, 2, 2)) + 3
     train_targets = numpy.arange(4, dtype='float32').reshape((4, 1))
     test_targets = numpy.arange(2, dtype='float32').reshape((2, 1)) + 3
-    data = ((train_features, test_features), (train_targets, test_targets))
-    source_names = ('features', 'targets')
-    shapes = ((6, 2, 2), (6, 1))
-    dtypes = ('uint8', 'float32')
-    split_names = ('train', 'test')
-    splits = ((0, 4), (4, 6))
     fill_hdf5_file(
-        h5file, data, source_names, shapes, dtypes, split_names, splits)
-    assert_equal(h5file.attrs['train'], [0, 4])
-    assert_equal(h5file.attrs['test'], [4, 6])
+        h5file,
+        (('train', 'features', train_features),
+         ('train', 'targets', train_targets),
+         ('test', 'features', test_features),
+         ('test', 'targets', test_targets)))
     assert_equal(
         h5file['features'], numpy.vstack([train_features, test_features]))
     assert_equal(

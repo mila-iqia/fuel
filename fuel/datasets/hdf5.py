@@ -121,7 +121,9 @@ class H5PYDataset(Dataset):
         self.driver = driver
         if which_set not in self.available_splits:
             raise ValueError(
-                "'{}' split is not provided by this dataset".format(which_set))
+                "'{}' split is not provided by this ".format(which_set) +
+                "dataset. Available splits are " +
+                "{}.".format(self.available_splits))
         self.which_set = which_set
         subset = subset if subset else slice(None, None, None)
         if subset.step not in (1, None):
