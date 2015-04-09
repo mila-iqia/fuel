@@ -97,9 +97,8 @@ class H5PYDataset(Dataset):
     ----------
     path : str
         Path to the HDF5 file.
-    which_set : str, optional
-        Name of the root group attribute containing the split information.
-        Defaults to `None`, in which case the whole dataset is used.
+    which_set : str
+        Which split to use.
     subset : slice, optional
         A slice of data *within the context of the split* to use. Defaults
         to `None`, in which case the whole split is used. **Note:
@@ -125,7 +124,7 @@ class H5PYDataset(Dataset):
                 "dataset. Available splits are " +
                 "{}.".format(self.available_splits))
         self.which_set = which_set
-        subset = subset if subset else slice(None, None, None)
+        subset = subset if subset else slice(None)
         if subset.step not in (1, None):
             raise ValueError("subset.step must be either 1 or None")
         self.subsets = [subset for source in self.provides_sources]
@@ -144,8 +143,7 @@ class H5PYDataset(Dataset):
     @staticmethod
     def create_split_array(split_dict):
         # Determine maximum split, source and string lengths
-        splits = tuple(split_dict.keys())
-        split_len = max(len(split) for split in splits)
+        split_len = max(len(split) for split in split_dict)
         sources = set()
         comment_len = 1
         for split in split_dict.values():
@@ -158,7 +156,7 @@ class H5PYDataset(Dataset):
 
         # Instantiate empty split array
         split_array = numpy.empty(
-            len(splits) * len(sources),
+            len(split_dict) * len(sources),
             dtype=numpy.dtype([
                 ('split', numpy.str_, split_len),
                 ('source', numpy.str_, source_len),
@@ -167,7 +165,7 @@ class H5PYDataset(Dataset):
                 ('comment', numpy.str_, comment_len)]))
 
         # Fill split array
-        for i, (split, source) in enumerate(product(splits, sources)):
+        for i, (split, source) in enumerate(product(split_dict, sources)):
             if source in split_dict[split]:
                 start, stop = split_dict[split][source][:2]
                 available = True
