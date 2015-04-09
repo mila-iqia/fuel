@@ -55,11 +55,17 @@ things if your data happens to meet these assumptions:
 * All data is stored into a single HDF5 file.
 * Data sources reside in the root group, and their names define the source
   names.
-* Data sources are not explicitly split. Instead, splits are defined as
-  attributes of the root group. They're expected to be numpy arrays of
-  shape ``(2,)``, with the first element being the starting point
-  (inclusive) of the split and the last element being the stopping
-  point (exclusive) of the split.
+* Data sources are not explicitly split. Instead, splits are defined in the
+  ``split`` attribute of the root group. It's expected to be a 1D numpy
+  array of compound ``dtype`` with six fields, organized as follows:
+
+  1. ``split`` : string identifier for the split name
+  2. ``source`` : string identifier for the source name
+  3. ``start`` : start index (inclusive) of the split in the source array
+  4. ``stop`` : stop index (exclusive) of the split in the source array
+  5. ``available`` : boolean, ``False`` is this split is not available for this
+     source
+  6. ``comment`` : comment string
 
 .. tip::
 
@@ -105,11 +111,66 @@ with training examples and the last 10 rows with test examples.
 >>> targets[...] = numpy.vstack([train_targets, test_targets])
 
 The last thing we need to do is to give :class:`~.datasets.hdf5.H5PYDataset`
-a way to recover what the splits are. This is done by setting attributes in
-the root group.
+a way to recover what the splits are. This is done by setting the ``split``
+attribute of the root group.
 
->>> f.attrs['train'] = [0, 90]
->>> f.attrs['test'] = [90, 100]
+>>> split_array = numpy.empty(
+>>>     6,
+>>>     dtype=numpy.dtype([
+>>>         ('split', numpy.str_, 5),
+>>>         ('source', numpy.str_, 15),
+>>>         ('start', numpy.int64, 1), ('stop', numpy.int64, 1),
+>>>         ('available', numpy.bool, 1),
+>>>         ('comment', numpy.str_, 1)]))
+>>>     split_array[0:3]['split'] = 'train'
+>>>     split_array[3:6]['split'] = 'test'
+>>>     split_array[0:6:3]['source'] = 'vector_features'
+>>>     split_array[1:6:3]['source'] = 'image_features'
+>>>     split_array[2:6:3]['source'] = 'targets'
+>>>     split_array[0:3]['start'] = 0
+>>>     split_array[0:3]['stop'] = 90
+>>>     split_array[3:6]['start'] = 90
+>>>     split_array[3:6]['stop'] = 100
+>>>     split_array[:]['available'] = True
+>>>     split_array[:]['comment'] = '.'
+>>> f.attrs['split'] = split_array
+
+We created a 1D numpy array with six elements. The ``dtype`` for this array
+is a compound type: every element of the array is a tuple of ``(str, str, int,
+int, bool, str)``. The length of each string element has been chosen to be the
+maximum length we needed to store: that's 5 for the ``split`` element
+(``'train'`` being the longest split name) and 15 for the ``source`` element
+(``'vector_features'`` being the longest source name). We didn't include any
+comment, so the length for that element was set to 1. Due to a quirk in pickling
+empty strings, we put ``'.'`` as the comment value.
+
+:class:`~.datasets.hdf5.H5PYDataset` expects the ``split`` attribute of the
+root node to contain as many elements as the cartesian product of all sources
+and all splits, *i.e.* all possible split/source combinations. Sometimes, no
+data is available for some source/split combination: for instance, the test
+set may not be labeled, and the ``('test', 'targets')`` combination may not
+exist. In that case, you can set the ``available`` element for that combination
+to ``False``, and :class:`~.datasets.hdf5.H5PYDataset` will ignore it.
+
+The method described above does the job, but it's not very convenient. An even
+simpler way of achieving the same result is to call
+:meth:`~.datasets.hdf5.H5PYDataset.create_split_array`.
+
+>>> from fuel.datasets.hdf5 import H5PYDataset
+>>> split_dict = {
+...     'train': {'features': (0, 90), 'targets': (0, 90)},
+...     'test': {'features': (90, 100), 'targets': (90, 100)}}
+>>> f.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+
+The :meth:`~.datasets.hdf5.H5PYDataset.create_split_array` method expects
+a dictionary mapping split names to dictionaries. Those dictionaries map source
+names to tuples of length 2 or 3: the first two elements correspond to the start
+and stop indexes and the last element is an optional comment for the
+split/source pair. The method will create the array behind the scenes,
+choose the string lengths automatically and populate it with the information
+in the split dictionary. If a particular split/source combination isn't present,
+its ``available`` attribute is set to ``False``, which allows us to specify
+only what's actually present in the HDF5 file we created.
 
 We flush, close the file and *voilà*!
 
@@ -123,7 +184,6 @@ Let's explore what we can do with the dataset we just created.
 
 The simplest thing is to load it by giving its path:
 
->>> from fuel.datasets.hdf5 import H5PYDataset
 >>> dataset = H5PYDataset('dataset.hdf5')
 
 By default, the whole data is used:
