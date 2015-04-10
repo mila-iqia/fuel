@@ -173,11 +173,11 @@ class H5PYDataset(Dataset):
         split_array = numpy.empty(
             len(split_dict) * len(sources),
             dtype=numpy.dtype([
-                ('split', numpy.str_, split_len),
-                ('source', numpy.str_, source_len),
+                ('split', 'a', split_len),
+                ('source', 'a', source_len),
                 ('start', numpy.int64, 1), ('stop', numpy.int64, 1),
                 ('available', numpy.bool, 1),
-                ('comment', numpy.str_, comment_len)]))
+                ('comment', 'a', comment_len)]))
 
         # Fill split array
         for i, (split, source) in enumerate(product(split_dict, sources)):
@@ -192,12 +192,13 @@ class H5PYDataset(Dataset):
                         comment = '.'
             else:
                 (start, stop, available, comment) = (0, 0, False, '.')
-            split_array[i]['split'] = split
-            split_array[i]['source'] = source
+            # Workaround for H5PY being unable to store unicode type
+            split_array[i]['split'] = split.encode('utf8')
+            split_array[i]['source'] = source.encode('utf8')
             split_array[i]['start'] = start
             split_array[i]['stop'] = stop
             split_array[i]['available'] = available
-            split_array[i]['comment'] = comment
+            split_array[i]['comment'] = comment.encode('utf8')
 
         return split_array
 
@@ -206,6 +207,9 @@ class H5PYDataset(Dataset):
         split_dict = defaultdict(dict)
         for row in split_array:
             split, source, start, stop, available, comment = row
+            split = split.decode('utf8')
+            source = source.decode('utf8')
+            comment = comment.decode('utf8')
             if available:
                 split_dict[split][source] = (start, stop, comment)
         return dict(split_dict)

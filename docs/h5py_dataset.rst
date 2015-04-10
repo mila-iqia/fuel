@@ -117,22 +117,22 @@ attribute of the root group.
 >>> split_array = numpy.empty(
 ...     6,
 ...     dtype=numpy.dtype([
-...         ('split', numpy.str_, 5),
-...         ('source', numpy.str_, 15),
+...         ('split', 'a', 5),
+...         ('source', 'a', 15),
 ...         ('start', numpy.int64, 1), ('stop', numpy.int64, 1),
 ...         ('available', numpy.bool, 1),
-...         ('comment', numpy.str_, 1)]))
->>> split_array[0:3]['split'] = 'train'
->>> split_array[3:6]['split'] = 'test'
->>> split_array[0:6:3]['source'] = 'vector_features'
->>> split_array[1:6:3]['source'] = 'image_features'
->>> split_array[2:6:3]['source'] = 'targets'
+...         ('comment', 'a', 1)]))
+>>> split_array[0:3]['split'] = 'train'.encode('utf8')
+>>> split_array[3:6]['split'] = 'test'.encode('utf8')
+>>> split_array[0:6:3]['source'] = 'vector_features'.encode('utf8')
+>>> split_array[1:6:3]['source'] = 'image_features'.encode('utf8')
+>>> split_array[2:6:3]['source'] = 'targets'.encode('utf8')
 >>> split_array[0:3]['start'] = 0
 >>> split_array[0:3]['stop'] = 90
 >>> split_array[3:6]['start'] = 90
 >>> split_array[3:6]['stop'] = 100
 >>> split_array[:]['available'] = True
->>> split_array[:]['comment'] = '.'
+>>> split_array[:]['comment'] = '.'.encode('utf8')
 >>> f.attrs['split'] = split_array
 
 We created a 1D numpy array with six elements. The ``dtype`` for this array
@@ -143,6 +143,11 @@ maximum length we needed to store: that's 5 for the ``split`` element
 (``'vector_features'`` being the longest source name). We didn't include any
 comment, so the length for that element was set to 1. Due to a quirk in pickling
 empty strings, we put ``'.'`` as the comment value.
+
+.. warning::
+
+    Due to limitations in h5py, you must make sure to use bytes for ``split``,
+    ``source`` and ``comment``.
 
 :class:`~.datasets.hdf5.H5PYDataset` expects the ``split`` attribute of the
 root node to contain as many elements as the cartesian product of all sources
