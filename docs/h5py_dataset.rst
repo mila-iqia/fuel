@@ -115,13 +115,13 @@ a way to recover what the splits are. This is done by setting the ``split``
 attribute of the root group.
 
 >>> split_array = numpy.empty(
->>>     6,
->>>     dtype=numpy.dtype([
->>>         ('split', numpy.str_, 5),
->>>         ('source', numpy.str_, 15),
->>>         ('start', numpy.int64, 1), ('stop', numpy.int64, 1),
->>>         ('available', numpy.bool, 1),
->>>         ('comment', numpy.str_, 1)]))
+...     6,
+...     dtype=numpy.dtype([
+...         ('split', numpy.str_, 5),
+...         ('source', numpy.str_, 15),
+...         ('start', numpy.int64, 1), ('stop', numpy.int64, 1),
+...         ('available', numpy.bool, 1),
+...         ('comment', numpy.str_, 1)]))
 >>>     split_array[0:3]['split'] = 'train'
 >>>     split_array[3:6]['split'] = 'test'
 >>>     split_array[0:6:3]['source'] = 'vector_features'
