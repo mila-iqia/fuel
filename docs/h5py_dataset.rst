@@ -122,17 +122,17 @@ attribute of the root group.
 ...         ('start', numpy.int64, 1), ('stop', numpy.int64, 1),
 ...         ('available', numpy.bool, 1),
 ...         ('comment', numpy.str_, 1)]))
->>>     split_array[0:3]['split'] = 'train'
->>>     split_array[3:6]['split'] = 'test'
->>>     split_array[0:6:3]['source'] = 'vector_features'
->>>     split_array[1:6:3]['source'] = 'image_features'
->>>     split_array[2:6:3]['source'] = 'targets'
->>>     split_array[0:3]['start'] = 0
->>>     split_array[0:3]['stop'] = 90
->>>     split_array[3:6]['start'] = 90
->>>     split_array[3:6]['stop'] = 100
->>>     split_array[:]['available'] = True
->>>     split_array[:]['comment'] = '.'
+>>> split_array[0:3]['split'] = 'train'
+>>> split_array[3:6]['split'] = 'test'
+>>> split_array[0:6:3]['source'] = 'vector_features'
+>>> split_array[1:6:3]['source'] = 'image_features'
+>>> split_array[2:6:3]['source'] = 'targets'
+>>> split_array[0:3]['start'] = 0
+>>> split_array[0:3]['stop'] = 90
+>>> split_array[3:6]['start'] = 90
+>>> split_array[3:6]['stop'] = 100
+>>> split_array[:]['available'] = True
+>>> split_array[:]['comment'] = '.'
 >>> f.attrs['split'] = split_array
 
 We created a 1D numpy array with six elements. The ``dtype`` for this array
@@ -158,8 +158,10 @@ simpler way of achieving the same result is to call
 
 >>> from fuel.datasets.hdf5 import H5PYDataset
 >>> split_dict = {
-...     'train': {'features': (0, 90), 'targets': (0, 90)},
-...     'test': {'features': (90, 100), 'targets': (90, 100)}}
+...     'train': {'vector_features': (0, 90), 'image_features': (0, 90),
+...               'targets': (0, 90)},
+...     'test': {'vector_features': (90, 100), 'image_features': (90, 100),
+...              'targets': (90, 100)}}
 >>> f.attrs['split'] = H5PYDataset.create_split_array(split_dict)
 
 The :meth:`~.datasets.hdf5.H5PYDataset.create_split_array` method expects
@@ -182,17 +184,7 @@ Playing with H5PYDataset datasets
 
 Let's explore what we can do with the dataset we just created.
 
-The simplest thing is to load it by giving its path:
-
->>> dataset = H5PYDataset('dataset.hdf5')
-
-By default, the whole data is used:
-
->>> print(dataset.num_examples)
-100
-
-In order to use the training set or the test set, you need to pass a
-``which_set`` argument:
+The simplest thing is to load it by giving its path and a split name:
 
 >>> train_set = H5PYDataset('dataset.hdf5', which_set='train')
 >>> print(train_set.num_examples)
