@@ -55,15 +55,16 @@ things if your data happens to meet these assumptions:
 * All data is stored into a single HDF5 file.
 * Data sources reside in the root group, and their names define the source
   names.
-* Data sources are not explicitly split. Instead, splits are defined in the
-  ``split`` attribute of the root group. It's expected to be a 1D numpy
-  array of compound ``dtype`` with six fields, organized as follows:
+* Data sources are not explicitly split into separate HDF5 datasets or separate
+  HDF5 files. Instead, splits are defined in the ``split`` attribute of the root
+  group. It's expected to be a 1D numpy array of compound ``dtype`` with six
+  fields, organized as follows:
 
   1. ``split`` : string identifier for the split name
   2. ``source`` : string identifier for the source name
   3. ``start`` : start index (inclusive) of the split in the source array
   4. ``stop`` : stop index (exclusive) of the split in the source array
-  5. ``available`` : boolean, ``False`` is this split is not available for this
+  5. ``available`` : boolean, ``False`` if this split is not available for this
      source
   6. ``comment`` : comment string
 
