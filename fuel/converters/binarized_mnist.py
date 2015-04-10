@@ -43,15 +43,10 @@ def binarized_mnist(input_directory, save_path):
     test_set = numpy.loadtxt(
         os.path.join(input_directory, 'binarized_mnist_test.amat')).reshape(
             (-1, 1, 28, 28))
-    data = ((train_set, valid_set, test_set),)
-    source_names = ('features',)
-    shapes = ((70000, 1, 28, 28),)
-    dtypes = ('uint8',)
-    split_names = ('train', 'valid', 'test')
-    splits = ((0, 50000), (50000, 60000), (60000, 70000))
-
-    fill_hdf5_file(
-        h5file, data, source_names, shapes, dtypes, split_names, splits)
+    data = (('train', 'features', train_set),
+            ('valid', 'features', valid_set),
+            ('test', 'features', test_set))
+    fill_hdf5_file(h5file, data)
 
     h5file.flush()
     h5file.close()

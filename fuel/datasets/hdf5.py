@@ -1,6 +1,8 @@
+from itertools import product
 from collections import defaultdict
 
 import h5py
+import numpy
 import tables
 
 from fuel.datasets import Dataset
@@ -77,27 +79,27 @@ class H5PYDataset(Dataset):
 
     * Data sources reside in the root group, and their names define the
       source names.
-    * The dataset is not explicitly split. Instead, splits are defined as
-      attributes of the root group. They're expected to be numpy arrays of
-      shape (2,), with the first element being the starting point
-      (inclusive) of the split and the last element being the stopping
-      point (exclusive) of the split.
+    * Data sources are not explicitly split. Instead, splits are defined
+      in the `split` attribute of the root group. It's expected to be a
+      1D numpy array of compound ``dtype`` with six fields, organized as
+      follows:
 
-    The `which_set`, `start` and `stop` parameters work together in the
-    following way:
-
-    * `which_set` is resolved first. If it is `None`, the whole dataset is
-      used.
-    * `start` and `stop` define a slice *within the context of*
-      `which_set`.
+      1. ``split`` : string identifier for the split name
+      2. ``source`` : string identifier for the source name
+      3. ``start`` : start index (inclusive) of the split in the source
+         array
+      4. ``stop`` : stop index (exclusive) of the split in the source
+         array
+      5. ``available`` : boolean, ``False`` is this split is not available
+         for this source
+      6. ``comment`` : comment string
 
     Parameters
     ----------
     path : str
         Path to the HDF5 file.
-    which_set : str, optional
-        Name of the root group attribute containing the split information.
-        Defaults to `None`, in which case the whole dataset is used.
+    which_set : str
+        Which split to use.
     subset : slice, optional
         A slice of data *within the context of the split* to use. Defaults
         to `None`, in which case the whole split is used. **Note:
@@ -113,24 +115,104 @@ class H5PYDataset(Dataset):
     """
     ref_counts = defaultdict(int)
 
-    def __init__(self, path, which_set=None, subset=None, load_in_memory=False,
+    def __init__(self, path, which_set, subset=None, load_in_memory=False,
                  flatten=None, driver=None, **kwargs):
         self.path = path
+        self.driver = driver
+        if which_set not in self.available_splits:
+            raise ValueError(
+                "'{}' split is not provided by this ".format(which_set) +
+                "dataset. Available splits are " +
+                "{}.".format(self.available_splits))
         self.which_set = which_set
-        self.subset = subset if subset else slice(None, None, None)
+        subset = subset if subset else slice(None)
+        if subset.step not in (1, None):
+            raise ValueError("subset.step must be either 1 or None")
+        self.subsets = [subset for source in self.provides_sources]
         self.load_in_memory = load_in_memory
         self.flatten = [] if flatten is None else flatten
-        self.driver = driver
+        for source in self.flatten:
+            if source not in self.provides_sources:
+                raise ValueError(
+                    "trying to flatten source '{}' which is ".format(source) +
+                    "not provided by the '{}' split".format(self.which_set))
 
         super(H5PYDataset, self).__init__(**kwargs)
 
-        for source in self.flatten:
-            if source not in self.provides_sources:
-                raise ValueError("trying to flatten source " +
-                                 "'{}' which is not part of ".format(source) +
-                                 "the provided sources")
-
         self.load()
+
+    @staticmethod
+    def create_split_array(split_dict):
+        """Create a valid array for the `split` attribute of the root node.
+
+        Parameters
+        ----------
+        split_dict : dict
+            Maps split names to dict. Those dict map source names to
+            tuples. Those tuples contain two or three elements:
+            the start index, the stop index and (optionally) a comment.
+            If a particular split/source combination isn't present
+            in the split dict, it's considered as unavailable and the
+            `available` element will be set to `False` it its split array
+            entry.
+
+        """
+        # Determine maximum split, source and string lengths
+        split_len = max(len(split) for split in split_dict)
+        sources = set()
+        comment_len = 1
+        for split in split_dict.values():
+            sources |= set(split.keys())
+            for val in split.values():
+                if len(val) == 3:
+                    comment_len = max([comment_len, len(val[-1])])
+        sources = tuple(sources)
+        source_len = max(len(source) for source in sources)
+
+        # Instantiate empty split array
+        split_array = numpy.empty(
+            len(split_dict) * len(sources),
+            dtype=numpy.dtype([
+                ('split', 'a', split_len),
+                ('source', 'a', source_len),
+                ('start', numpy.int64, 1), ('stop', numpy.int64, 1),
+                ('available', numpy.bool, 1),
+                ('comment', 'a', comment_len)]))
+
+        # Fill split array
+        for i, (split, source) in enumerate(product(split_dict, sources)):
+            if source in split_dict[split]:
+                start, stop = split_dict[split][source][:2]
+                available = True
+                # Workaround for bug when pickling an empty string
+                comment = '.'
+                if len(split_dict[split][source]) == 3:
+                    comment = split_dict[split][source][2]
+                    if not comment:
+                        comment = '.'
+            else:
+                (start, stop, available, comment) = (0, 0, False, '.')
+            # Workaround for H5PY being unable to store unicode type
+            split_array[i]['split'] = split.encode('utf8')
+            split_array[i]['source'] = source.encode('utf8')
+            split_array[i]['start'] = start
+            split_array[i]['stop'] = stop
+            split_array[i]['available'] = available
+            split_array[i]['comment'] = comment.encode('utf8')
+
+        return split_array
+
+    @staticmethod
+    def parse_split_array(split_array):
+        split_dict = defaultdict(dict)
+        for row in split_array:
+            split, source, start, stop, available, comment = row
+            split = split.decode('utf8')
+            source = source.decode('utf8')
+            comment = comment.decode('utf8')
+            if available:
+                split_dict[split][source] = (start, stop, comment)
+        return dict(split_dict)
 
     def _get_file_id(self):
         file_id = [f for f in self.ref_counts.keys() if f.name == self.path]
@@ -140,32 +222,44 @@ class H5PYDataset(Dataset):
         return file_id
 
     @property
-    def provides_sources(self):
-        if not hasattr(self, '_provides_sources'):
+    def split_dict(self):
+        if not hasattr(self, '_split_dict'):
             handle = self._out_of_memory_open()
-            self._provides_sources = tuple(handle.keys())
+            split_array = handle.attrs['split']
+            self._split_dict = H5PYDataset.parse_split_array(split_array)
             self._out_of_memory_close(handle)
-        return self._provides_sources
+        return self._split_dict
+
+    @property
+    def available_splits(self):
+        return tuple(self.split_dict.keys())
+
+    @property
+    def provides_sources(self):
+        return tuple(self.split_dict[self.which_set].keys())
 
     def load(self):
         handle = self._out_of_memory_open()
-        shapes = [data_source.shape for data_source in handle.values()]
-        if any(s[0] != shapes[0][0] for s in shapes):
-            raise ValueError("sources have different lengths")
-        if self.subset.step not in (1, None):
-            raise ValueError("subset.step must be either 1 or None")
-        start, stop = (handle.attrs[self.which_set] if self.which_set
-                       else (0, shapes[0][0]))
-        self.subset = slice(
-            start if self.subset.start is None else self.subset.start,
-            stop if self.subset.stop is None else self.subset.stop,
-            self.subset.step)
-        self.num_examples = self.subset.stop - self.subset.start
+        num_examples = None
+        for i, (source_name, data_source) in enumerate(handle.items()):
+            if source_name in self.provides_sources:
+                start, stop = self.split_dict[self.which_set][source_name][:2]
+                subset = self.subsets[i]
+                subset = slice(
+                    start if subset.start is None else subset.start,
+                    stop if subset.stop is None else subset.stop,
+                    subset.step)
+                self.subsets[i] = subset
+                if num_examples is None:
+                    num_examples = subset.stop - subset.start
+                if num_examples != subset.stop - subset.start:
+                    raise ValueError("sources have different lengths")
+        self.num_examples = num_examples
         if self.load_in_memory:
             data_sources = []
-            for source_name, data_source in handle.items():
+            for i, (source_name, data_source) in enumerate(handle.items()):
                 if source_name in self.sources:
-                    data = data_source[self.subset]
+                    data = data_source[self.subsets[i]]
                     if source_name in self.flatten:
                         data = data.reshape((data.shape[0], -1))
                     data_sources.append(data)
@@ -206,17 +300,18 @@ class H5PYDataset(Dataset):
                                     in self.data_sources])
 
     def _out_of_memory_get_data(self, state=None, request=None):
-        if isinstance(request, slice):
-            request = slice(request.start + self.subset.start,
-                            request.stop + self.subset.start, request.step)
-        elif isinstance(request, list):
-            request = [index + self.subset.start for index in request]
-        else:
-            raise ValueError
         rval = []
-        for source_name, data_source in state.items():
+        for i, (source_name, data_source) in enumerate(state.items()):
             if source_name not in self.sources:
                 continue
+            subset = self.subsets[i]
+            if isinstance(request, slice):
+                request = slice(request.start + subset.start,
+                                request.stop + subset.start, request.step)
+            elif isinstance(request, list):
+                request = [index + subset.start for index in request]
+            else:
+                raise ValueError
             data = data_source[request]
             if source_name in self.flatten:
                 data = data.reshape((data.shape[0], -1))
