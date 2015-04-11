@@ -1,6 +1,6 @@
 """Download modules for built-in datasets.
 
-Download methods accept two arguments:
+Download functions accept two arguments:
 
 * `save_directory` : Where to save the downloaded files
 * `clear` : If `True`, clear the downloaded files. Defaults to `False`.
