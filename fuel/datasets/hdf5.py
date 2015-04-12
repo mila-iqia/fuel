@@ -1,5 +1,5 @@
 from itertools import product
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 import h5py
 import numpy
@@ -147,9 +147,9 @@ class H5PYDataset(Dataset):
 
         Parameters
         ----------
-        split_dict : dict
-            Maps split names to dict. Those dict map source names to
-            tuples. Those tuples contain two or three elements:
+        split_dict : :class:`collections.OrderedDict`
+            Maps split names to `OrderedDict`. Those dict map source names
+            to tuples. Those tuples contain two or three elements:
             the start index, the stop index and (optionally) a comment.
             If a particular split/source combination isn't present
             in the split dict, it's considered as unavailable and the
@@ -159,10 +159,12 @@ class H5PYDataset(Dataset):
         """
         # Determine maximum split, source and string lengths
         split_len = max(len(split) for split in split_dict)
-        sources = set()
+        sources = []
         comment_len = 1
         for split in split_dict.values():
-            sources |= set(split.keys())
+            for source in split.keys():
+                if source not in sources:
+                    sources.append(source)
             for val in split.values():
                 if len(val) == 3:
                     comment_len = max([comment_len, len(val[-1])])
@@ -204,13 +206,15 @@ class H5PYDataset(Dataset):
 
     @staticmethod
     def parse_split_array(split_array):
-        split_dict = defaultdict(dict)
+        split_dict = OrderedDict()
         for row in split_array:
             split, source, start, stop, available, comment = row
             split = split.decode('utf8')
             source = source.decode('utf8')
             comment = comment.decode('utf8')
             if available:
+                if split not in split_dict:
+                    split_dict[split] = OrderedDict()
                 split_dict[split][source] = (start, stop, comment)
         return dict(split_dict)
 

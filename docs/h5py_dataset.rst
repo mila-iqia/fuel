@@ -163,11 +163,15 @@ simpler way of achieving the same result is to call
 :meth:`~.datasets.hdf5.H5PYDataset.create_split_array`.
 
 >>> from fuel.datasets.hdf5 import H5PYDataset
->>> split_dict = {
-...     'train': {'vector_features': (0, 90), 'image_features': (0, 90),
-...               'targets': (0, 90)},
-...     'test': {'vector_features': (90, 100), 'image_features': (90, 100),
-...              'targets': (90, 100)}}
+>>> split_dict = OrderedDict([
+...     ('train', OrderedDict([
+...         ('vector_features', (0, 90)),
+...         ('image_features', (0, 90)),
+...         ('targets', (0, 90))])),
+...     ('test', OrderedDict([
+...         ('vector_features', (90, 100)),
+...         ('image_features', (90, 100)),
+...         ('targets', (90, 100))]))])
 >>> f.attrs['split'] = H5PYDataset.create_split_array(split_dict)
 
 The :meth:`~.datasets.hdf5.H5PYDataset.create_split_array` method expects
@@ -179,6 +183,13 @@ choose the string lengths automatically and populate it with the information
 in the split dictionary. If a particular split/source combination isn't present,
 its ``available`` attribute is set to ``False``, which allows us to specify
 only what's actually present in the HDF5 file we created.
+
+.. warning::
+
+    In order to maintain deterministic behaviour, it is recommended that you
+    use :class:`collections.OrderedDict` instead of ``dict``. The source
+    order will correspond to the order in which sources are encountered by
+    traversing the split dictionary depth-first.
 
 We flush, close the file and *voilà*!
 
