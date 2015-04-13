@@ -1,7 +1,6 @@
 import os
 import pickle
 import tables
-from collections import OrderedDict
 
 import h5py
 import numpy
@@ -42,10 +41,9 @@ def test_h5py_dataset_split_parsing():
     features[...] = numpy.zeros(shape=(100, 36)).astype('uint8')
     targets = h5file.create_dataset('targets', (30, 1), dtype='uint8')
     targets[...] = numpy.zeros(shape=(30, 1)).astype('uint8')
-    split_dict = OrderedDict([
-        ('train', OrderedDict([('features', (0, 20)), ('targets', (0, 20))])),
-        ('test', OrderedDict([('features', (20, 30)), ('targets', (20, 30))])),
-        ('unlabeled', OrderedDict([('features', (30, 100))]))])
+    split_dict = {'train': {'features': (0, 20), 'targets': (0, 20)},
+                  'test': {'features': (20, 30), 'targets': (20, 30)},
+                  'unlabeled': {'features': (30, 100)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     h5file.flush()
     h5file.close()
@@ -62,7 +60,7 @@ def test_h5py_dataset_pickles():
     h5file = h5py.File(name='tmp.hdf5', mode="w")
     features = h5file.create_dataset('features', (10, 5), dtype='float32')
     features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
-    split_dict = OrderedDict([('train', OrderedDict([('features', (0, 10))]))])
+    split_dict = {'train': {'features': (0, 10)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     h5file.flush()
     h5file.close()
@@ -75,7 +73,7 @@ def test_h5py_dataset_multiple_instances():
     h5file = h5py.File(name='tmp.hdf5', mode="w")
     features = h5file.create_dataset('features', (10, 5), dtype='float32')
     features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
-    split_dict = OrderedDict([('train', OrderedDict([('features', (0, 10))]))])
+    split_dict = {'train': {'features': (0, 10)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     h5file.flush()
     h5file.close()
@@ -94,9 +92,8 @@ def test_h5py_dataset_split():
     h5file = h5py.File(name='tmp.hdf5', mode="w")
     features = h5file.create_dataset('features', (10, 5), dtype='float32')
     features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
-    split_dict = OrderedDict([
-        ('train', OrderedDict([('features', (0, 8))])),
-        ('test', OrderedDict([('features', (8, 10))]))])
+    split_dict = {'train': {'features': (0, 8)},
+                  'test': {'features': (8, 10)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     h5file.flush()
     h5file.close()
@@ -119,7 +116,7 @@ def test_h5py_dataset_out_of_memory():
     h5file = h5py.File(name='tmp.hdf5', mode="w")
     features = h5file.create_dataset('features', (10, 5), dtype='float32')
     features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
-    split_dict = OrderedDict([('train', OrderedDict([('features', (0, 10))]))])
+    split_dict = {'train': {'features': (0, 10)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     h5file.flush()
     h5file.close()
@@ -137,7 +134,7 @@ def test_h5py_dataset_in_memory():
     h5file = h5py.File(name='tmp.hdf5', mode="w")
     features = h5file.create_dataset('features', (10, 5), dtype='float32')
     features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
-    split_dict = OrderedDict([('train', OrderedDict([('features', (0, 10))]))])
+    split_dict = {'train': {'features': (0, 10)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     h5file.flush()
     h5file.close()
@@ -158,8 +155,7 @@ def test_h5py_flatten_in_memory():
     features[...] = numpy.arange(60, dtype='float32').reshape((10, 2, 3))
     targets = h5file.create_dataset('targets', (10,), dtype='uint8')
     targets[...] = numpy.arange(10, dtype='uint8')
-    split_dict = OrderedDict([
-        ('train', OrderedDict([('features', (0, 10)), ('targets', (0, 10))]))])
+    split_dict = {'train': {'features': (0, 10), 'targets': (0, 10)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     h5file.flush()
     h5file.close()
@@ -180,8 +176,7 @@ def test_h5py_flatten_out_of_memory():
     features[...] = numpy.arange(60, dtype='float32').reshape((10, 2, 3))
     targets = h5file.create_dataset('targets', (10,), dtype='uint8')
     targets[...] = numpy.arange(10, dtype='uint8')
-    split_dict = OrderedDict([
-        ('train', OrderedDict([('features', (0, 10)), ('targets', (0, 10))]))])
+    split_dict = {'train': {'features': (0, 10), 'targets': (0, 10)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     h5file.flush()
     h5file.close()
@@ -202,8 +197,7 @@ def test_h5py_flatten_raises_error_on_invalid_name():
     features[...] = numpy.arange(60, dtype='float32').reshape((10, 2, 3))
     targets = h5file.create_dataset('targets', (10,), dtype='uint8')
     targets[...] = numpy.arange(10, dtype='uint8')
-    split_dict = OrderedDict([
-        ('train', OrderedDict([('features', (0, 10)), ('targets', (0, 10))]))])
+    split_dict = {'train': {'features': (0, 10), 'targets': (0, 10)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     h5file.flush()
     h5file.close()

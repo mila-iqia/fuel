@@ -147,9 +147,9 @@ class H5PYDataset(Dataset):
 
         Parameters
         ----------
-        split_dict : :class:`collections.OrderedDict`
-            Maps split names to `OrderedDict`. Those dict map source names
-            to tuples. Those tuples contain two or three elements:
+        split_dict : dict
+            Maps split names to dict. Those dict map source names to
+            tuples. Those tuples contain two or three elements:
             the start index, the stop index and (optionally) a comment.
             If a particular split/source combination isn't present
             in the split dict, it's considered as unavailable and the
