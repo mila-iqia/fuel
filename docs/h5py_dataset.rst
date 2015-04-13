@@ -180,6 +180,18 @@ in the split dictionary. If a particular split/source combination isn't present,
 its ``available`` attribute is set to ``False``, which allows us to specify
 only what's actually present in the HDF5 file we created.
 
+.. tip::
+
+    By default, :class:`~.datasets.hdf5.H5PYDataset` sorts sources in
+    alphabetical order, and data requests are also returned in that order. If
+    ``sources`` is passed as argument upon instantiation,
+    :class:`~.datasets.hdf5.H5PYDataset` will use the order of ``sources``
+    instead. This means that if you want to force a particular source order, you
+    can do so by explicitly passing the ``sources`` argument with the desired
+    ordering. For example, if your dataset has two sources named ``'features'``
+    and ``'targets'`` and you'd like the targets to be returned first, you need
+    to pass ``sources=('targets', 'features')`` as a constructor argument.
+
 We flush, close the file and *voilà*!
 
 >>> f.flush()

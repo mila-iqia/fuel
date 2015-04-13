@@ -1,5 +1,5 @@
 from itertools import product
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 import h5py
 import numpy
@@ -128,17 +128,17 @@ class H5PYDataset(Dataset):
         subset = subset if subset else slice(None)
         if subset.step not in (1, None):
             raise ValueError("subset.step must be either 1 or None")
-        self.subsets = [subset for source in self.provides_sources]
         self.load_in_memory = load_in_memory
         self.flatten = [] if flatten is None else flatten
+
+        super(H5PYDataset, self).__init__(**kwargs)
+
         for source in self.flatten:
             if source not in self.provides_sources:
                 raise ValueError(
                     "trying to flatten source '{}' which is ".format(source) +
                     "not provided by the '{}' split".format(self.which_set))
-
-        super(H5PYDataset, self).__init__(**kwargs)
-
+        self.subsets = [subset for source in self.sources]
         self.load()
 
     @staticmethod
@@ -166,7 +166,7 @@ class H5PYDataset(Dataset):
             for val in split.values():
                 if len(val) == 3:
                     comment_len = max([comment_len, len(val[-1])])
-        sources = tuple(sources)
+        sources = sorted(list(sources))
         source_len = max(len(source) for source in sources)
 
         # Instantiate empty split array
@@ -204,15 +204,17 @@ class H5PYDataset(Dataset):
 
     @staticmethod
     def parse_split_array(split_array):
-        split_dict = defaultdict(dict)
+        split_dict = OrderedDict()
         for row in split_array:
             split, source, start, stop, available, comment = row
             split = split.decode('utf8')
             source = source.decode('utf8')
             comment = comment.decode('utf8')
             if available:
+                if split not in split_dict:
+                    split_dict[split] = OrderedDict()
                 split_dict[split][source] = (start, stop, comment)
-        return dict(split_dict)
+        return split_dict
 
     def _get_file_id(self):
         file_id = [f for f in self.ref_counts.keys() if f.name == self.path]
@@ -241,28 +243,26 @@ class H5PYDataset(Dataset):
     def load(self):
         handle = self._out_of_memory_open()
         num_examples = None
-        for i, (source_name, data_source) in enumerate(handle.items()):
-            if source_name in self.provides_sources:
-                start, stop = self.split_dict[self.which_set][source_name][:2]
-                subset = self.subsets[i]
-                subset = slice(
-                    start if subset.start is None else subset.start,
-                    stop if subset.stop is None else subset.stop,
-                    subset.step)
-                self.subsets[i] = subset
-                if num_examples is None:
-                    num_examples = subset.stop - subset.start
-                if num_examples != subset.stop - subset.start:
-                    raise ValueError("sources have different lengths")
+        for i, source_name in enumerate(self.sources):
+            start, stop = self.split_dict[self.which_set][source_name][:2]
+            subset = self.subsets[i]
+            subset = slice(
+                start if subset.start is None else subset.start,
+                stop if subset.stop is None else subset.stop,
+                subset.step)
+            self.subsets[i] = subset
+            if num_examples is None:
+                num_examples = subset.stop - subset.start
+            if num_examples != subset.stop - subset.start:
+                raise ValueError("sources have different lengths")
         self.num_examples = num_examples
         if self.load_in_memory:
             data_sources = []
-            for i, (source_name, data_source) in enumerate(handle.items()):
-                if source_name in self.sources:
-                    data = data_source[self.subsets[i]]
-                    if source_name in self.flatten:
-                        data = data.reshape((data.shape[0], -1))
-                    data_sources.append(data)
+            for source_name, subset in zip(self.sources, self.subsets):
+                data = handle[source_name][subset]
+                if source_name in self.flatten:
+                    data = data.reshape((data.shape[0], -1))
+                data_sources.append(data)
             self.data_sources = data_sources
         else:
             self.data_sources = None
@@ -296,15 +296,11 @@ class H5PYDataset(Dataset):
     def _in_memory_get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
-        return self.filter_sources([data_source[request] for data_source
-                                    in self.data_sources])
+        return tuple(data_source[request] for data_source in self.data_sources)
 
     def _out_of_memory_get_data(self, state=None, request=None):
         rval = []
-        for i, (source_name, data_source) in enumerate(state.items()):
-            if source_name not in self.sources:
-                continue
-            subset = self.subsets[i]
+        for source_name, subset in zip(self.sources, self.subsets):
             if isinstance(request, slice):
                 request = slice(request.start + subset.start,
                                 request.stop + subset.start, request.step)
@@ -312,7 +308,7 @@ class H5PYDataset(Dataset):
                 request = [index + subset.start for index in request]
             else:
                 raise ValueError
-            data = data_source[request]
+            data = state[source_name][request]
             if source_name in self.flatten:
                 data = data.reshape((data.shape[0], -1))
             rval.append(data)
