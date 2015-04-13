@@ -201,5 +201,33 @@ Our subclass is just a thin wrapper around the
 switches the ``load_in_memory`` argument default to ``True`` (since this dataset
 easily fits in memory). Everything else is handled by the superclass.
 
+Putting it together
+-------------------
+
+We now have everything we need to start playing around with our new dataset
+implementation.
+
+Try downloading and converting the data file:
+
+.. code-block:: bash
+
+    cd $FUEL_DATA_PATH
+    fuel-download iris
+    fuel-convert iris
+    fuel-download --clear iris
+    cd -
+
+You can now use the Iris dataset like you would use any other built-in dataset:
+
+.. code-block:: python
+
+    >>> from fuel.datasets.iris import Iris # doctest: +SKIP
+    >>> train_set = Iris('train') # doctest: +SKIP
+    >>> handle = train_set.open() # doctest: +SKIP
+    >>> data = train_set.get_data(handle, slice(0, 10)) # doctest: +SKIP
+    >>> print((data[0].shape, data[1].shape)) # doctest: +SKIP
+    ((10, 4), (10, 1))
+    >>> train_set.close(handle) # doctest: +SKIP
+
 .. _Iris dataset: https://archive.ics.uci.edu/ml/datasets/Iris
 .. _iris.data: https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data
