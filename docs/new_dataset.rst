@@ -129,11 +129,11 @@ module (you'll have to create it):
 
     def iris(input_directory, save_path):
         h5file = h5py.File(save_path, mode="w")
+        classes = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2}
         data = numpy.loadtxt(
-            os.path.join(input_directory, 'iris.data'), delimiter=',')
-        data[:50, -1] = '0'
-        data[50:100, -1] = '1'
-        data[100:150, -1] = '2'
+            os.path.join(input_directory, 'iris.data'),
+            converters={4: lambda x: classes[x]},
+            delimiter=',')
         numpy.random.shuffle(data)
         features = data[:, :-1].astype('float32')
         targets = data[:, -1].astype('uint8')
@@ -226,7 +226,7 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> handle = train_set.open() # doctest: +SKIP
     >>> data = train_set.get_data(handle, slice(0, 10)) # doctest: +SKIP
     >>> print((data[0].shape, data[1].shape)) # doctest: +SKIP
-    ((10, 4), (10, 1))
+    ((10, 4), (10,))
     >>> train_set.close(handle) # doctest: +SKIP
 
 .. _Iris dataset: https://archive.ics.uci.edu/ml/datasets/Iris
