@@ -162,6 +162,7 @@ The method described above does the job, but it's not very convenient. An even
 simpler way of achieving the same result is to call
 :meth:`~.datasets.hdf5.H5PYDataset.create_split_array`.
 
+>>> from collections import OrderedDict
 >>> from fuel.datasets.hdf5 import H5PYDataset
 >>> split_dict = OrderedDict([
 ...     ('train', OrderedDict([
