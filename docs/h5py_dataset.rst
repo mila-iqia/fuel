@@ -162,17 +162,12 @@ The method described above does the job, but it's not very convenient. An even
 simpler way of achieving the same result is to call
 :meth:`~.datasets.hdf5.H5PYDataset.create_split_array`.
 
->>> from collections import OrderedDict
 >>> from fuel.datasets.hdf5 import H5PYDataset
->>> split_dict = OrderedDict([
-...     ('train', OrderedDict([
-...         ('vector_features', (0, 90)),
-...         ('image_features', (0, 90)),
-...         ('targets', (0, 90))])),
-...     ('test', OrderedDict([
-...         ('vector_features', (90, 100)),
-...         ('image_features', (90, 100)),
-...         ('targets', (90, 100))]))])
+>>> split_dict = {
+...     'train': {'vector_features': (0, 90), 'image_features': (0, 90),
+...               'targets': (0, 90)},
+...     'test': {'vector_features': (90, 100), 'image_features': (90, 100),
+...              'targets': (90, 100)}}
 >>> f.attrs['split'] = H5PYDataset.create_split_array(split_dict)
 
 The :meth:`~.datasets.hdf5.H5PYDataset.create_split_array` method expects
@@ -185,12 +180,17 @@ in the split dictionary. If a particular split/source combination isn't present,
 its ``available`` attribute is set to ``False``, which allows us to specify
 only what's actually present in the HDF5 file we created.
 
-.. warning::
+.. tip::
 
-    In order to maintain deterministic behaviour, it is recommended that you
-    use :class:`collections.OrderedDict` instead of ``dict``. The source
-    order will correspond to the order in which sources are encountered by
-    traversing the split dictionary depth-first.
+    By default, :class:`~.datasets.hdf5.H5PYDataset` sorts sources in
+    alphabetical order, and data requests are also returned in that order. If
+    ``sources`` is passed as argument upon instantiation,
+    :class:`~.datasets.hdf5.H5PYDataset` will use the order of ``sources``
+    instead. This means that if you want to force a particular source order, you
+    can do so by explicitly passing the ``sources`` argument with the desired
+    ordering. For example, if your dataset has two sources named ``'features'``
+    and ``'targets'`` and you'd like the targets to be returned first, you need
+    to pass ``sources=('targets', 'features')`` as a constructor argument.
 
 We flush, close the file and *voilà*!
 
