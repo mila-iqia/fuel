@@ -1,3 +1,4 @@
+import hashlib
 import os
 
 from numpy.testing import assert_raises
@@ -15,6 +16,7 @@ def test_binarized_mnist_train():
     data, = dataset.get_data(handle, slice(0, 10))
     assert data.dtype == 'uint8'
     assert data.shape == (10, 1, 28, 28)
+    assert hashlib.md5(data).hexdigest() == '0922fefc9a9d097e3b086b89107fafce'
     assert dataset.num_examples == 50000
     dataset.close(handle)
 
@@ -27,6 +29,7 @@ def test_binarized_mnist_valid():
     data, = dataset.get_data(handle, slice(0, 10))
     assert data.dtype == 'uint8'
     assert data.shape == (10, 1, 28, 28)
+    assert hashlib.md5(data).hexdigest() == '65e8099613162b3110a7618037011617'
     assert dataset.num_examples == 10000
     dataset.close(handle)
 
@@ -39,6 +42,7 @@ def test_binarized_mnist_test():
     data, = dataset.get_data(handle, slice(0, 10))
     assert data.dtype == 'uint8'
     assert data.shape == (10, 1, 28, 28)
+    assert hashlib.md5(data).hexdigest() == '0fa539ed8cb008880a61be77f744f06a'
     assert dataset.num_examples == 10000
     dataset.close(handle)
 
