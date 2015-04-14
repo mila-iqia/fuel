@@ -1,3 +1,4 @@
+import hashlib
 import os
 
 from numpy.testing import assert_raises
@@ -8,36 +9,42 @@ from tests import skip_if_not_available
 
 
 def test_binarized_mnist_train():
-    skip_if_not_available(datasets=['binarized_mnist'])
+    skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
-    mnist_train = BinarizedMNIST('train')
-    handle = mnist_train.open()
-    data = mnist_train.get_data(handle, slice(0, 50000))[0]
-    assert data.shape == (50000, 1, 28, 28)
-    assert mnist_train.num_examples == 50000
-    mnist_train.close(handle)
+    dataset = BinarizedMNIST('train', load_in_memory=False)
+    handle = dataset.open()
+    data, = dataset.get_data(handle, slice(0, 10))
+    assert data.dtype == 'uint8'
+    assert data.shape == (10, 1, 28, 28)
+    assert hashlib.md5(data).hexdigest() == '0922fefc9a9d097e3b086b89107fafce'
+    assert dataset.num_examples == 50000
+    dataset.close(handle)
 
 
 def test_binarized_mnist_valid():
-    skip_if_not_available(datasets=['binarized_mnist'])
+    skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
-    mnist_valid = BinarizedMNIST('valid')
-    handle = mnist_valid.open()
-    data = mnist_valid.get_data(handle, slice(0, 10000))[0]
-    assert data.shape == (10000, 1, 28, 28)
-    assert mnist_valid.num_examples == 10000
-    mnist_valid.close(handle)
+    dataset = BinarizedMNIST('valid', load_in_memory=False)
+    handle = dataset.open()
+    data, = dataset.get_data(handle, slice(0, 10))
+    assert data.dtype == 'uint8'
+    assert data.shape == (10, 1, 28, 28)
+    assert hashlib.md5(data).hexdigest() == '65e8099613162b3110a7618037011617'
+    assert dataset.num_examples == 10000
+    dataset.close(handle)
 
 
 def test_binarized_mnist_test():
-    skip_if_not_available(datasets=['binarized_mnist'])
+    skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
-    mnist_test = BinarizedMNIST('test')
-    handle = mnist_test.open()
-    data = mnist_test.get_data(handle, slice(0, 10000))[0]
-    assert data.shape == (10000, 1, 28, 28)
-    assert mnist_test.num_examples == 10000
-    mnist_test.close(handle)
+    dataset = BinarizedMNIST('test', load_in_memory=False)
+    handle = dataset.open()
+    data, = dataset.get_data(handle, slice(0, 10))
+    assert data.dtype == 'uint8'
+    assert data.shape == (10, 1, 28, 28)
+    assert hashlib.md5(data).hexdigest() == '0fa539ed8cb008880a61be77f744f06a'
+    assert dataset.num_examples == 10000
+    dataset.close(handle)
 
 
 def test_binarized_mnist_invalid_split():
