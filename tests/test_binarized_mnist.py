@@ -8,33 +8,36 @@ from tests import skip_if_not_available
 
 
 def test_binarized_mnist_train():
-    skip_if_not_available(datasets=['binarized_mnist'])
+    skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
     mnist_train = BinarizedMNIST('train')
     handle = mnist_train.open()
     data = mnist_train.get_data(handle, slice(0, 50000))[0]
+    assert data.dtype == 'uint8'
     assert data.shape == (50000, 1, 28, 28)
     assert mnist_train.num_examples == 50000
     mnist_train.close(handle)
 
 
 def test_binarized_mnist_valid():
-    skip_if_not_available(datasets=['binarized_mnist'])
+    skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
     mnist_valid = BinarizedMNIST('valid')
     handle = mnist_valid.open()
     data = mnist_valid.get_data(handle, slice(0, 10000))[0]
+    assert data.dtype == 'uint8'
     assert data.shape == (10000, 1, 28, 28)
     assert mnist_valid.num_examples == 10000
     mnist_valid.close(handle)
 
 
 def test_binarized_mnist_test():
-    skip_if_not_available(datasets=['binarized_mnist'])
+    skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
     mnist_test = BinarizedMNIST('test')
     handle = mnist_test.open()
     data = mnist_test.get_data(handle, slice(0, 10000))[0]
+    assert data.dtype == 'uint8'
     assert data.shape == (10000, 1, 28, 28)
     assert mnist_test.num_examples == 10000
     mnist_test.close(handle)
