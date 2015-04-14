@@ -1,4 +1,5 @@
 import collections
+import re
 
 import six
 
@@ -87,3 +88,24 @@ def do_not_pickle_attributes(*lazy_properties):
 
         return cls
     return wrap_class
+
+
+def expand_axis_label(axis_label):
+    """Expand an abbreviated axis label.
+
+    Parameters
+    ----------
+    axis_label : str
+        Abbreviated axis label
+
+    """
+    if axis_label == 'b':
+        return 'batch'
+    elif axis_label == 'c':
+        return 'channel'
+    elif axis_label == 't':
+        return 'time'
+    elif re.match('^[0-9]+$', axis_label):
+        return 'axis_' + axis_label
+    else:
+        return axis_label
