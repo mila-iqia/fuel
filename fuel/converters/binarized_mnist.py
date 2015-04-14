@@ -36,13 +36,13 @@ def binarized_mnist(input_directory, save_path):
     h5file = h5py.File(save_path, mode="w")
     train_set = numpy.loadtxt(
         os.path.join(input_directory, 'binarized_mnist_train.amat')).reshape(
-            (-1, 1, 28, 28))
+            (-1, 1, 28, 28)).astype('uint8')
     valid_set = numpy.loadtxt(
         os.path.join(input_directory, 'binarized_mnist_valid.amat')).reshape(
-            (-1, 1, 28, 28))
+            (-1, 1, 28, 28)).astype('uint8')
     test_set = numpy.loadtxt(
         os.path.join(input_directory, 'binarized_mnist_test.amat')).reshape(
-            (-1, 1, 28, 28))
+            (-1, 1, 28, 28)).astype('uint8')
     data = (('train', 'features', train_set),
             ('valid', 'features', valid_set),
             ('test', 'features', test_set))
