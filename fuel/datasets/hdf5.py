@@ -6,7 +6,7 @@ import numpy
 import tables
 
 from fuel.datasets import Dataset
-from fuel.utils import do_not_pickle_attributes
+from fuel.utils import do_not_pickle_attributes, expand_axis_label
 
 
 @do_not_pickle_attributes('nodes')
@@ -231,6 +231,19 @@ class H5PYDataset(Dataset):
             self._split_dict = H5PYDataset.parse_split_array(split_array)
             self._out_of_memory_close(handle)
         return self._split_dict
+
+    @property
+    def axis_label_dict(self):
+        if not hasattr(self, '_axis_label_dict'):
+            handle = self._out_of_memory_open()
+            axis_label_dict = {}
+            for source_name in handle:
+                axis_label_dict[source_name] = tuple(
+                    expand_axis_label(dim.label)
+                    for dim in handle[source_name].dims)
+            self._axis_label_dict = axis_label_dict
+            self._out_of_memory_close(handle)
+        return self._axis_label_dict
 
     @property
     def available_splits(self):
