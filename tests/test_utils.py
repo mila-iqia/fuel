@@ -1,6 +1,8 @@
 import pickle
 from six.moves import range
 
+from numpy.testing import assert_raises
+
 from fuel.utils import do_not_pickle_attributes, expand_axis_label
 
 
@@ -32,3 +34,7 @@ def test_expand_axis_label():
     assert expand_axis_label('1') == 'axis_1'
     assert expand_axis_label('0b') == '0b'
     assert expand_axis_label('') == ''
+
+
+def test_expand_axis_label_not_string():
+    assert_raises(ValueError, expand_axis_label, 0)

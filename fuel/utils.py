@@ -99,6 +99,8 @@ def expand_axis_label(axis_label):
         Abbreviated axis label
 
     """
+    if not isinstance(axis_label, six.string_types):
+        raise ValueError("axis_label needs to be a string")
     if axis_label == 'b':
         return 'batch'
     elif axis_label == 'c':
