@@ -1,5 +1,4 @@
 import collections
-import re
 
 import six
 
@@ -107,7 +106,11 @@ def expand_axis_label(axis_label):
         return 'channel'
     elif axis_label == 't':
         return 'time'
-    elif re.match('^[0-9]+$', axis_label):
-        return 'axis_' + axis_label
+    elif axis_label == 'w':
+        return 'width'
+    elif axis_label == 'h':
+        return 'height'
+    elif axis_label == 'f':
+        return 'features'
     else:
         return axis_label

@@ -30,9 +30,10 @@ def test_expand_axis_label():
     assert expand_axis_label('b') == 'batch'
     assert expand_axis_label('c') == 'channel'
     assert expand_axis_label('t') == 'time'
-    assert expand_axis_label('0') == 'axis_0'
-    assert expand_axis_label('1') == 'axis_1'
-    assert expand_axis_label('0b') == '0b'
+    assert expand_axis_label('w') == 'width'
+    assert expand_axis_label('h') == 'height'
+    assert expand_axis_label('f') == 'features'
+    assert expand_axis_label('dummy') == 'dummy'
     assert expand_axis_label('') == ''
 
 

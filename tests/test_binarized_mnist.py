@@ -52,7 +52,7 @@ def test_binarized_mnist_axes():
 
     dataset = BinarizedMNIST('train', load_in_memory=False)
     assert_equal(dataset.axis_label_dict['features'],
-                 ('batch', 'channel', 'axis_0', 'axis_1'))
+                 ('batch', 'channel', 'height', 'width'))
 
 
 def test_binarized_mnist_invalid_split():
