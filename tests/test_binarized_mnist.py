@@ -1,7 +1,7 @@
 import hashlib
 import os
 
-from numpy.testing import assert_raises
+from numpy.testing import assert_raises, assert_equal
 
 from fuel import config
 from fuel.datasets import BinarizedMNIST
@@ -51,10 +51,8 @@ def test_binarized_mnist_axes():
     skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
     dataset = BinarizedMNIST('train', load_in_memory=False)
-    assert all(
-        dim_label == label for (dim_label, label) in
-        zip(dataset.axis_label_dict['features'],
-            ('batch', 'channel', 'axis_0', 'axis_1')))
+    assert_equal(dataset.axis_label_dict['features'],
+                 ('batch', 'channel', 'axis_0', 'axis_1'))
 
 
 def test_binarized_mnist_invalid_split():
