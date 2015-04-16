@@ -95,7 +95,8 @@ class SwissRoll(IndexableDataset):
 
         fig = plt.figure()
         ax = fig.gca(projection="3d")
-        ax.scatter(features[:,0], features[:,1], features[:,2], 'x', c=color)
+        ax.scatter(features[:,0], features[:,1], features[:,2],
+                   'x', c=color)
         ax.set_xlim(-1, 1)
         ax.set_ylim(-1, 1)
         ax.set_zlim(-1, 1)

@@ -21,6 +21,7 @@ def test_spiral():
     assert position.max() <= 1.
     assert label.max() == 1
 
+
 def test_swiossroll():
     ds = SwissRoll(num_examples=1000)
 
