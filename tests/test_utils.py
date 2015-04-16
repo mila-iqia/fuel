@@ -1,9 +1,7 @@
 import pickle
 from six.moves import range
 
-from numpy.testing import assert_raises
-
-from fuel.utils import do_not_pickle_attributes, expand_axis_label
+from fuel.utils import do_not_pickle_attributes
 
 
 @do_not_pickle_attributes("non_pickable", "bulky_attr")
@@ -24,18 +22,3 @@ def test_do_not_pickle_attributes():
     loaded = pickle.loads(dump)
     assert loaded.bulky_attr == list(range(100))
     assert loaded.non_pickable is not None
-
-
-def test_expand_axis_label():
-    assert expand_axis_label('b') == 'batch'
-    assert expand_axis_label('c') == 'channel'
-    assert expand_axis_label('t') == 'time'
-    assert expand_axis_label('w') == 'width'
-    assert expand_axis_label('h') == 'height'
-    assert expand_axis_label('f') == 'features'
-    assert expand_axis_label('dummy') == 'dummy'
-    assert expand_axis_label('') == ''
-
-
-def test_expand_axis_label_not_string():
-    assert_raises(ValueError, expand_axis_label, 0)

@@ -6,7 +6,7 @@ import numpy
 import tables
 
 from fuel.datasets import Dataset
-from fuel.utils import do_not_pickle_attributes, expand_axis_label
+from fuel.utils import do_not_pickle_attributes
 
 
 @do_not_pickle_attributes('nodes')
@@ -239,8 +239,7 @@ class H5PYDataset(Dataset):
             axis_label_dict = {}
             for source_name in handle:
                 axis_label_dict[source_name] = tuple(
-                    expand_axis_label(dim.label)
-                    for dim in handle[source_name].dims)
+                    dim.label for dim in handle[source_name].dims)
             self._axis_label_dict = axis_label_dict
             self._out_of_memory_close(handle)
         return self._axis_label_dict

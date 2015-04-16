@@ -47,7 +47,7 @@ def binarized_mnist(input_directory, save_path):
             ('valid', 'features', valid_set),
             ('test', 'features', test_set))
     fill_hdf5_file(h5file, data)
-    for i, label in enumerate(('b', 'c', 'h', 'w')):
+    for i, label in enumerate(('batch', 'channel', 'height', 'width')):
         h5file['features'].dims[i].label = label
 
     h5file.flush()

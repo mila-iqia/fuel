@@ -87,30 +87,3 @@ def do_not_pickle_attributes(*lazy_properties):
 
         return cls
     return wrap_class
-
-
-def expand_axis_label(axis_label):
-    """Expand an abbreviated axis label.
-
-    Parameters
-    ----------
-    axis_label : str
-        Abbreviated axis label
-
-    """
-    if not isinstance(axis_label, six.string_types):
-        raise ValueError("axis_label needs to be a string")
-    if axis_label == 'b':
-        return 'batch'
-    elif axis_label == 'c':
-        return 'channel'
-    elif axis_label == 't':
-        return 'time'
-    elif axis_label == 'w':
-        return 'width'
-    elif axis_label == 'h':
-        return 'height'
-    elif axis_label == 'f':
-        return 'features'
-    else:
-        return axis_label
