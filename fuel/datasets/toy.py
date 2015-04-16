@@ -69,3 +69,70 @@ class Spiral(IndexableDataset):
         ])
 
         super(Spiral, self).__init__(data, **kwargs)
+
+
+class SwissRoll(IndexableDataset):
+    """Dataset containing points from a 3-dimensional Swiss roll.
+
+    The dataset contains 2 sources:
+
+    * features -- the x, y and z position of the datapoints
+    * position -- radial and z position on the manifold
+
+    .. plot::
+
+        from fuel.datasets.toy import SwissRoll
+        import mpl_toolkits.mplot3d.axes3d as p3
+        import numpy as np
+
+        ds = SwissRoll()
+        features, pos = ds.get_data(None, slice(0, 1000))
+
+        color = pos[:,0]
+        color -= color.min()
+        color /= color.max()
+
+        fig = plt.figure()
+        ax = fig.gca(projection="3d")
+        ax.scatter(features[:,0], features[:,1], features[:,2], 'x', c=color)
+        ax.set_xlim(-1, 1)
+        ax.set_ylim(-1, 1)
+        ax.set_zlim(-1, 1)
+        ax.view_init(10., 10.)
+        plt.show()
+
+    Parameters
+    ----------
+    num_examples : int
+        Number of datapoints to create.
+    noise : float
+        Add normal distributed noise with standard deviation *noise*.
+
+    """
+    def __init__(self, num_examples=1000, noise=0.0, **kwargs):
+        cycles = 1.5
+
+        pos = numpy.random.uniform(size=num_examples, low=0, high=1)
+        phi = cycles * numpy.pi * (1 + 2*pos)
+        radius = (1+2*pos) / 3
+
+        x = radius * numpy.cos(phi)
+        y = radius * numpy.sin(phi)
+        z = numpy.random.uniform(size=num_examples, low=-1, high=1)
+
+        features = numpy.zeros(shape=(num_examples, 3), dtype='float32')
+        features[:, 0] = x
+        features[:, 1] = y
+        features[:, 2] = z
+        features += noise * numpy.random.normal(size=(num_examples, 3))
+
+        position = numpy.zeros(shape=(num_examples, 2), dtype='float32')
+        position[:, 0] = pos
+        position[:, 1] = z
+
+        data = OrderedDict([
+            ('features', features),
+            ('position', position),
+        ])
+
+        super(SwissRoll, self).__init__(data, **kwargs)
