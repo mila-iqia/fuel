@@ -39,15 +39,16 @@ class Spiral(IndexableDataset):
     Parameters
     ----------
     num_examples : int
-        Number of datapoints to create
+        Number of datapoints to create.
     classes : int
-        Number of spiral arms
+        Number of spiral arms.
     cycles : float
-    sd : float
-        Add normal distributed noise with standard deviation *ds*.
+        Number of turns the arms take.
+    noise : float
+        Add normal distributed noise with standard deviation *noise*.
 
     """
-    def __init__(self, num_examples=1000, classes=1, cycles=1., sd=0.0,
+    def __init__(self, num_examples=1000, classes=1, cycles=1., noise=0.0,
                  **kwargs):
         # Create dataset
         pos = numpy.random.uniform(size=num_examples, low=0, high=cycles)
