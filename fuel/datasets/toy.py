@@ -61,6 +61,7 @@ class Spiral(IndexableDataset):
 
         features[:, 0] = radius * numpy.sin(2*numpy.pi*pos + phase_offset)
         features[:, 1] = radius * numpy.cos(2*numpy.pi*pos + phase_offset)
+        features += noise * numpy.random.normal(size=(num_examples, 2))
 
         data = OrderedDict([
             ('features', features),
