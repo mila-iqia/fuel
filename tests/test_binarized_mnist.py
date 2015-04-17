@@ -51,7 +51,7 @@ def test_binarized_mnist_axes():
     skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
     dataset = BinarizedMNIST('train', load_in_memory=False)
-    assert_equal(dataset.axis_label_dict['features'],
+    assert_equal(dataset.axis_labels['features'],
                  ('batch', 'channel', 'height', 'width'))
 
 

@@ -233,16 +233,16 @@ class H5PYDataset(Dataset):
         return self._split_dict
 
     @property
-    def axis_label_dict(self):
-        if not hasattr(self, '_axis_label_dict'):
+    def axis_labels(self):
+        if not hasattr(self, '_axis_labels'):
             handle = self._out_of_memory_open()
-            axis_label_dict = {}
+            axis_labels = {}
             for source_name in handle:
-                axis_label_dict[source_name] = tuple(
+                axis_labels[source_name] = tuple(
                     dim.label for dim in handle[source_name].dims)
-            self._axis_label_dict = axis_label_dict
+            self._axis_labels = axis_labels
             self._out_of_memory_close(handle)
-        return self._axis_label_dict
+        return self._axis_labels
 
     @property
     def available_splits(self):

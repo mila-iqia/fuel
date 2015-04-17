@@ -56,6 +56,21 @@ def test_h5py_dataset_split_parsing():
     os.remove('tmp.hdf5')
 
 
+def test_h5py_dataset_axis_labels():
+    h5file = h5py.File(name='tmp.hdf5', mode="w")
+    features = h5file.create_dataset('features', (10, 5), dtype='float32')
+    features.dims[0].label = 'batch'
+    features.dims[1].label = 'feature'
+    features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
+    split_dict = {'train': {'features': (0, 10)}}
+    h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+    h5file.flush()
+    h5file.close()
+    dataset = H5PYDataset(path='tmp.hdf5', which_set='train')
+    assert dataset.axis_labels == {'features': ('batch', 'feature')}
+    os.remove('tmp.hdf5')
+
+
 def test_h5py_dataset_pickles():
     h5file = h5py.File(name='tmp.hdf5', mode="w")
     features = h5file.create_dataset('features', (10, 5), dtype='float32')
