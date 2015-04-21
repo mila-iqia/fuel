@@ -32,6 +32,10 @@ class Transformer(AbstractDataStream):
         self.batch_input = batch_input
 
     @property
+    def axis_labels(self):
+        return None
+
+    @property
     def sources(self):
         if hasattr(self, '_sources'):
             return self._sources
@@ -121,6 +125,14 @@ class ForceFloatX(Transformer):
     """Force all floating point numpy arrays to be floatX."""
     def __init__(self, data_stream):
         super(ForceFloatX, self).__init__(data_stream)
+
+    @property
+    def axis_labels(self):
+        return None
+        if hasattr(self.data_stream.axis_labels):
+            return self.data_stream.axis_labels
+        else:
+            return None
 
     def get_data(self, request=None):
         if request is not None:
