@@ -1,7 +1,7 @@
 import hashlib
 import os
 
-from numpy.testing import assert_raises
+from numpy.testing import assert_raises, assert_equal
 
 from fuel import config
 from fuel.datasets import BinarizedMNIST
@@ -45,6 +45,14 @@ def test_binarized_mnist_test():
     assert hashlib.md5(data).hexdigest() == '0fa539ed8cb008880a61be77f744f06a'
     assert dataset.num_examples == 10000
     dataset.close(handle)
+
+
+def test_binarized_mnist_axes():
+    skip_if_not_available(datasets=['binarized_mnist.hdf5'])
+
+    dataset = BinarizedMNIST('train', load_in_memory=False)
+    assert_equal(dataset.axis_labels['features'],
+                 ('batch', 'channel', 'height', 'width'))
 
 
 def test_binarized_mnist_invalid_split():
