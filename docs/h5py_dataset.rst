@@ -111,6 +111,23 @@ with training examples and the last 10 rows with test examples.
 ...     [train_image_features, test_image_features])
 >>> targets[...] = numpy.vstack([train_targets, test_targets])
 
+:class:`~.datasets.hdf5.H5PYDataset` allows us to label axes with semantic
+information. We record that information in the HDF5 file through `dimension
+scales`_.
+
+>>> vector_features.dims[0].label = 'batch'
+>>> vector_features.dims[1].label = 'feature'
+>>> image_features.dims[0].label = 'batch'
+>>> image_features.dims[1].label = 'channel'
+>>> image_features.dims[2].label = 'height'
+>>> image_features.dims[3].label = 'width'
+>>> targets.dims[0].label = 'batch'
+>>> targets.dims[1].label = 'index'
+
+This particular choice of label is arbitrary. Nothing in Fuel forces you to
+adopt any labeling convention. Note, however, that certain external frameworks
+that rely on Fuel *may* impose some restrictions on the choice of labels.
+
 The last thing we need to do is to give :class:`~.datasets.hdf5.H5PYDataset`
 a way to recover what the splits are. This is done by setting the ``split``
 attribute of the root group.
@@ -229,7 +246,17 @@ node of the HDF5 file, and :class:`~.datasets.hdf5.H5PYDataset` automatically
 picked them up for us:
 
 >>> print(train_set.provides_sources) # doctest: +SKIP
-[u'image_features', u'targets', u'vector_features']
+['image_features', 'targets', 'vector_features']
+
+It also parsed axis labels, which are accessible through the ``axis_labels``
+property, which is a dict mapping source names to a tuple of axis labels:
+
+>>> print(train_set.axis_labels['image_features']) # doctest: +SKIP
+('batch', 'channel', 'height', 'width')
+>>> print(train_set.axis_labels['vector_features']) # doctest: +SKIP
+('batch', 'feature')
+>>> print(train_set.axis_labels['targets']) # doctest: +SKIP
+('batch', 'index')
 
 We can request data as usual:
 
@@ -269,3 +296,17 @@ what you requested, and nothing more.
 <type 'numpy.ndarray'>
 >>> print(data.shape)
 (80, 10)
+
+.. doctest::
+   :hide:
+
+   >>> import os
+   >>> os.remove('train_image_features.npy')
+   >>> os.remove('train_vector_features.npy')
+   >>> os.remove('train_targets.npy')
+   >>> os.remove('test_image_features.npy')
+   >>> os.remove('test_vector_features.npy')
+   >>> os.remove('test_targets.npy')
+   >>> os.remove('dataset.hdf5')
+
+.. _dimension scales: http://docs.h5py.org/en/latest/high/dims.html
