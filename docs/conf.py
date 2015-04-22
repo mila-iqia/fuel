@@ -44,7 +44,8 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.graphviz',
-    'sphinx.ext.intersphinx'
+    'sphinx.ext.intersphinx',
+    'matplotlib.sphinxext.plot_directive',
 ]
 
 intersphinx_mapping = {
