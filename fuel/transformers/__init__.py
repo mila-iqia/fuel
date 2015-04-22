@@ -2,7 +2,7 @@ from abc import ABCMeta
 from multiprocessing import Process, Queue
 
 import numpy
-from picklable_itertools import chain, ifilter, izip
+from picklable_itertools import chain, ifilter, izip, imap, repeat, starmap
 from picklable_itertools.extras import partition
 from six import add_metaclass
 
@@ -420,7 +420,13 @@ class Merge(Transformer):
         batches = chain.from_iterable(
             izip(*[data_stream.get_epoch_iterator()
                    for data_stream in self.data_streams]))
-        return partition(len(self.sources), chain.from_iterable(batches))
+
+        part = partition(len(self.sources), chain.from_iterable(batches))
+        as_dict = kwargs.get('as_dict', False)
+        if as_dict:
+            return imap(dict, starmap(zip, izip(repeat(self.sources), part)))
+        else:
+            return part
 
 
 class BackgroundProcess(object):
