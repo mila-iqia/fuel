@@ -148,6 +148,10 @@ module (you'll have to create it):
                 ('valid', 'targets', valid_targets),
                 ('test', 'features', test_features))
         fill_hdf5_file(h5file, data)
+        h5file['features'].dims[0].label = 'batch'
+        h5file['features'].dims[1].label = 'feature'
+        h5file['targets'].dims[0].label = 'batch'
+        h5file['targets'].dims[1].label = 'index'
 
         h5file.flush()
         h5file.close()
@@ -156,6 +160,12 @@ We used the convenience :meth:`~.converters.base.fill_hdf5_file` function
 to populate our HDF5 file and create the split array. This function expects
 a tuple of tuples, one per split/source pair, containing the split name,
 the source name, the data array and (optionally) a comment string.
+
+We also used :class:`~.datasets.hdf5.H5PYDataset`'s ability to extract axis
+labels to add semantic information to the axes of our data sources. This
+allowed us to specify that target values are categorical (``'index``'). Note
+that you can use whatever label you want in Fuel, although certain frameworks
+using Fuel may have some hard-coded assumptions about which labels to use.
 
 As for the download code, you should import the function you just defined and
 add ``'iris'`` inside the ``__all__`` attribute of the ``fuel.converters`` init
@@ -223,6 +233,8 @@ You can now use the Iris dataset like you would use any other built-in dataset:
 
     >>> from fuel.datasets.iris import Iris # doctest: +SKIP
     >>> train_set = Iris('train') # doctest: +SKIP
+    >>> print(train_set.axis_labels) # doctest: +SKIP
+    {'features': ('batch', 'feature'), 'targets': ('batch', 'index')}
     >>> handle = train_set.open() # doctest: +SKIP
     >>> data = train_set.get_data(handle, slice(0, 10)) # doctest: +SKIP
     >>> print((data[0].shape, data[1].shape)) # doctest: +SKIP
