@@ -246,17 +246,17 @@ node of the HDF5 file, and :class:`~.datasets.hdf5.H5PYDataset` automatically
 picked them up for us:
 
 >>> print(train_set.provides_sources) # doctest: +SKIP
-[u'image_features', u'targets', u'vector_features']
+['image_features', 'targets', 'vector_features']
 
 It also parsed axis labels, which are accessible through the ``axis_labels``
 property, which is a dict mapping source names to a tuple of axis labels:
 
 >>> print(train_set.axis_labels['image_features']) # doctest: +SKIP
-(u'batch', u'channel', u'height', u'width')
+('batch', 'channel', 'height', 'width')
 >>> print(train_set.axis_labels['vector_features']) # doctest: +SKIP
-(u'batch', u'feature')
+('batch', 'feature')
 >>> print(train_set.axis_labels['targets']) # doctest: +SKIP
-(u'batch', u'index')
+('batch', 'index')
 
 We can request data as usual:
 
