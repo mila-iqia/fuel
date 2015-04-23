@@ -46,7 +46,7 @@ class Dataset(object):
     """
     provides_sources = None
 
-    def __init__(self, sources=None):
+    def __init__(self, sources=None, axis_labels=None):
         if not self.provides_sources:
             raise ValueError("dataset does not have `provides_sources`")
         if sources is not None:
@@ -54,6 +54,7 @@ class Dataset(object):
                                       for source in sources):
                 raise ValueError("unable to provide requested sources")
             self.sources = sources
+        self._axis_labels = axis_labels
 
     @property
     def sources(self):
@@ -64,6 +65,14 @@ class Dataset(object):
     @sources.setter
     def sources(self, sources):
         self._sources = sources
+
+    @property
+    def axis_labels(self):
+        return self._axis_labels
+
+    @axis_labels.setter
+    def axis_labels(self, axis_labels):
+        self._axis_labels = axis_labels
 
     @property
     def example_iteration_scheme(self):
