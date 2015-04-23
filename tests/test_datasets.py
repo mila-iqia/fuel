@@ -33,7 +33,7 @@ def test_dataset():
 
 def test_dataset_no_axis_labels():
     dataset = IterableDataset(numpy.eye(2))
-    assert dataset.axis_labels == None
+    assert dataset.axis_labels is None
 
 
 def test_dataset_axis_labels():
@@ -45,7 +45,7 @@ def test_dataset_axis_labels():
 def test_data_stream_no_axis_labels():
     dataset = IterableDataset(numpy.eye(2))
     stream = DataStream(dataset)
-    assert stream.axis_labels == None
+    assert stream.axis_labels is None
 
 
 def test_data_stream_axis_labels():
