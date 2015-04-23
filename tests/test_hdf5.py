@@ -42,8 +42,8 @@ def test_h5py_dataset_split_parsing():
         features[...] = numpy.zeros(shape=(100, 36)).astype('uint8')
         targets = h5file.create_dataset('targets', (30, 1), dtype='uint8')
         targets[...] = numpy.zeros(shape=(30, 1)).astype('uint8')
-        split_dict = {'train': {'features': (0, 20), 'targets': (0, 20)},
-                      'test': {'features': (20, 30), 'targets': (20, 30)},
+        split_dict = {'train': {'features': (0, 20, '.'), 'targets': (0, 20)},
+                      'test': {'features': (20, 30, ''), 'targets': (20, 30)},
                       'unlabeled': {'features': (30, 100)}}
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         h5file.flush()

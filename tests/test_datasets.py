@@ -31,10 +31,21 @@ def test_dataset():
     assert next(stream.get_epoch_iterator(as_dict=True)) == {"data": 1}
 
 
+def test_dataset_no_axis_labels():
+    dataset = IterableDataset(numpy.eye(2))
+    assert dataset.axis_labels == None
+
+
 def test_dataset_axis_labels():
     axis_labels = {'data': ('batch', 'features')}
     dataset = IterableDataset(numpy.eye(2), axis_labels=axis_labels)
     assert dataset.axis_labels == axis_labels
+
+
+def test_data_stream_no_axis_labels():
+    dataset = IterableDataset(numpy.eye(2))
+    stream = DataStream(dataset)
+    assert stream.axis_labels == None
 
 
 def test_data_stream_axis_labels():
