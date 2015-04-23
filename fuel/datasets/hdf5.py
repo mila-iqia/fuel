@@ -128,9 +128,11 @@ class H5PYDataset(Dataset):
         subset = subset if subset else slice(None)
         if subset.step not in (1, None):
             raise ValueError("subset.step must be either 1 or None")
+        self._subset_template = subset
         self.load_in_memory = load_in_memory
         self.flatten = [] if flatten is None else flatten
 
+        kwargs.setdefault('axis_labels', self.load_axis_labels())
         super(H5PYDataset, self).__init__(**kwargs)
 
         for source in self.flatten:
@@ -138,8 +140,6 @@ class H5PYDataset(Dataset):
                 raise ValueError(
                     "trying to flatten source '{}' which is ".format(source) +
                     "not provided by the '{}' split".format(self.which_set))
-        self.subsets = [subset for source in self.sources]
-        self.load()
 
     @staticmethod
     def create_split_array(split_dict):
@@ -232,17 +232,14 @@ class H5PYDataset(Dataset):
             self._out_of_memory_close(handle)
         return self._split_dict
 
-    @property
-    def axis_labels(self):
-        if not hasattr(self, '_axis_labels'):
-            handle = self._out_of_memory_open()
-            axis_labels = {}
-            for source_name in handle:
-                axis_labels[source_name] = tuple(
-                    dim.label for dim in handle[source_name].dims)
-            self._axis_labels = axis_labels
-            self._out_of_memory_close(handle)
-        return self._axis_labels
+    def load_axis_labels(self):
+        handle = self._out_of_memory_open()
+        axis_labels = {}
+        for source_name in handle:
+            axis_labels[source_name] = tuple(
+                dim.label for dim in handle[source_name].dims)
+        self._out_of_memory_close(handle)
+        return axis_labels
 
     @property
     def available_splits(self):
@@ -252,23 +249,31 @@ class H5PYDataset(Dataset):
     def provides_sources(self):
         return tuple(self.split_dict[self.which_set].keys())
 
+    @property
+    def subsets(self):
+        if not hasattr(self, '_subsets'):
+            subsets = [self._subset_template for source in self.sources]
+            handle = self._out_of_memory_open()
+            num_examples = None
+            for i, source_name in enumerate(self.sources):
+                start, stop = self.split_dict[self.which_set][source_name][:2]
+                subset = subsets[i]
+                subset = slice(
+                    start if subset.start is None else subset.start,
+                    stop if subset.stop is None else subset.stop,
+                    subset.step)
+                subsets[i] = subset
+                if num_examples is None:
+                    num_examples = subset.stop - subset.start
+                if num_examples != subset.stop - subset.start:
+                    raise ValueError("sources have different lengths")
+            self._subsets = subsets
+            self._out_of_memory_close(handle)
+        return self._subsets
+
     def load(self):
-        handle = self._out_of_memory_open()
-        num_examples = None
-        for i, source_name in enumerate(self.sources):
-            start, stop = self.split_dict[self.which_set][source_name][:2]
-            subset = self.subsets[i]
-            subset = slice(
-                start if subset.start is None else subset.start,
-                stop if subset.stop is None else subset.stop,
-                subset.step)
-            self.subsets[i] = subset
-            if num_examples is None:
-                num_examples = subset.stop - subset.start
-            if num_examples != subset.stop - subset.start:
-                raise ValueError("sources have different lengths")
-        self.num_examples = num_examples
         if self.load_in_memory:
+            handle = self._out_of_memory_open()
             data_sources = []
             for source_name, subset in zip(self.sources, self.subsets):
                 data = handle[source_name][subset]
@@ -276,9 +281,13 @@ class H5PYDataset(Dataset):
                     data = data.reshape((data.shape[0], -1))
                 data_sources.append(data)
             self.data_sources = data_sources
+            self._out_of_memory_close(handle)
         else:
             self.data_sources = None
-        self._out_of_memory_close(handle)
+
+    @property
+    def num_examples(self):
+        return self.subsets[0].stop - self.subsets[0].start
 
     def open(self):
         return None if self.load_in_memory else self._out_of_memory_open()
