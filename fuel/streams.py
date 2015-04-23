@@ -123,10 +123,7 @@ class DataStream(AbstractDataStream):
 
     @property
     def axis_labels(self):
-        if hasattr(self.dataset.axis_labels):
-            return self.dataset.axis_labels
-        else:
-            return None
+        return self.dataset.axis_labels
 
     def close(self):
         self.data_state = self.dataset.close(self.data_state)

@@ -128,11 +128,7 @@ class ForceFloatX(Transformer):
 
     @property
     def axis_labels(self):
-        return None
-        if hasattr(self.data_stream.axis_labels):
-            return self.data_stream.axis_labels
-        else:
-            return None
+        return self.data_stream.axis_labels
 
     def get_data(self, request=None):
         if request is not None:
