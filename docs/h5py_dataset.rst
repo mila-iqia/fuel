@@ -74,6 +74,8 @@ things if your data happens to meet these assumptions:
     the time. Rest assured, :class:`~.datasets.hdf5.H5PYDataset` has an
     option to load things into memory which we will be covering soon.
 
+.. _convert_h5py_dataset:
+
 Converting the toy example
 --------------------------
 
