@@ -1,4 +1,3 @@
-import warnings
 from itertools import product
 from collections import defaultdict, OrderedDict
 
@@ -8,11 +7,6 @@ import tables
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
-
-unordered_error_message = """\
-H5PYDataset has received an unordered list of indices. This is handled by \
-H5PYDataset, but it will be slower. If you can, try forcing that indices be \
-sorted within a batch."""
 
 
 @do_not_pickle_attributes('nodes')
@@ -117,14 +111,21 @@ class H5PYDataset(Dataset):
     driver : str, optional
         Low-level driver to use. Defaults to `None`. See h5py
         documentation for a complete list of available options.
+    sort_indices : bool, optional
+        Whether to explicitly sort requested indices when data is
+        requested in the form of a list of indices. Defaults to `True`.
+        This flag can be set to `False` for greater performance. In
+        that case, it is the user's responsibility to make sure that
+        indices are ordered.
 
     """
     ref_counts = defaultdict(int)
 
     def __init__(self, path, which_set, subset=None, load_in_memory=False,
-                 flatten=None, driver=None, **kwargs):
+                 flatten=None, driver=None, sort_indices=True, **kwargs):
         self.path = path
         self.driver = driver
+        self.sort_indices = sort_indices
         if which_set not in self.available_splits:
             raise ValueError(
                 "'{}' split is not provided by this ".format(which_set) +
@@ -325,16 +326,15 @@ class H5PYDataset(Dataset):
                 data = state[source_name][request]
             elif isinstance(request, list):
                 request = [index + subset.start for index in request]
-                try:
-                    data = state[source_name][request]
-                except TypeError:
-                    warnings.warn(unordered_error_message)
+                if self.sort_indices:
                     indices = numpy.argsort(request)
                     source = state[source_name]
                     data = numpy.empty(
                         shape=(len(request),) + source.shape[1:],
                         dtype=source.dtype)
                     data[indices] = source[numpy.array(request)[indices], ...]
+                else:
+                    data = state[source_name][request]
             else:
                 raise ValueError
             if source_name in self.flatten:
