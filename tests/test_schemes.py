@@ -52,7 +52,7 @@ def test_shuffled_scheme_sorted_indices():
     test_rng = numpy.random.RandomState(3)
     test_rng.shuffle(expected)
     assert (list(get_request_iterator(indices, 3, rng=rng,
-                                      sorted_indices=True)) == \
+                                      sorted_indices=True)) ==
             [sorted(expected[:3]), sorted(expected[3:6])])
 
 
