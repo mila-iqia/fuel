@@ -169,12 +169,16 @@ class ShuffledScheme(BatchScheme):
         self.rng = kwargs.pop('rng', None)
         if self.rng is None:
             self.rng = numpy.random.RandomState(config.default_seed)
+        self.sorted_indices = kwargs.pop('sorted_indices', True)
         super(ShuffledScheme, self).__init__(*args, **kwargs)
 
     def get_request_iterator(self):
         indices = list(self.indices)
         self.rng.shuffle(indices)
-        return imap(list, partition_all(self.batch_size, indices))
+        if self.sorted_indices:
+            return imap(sorted, partition_all(self.batch_size, indices))
+        else:
+            return imap(list, partition_all(self.batch_size, indices))
 
 
 class SequentialExampleScheme(IndexScheme):

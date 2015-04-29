@@ -316,14 +316,11 @@ class H5PYDataset(Dataset):
             if isinstance(request, slice):
                 request = slice(request.start + subset.start,
                                 request.stop + subset.start, request.step)
-                data = state[source_name][request]
             elif isinstance(request, list):
                 request = [index + subset.start for index in request]
-                sorted_request = numpy.sort(request)
-                sorted_data = state[source_name][sorted_request, ...]
-                data = sorted_data[numpy.argsort(numpy.argsort(request))]
             else:
                 raise ValueError
+            data = state[source_name][request]
             if source_name in self.flatten:
                 data = data.reshape((data.shape[0], -1))
             rval.append(data)
