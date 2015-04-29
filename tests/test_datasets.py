@@ -2,16 +2,16 @@ from collections import OrderedDict
 
 import numpy
 import operator
-from six.moves import zip, range
-from nose.tools import assert_raises
+from numpy.testing import assert_equal, assert_raises
 from picklable_itertools import repeat
+from six.moves import zip, range
 
 from fuel import config
 from fuel.datasets import IterableDataset, IndexableDataset
 from fuel.streams import DataStream
 from fuel.transformers import (Cache, Mapping, Batch, Padding, Filter,
                                ForceFloatX, SortMapping)
-from fuel.schemes import BatchSizeScheme, ConstantScheme
+from fuel.schemes import BatchSizeScheme, SequentialScheme, ConstantScheme
 
 floatX = config.floatX
 
@@ -310,3 +310,38 @@ def test_num_examples():
     assert dataset.num_examples == 5
     assert_raises(ValueError, IndexableDataset,
                   {'features': x, 'targets': y[:4]})
+
+
+def test_indexable_dataset_default_batch_stream():
+    dataset = IndexableDataset({'features': numpy.arange(10),
+                                'targets': numpy.arange(10)})
+    iteration_scheme = dataset.batch_iteration_scheme
+    indices = list(iteration_scheme.indices)
+    batch_size = iteration_scheme.batch_size
+    assert (isinstance(iteration_scheme, SequentialScheme) and
+            indices == list(range(dataset.num_examples)) and
+            batch_size == dataset.num_examples)
+
+
+def test_indexable_get_batch_stream():
+    dataset = IndexableDataset({'features': numpy.arange(10),
+                                'targets': numpy.arange(10)})
+    stream = dataset.get_batch_stream()
+    data = next(stream.get_epoch_iterator())
+    assert_equal(data[0], numpy.arange(10))
+    assert_equal(data[1], numpy.arange(10))
+
+
+def test_apply_default_transformers():
+    class DoublingIndexableDataset(IndexableDataset):
+        def apply_default_transformers(self, stream):
+            return Mapping(
+                stream,
+                lambda sources: tuple(2 * source for source in sources))
+
+    dataset = DoublingIndexableDataset({'features': numpy.arange(10),
+                                        'targets': numpy.arange(10)})
+    stream = dataset.get_batch_stream()
+    data = next(stream.get_epoch_iterator())
+    assert_equal(data[0], 2 * numpy.arange(10))
+    assert_equal(data[1], 2 * numpy.arange(10))
