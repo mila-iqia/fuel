@@ -232,6 +232,27 @@ def test_h5py_flatten_out_of_memory():
             os.remove('tmp.hdf5')
 
 
+def test_h5py_dataset_out_of_memory_unordered_indices():
+    try:
+        h5file = h5py.File(name='tmp.hdf5', mode="w")
+        features = h5file.create_dataset('features', (10, 5), dtype='float32')
+        features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
+        split_dict = {'train': {'features': (0, 10)}}
+        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+        h5file.flush()
+        h5file.close()
+        dataset = H5PYDataset(
+            path='tmp.hdf5', which_set='train', load_in_memory=False)
+        handle = dataset.open()
+        assert_equal(
+            dataset.get_data(state=handle, request=[7, 4, 6, 2, 5])[0],
+            numpy.arange(50).reshape((10, 5))[[7, 4, 6, 2, 5]])
+        dataset.close(handle)
+    finally:
+        if os.path.exists('tmp.hdf5'):
+            os.remove('tmp.hdf5')
+
+
 def test_h5py_flatten_raises_error_on_invalid_name():
     try:
         h5file = h5py.File(name='tmp.hdf5', mode="w")

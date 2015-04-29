@@ -1,3 +1,4 @@
+import warnings
 from itertools import product
 from collections import defaultdict, OrderedDict
 
@@ -7,6 +8,11 @@ import tables
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
+
+unordered_error_message = """\
+H5PYDataset has received an unordered list of indices. This is handled by \
+H5PYDataset, but it will be slower. If you can, try forcing that indices be \
+sorted within a batch."""
 
 
 @do_not_pickle_attributes('nodes')
@@ -316,11 +322,21 @@ class H5PYDataset(Dataset):
             if isinstance(request, slice):
                 request = slice(request.start + subset.start,
                                 request.stop + subset.start, request.step)
+                data = state[source_name][request]
             elif isinstance(request, list):
                 request = [index + subset.start for index in request]
+                try:
+                    data = state[source_name][request]
+                except TypeError:
+                    warnings.warn(unordered_error_message)
+                    indices = numpy.argsort(request)
+                    source = state[source_name]
+                    data = numpy.empty(
+                        shape=(len(request),) + source.shape[1:],
+                        dtype=source.dtype)
+                    data[indices] = source[numpy.array(request)[indices], ...]
             else:
                 raise ValueError
-            data = state[source_name][request]
             if source_name in self.flatten:
                 data = data.reshape((data.shape[0], -1))
             rval.append(data)
