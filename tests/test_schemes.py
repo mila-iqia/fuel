@@ -71,8 +71,8 @@ def test_shuffled_scheme_unsorted_indices():
     rng = numpy.random.RandomState(3)
     test_rng = numpy.random.RandomState(3)
     test_rng.shuffle(expected)
-    assert (list(get_request_iterator(
-                indices, 3, rng=rng, sorted_indices=False)) ==
+    assert (list(get_request_iterator(indices, 3, rng=rng,
+                                      sorted_indices=False)) ==
             [expected[:3], expected[3:6]])
 
 
