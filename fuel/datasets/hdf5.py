@@ -111,14 +111,21 @@ class H5PYDataset(Dataset):
     driver : str, optional
         Low-level driver to use. Defaults to `None`. See h5py
         documentation for a complete list of available options.
+    sort_indices : bool, optional
+        Whether to explicitly sort requested indices when data is
+        requested in the form of a list of indices. Defaults to `True`.
+        This flag can be set to `False` for greater performance. In
+        that case, it is the user's responsibility to make sure that
+        indices are ordered.
 
     """
     ref_counts = defaultdict(int)
 
     def __init__(self, path, which_set, subset=None, load_in_memory=False,
-                 flatten=None, driver=None, **kwargs):
+                 flatten=None, driver=None, sort_indices=True, **kwargs):
         self.path = path
         self.driver = driver
+        self.sort_indices = sort_indices
         if which_set not in self.available_splits:
             raise ValueError(
                 "'{}' split is not provided by this ".format(which_set) +
@@ -314,13 +321,22 @@ class H5PYDataset(Dataset):
         rval = []
         for source_name, subset in zip(self.sources, self.subsets):
             if isinstance(request, slice):
-                request = slice(request.start + subset.start,
-                                request.stop + subset.start, request.step)
+                req = slice(request.start + subset.start,
+                            request.stop + subset.start, request.step)
+                data = state[source_name][req]
             elif isinstance(request, list):
-                request = [index + subset.start for index in request]
+                req = [index + subset.start for index in request]
+                if self.sort_indices:
+                    indices = numpy.argsort(req)
+                    source = state[source_name]
+                    data = numpy.empty(
+                        shape=(len(req),) + source.shape[1:],
+                        dtype=source.dtype)
+                    data[indices] = source[numpy.array(req)[indices], ...]
+                else:
+                    data = state[source_name][req]
             else:
                 raise ValueError
-            data = state[source_name][request]
             if source_name in self.flatten:
                 data = data.reshape((data.shape[0], -1))
             rval.append(data)
