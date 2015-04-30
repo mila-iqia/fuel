@@ -147,16 +147,19 @@ def test_h5py_dataset_out_of_memory():
         h5file = h5py.File(name='tmp.hdf5', mode="w")
         features = h5file.create_dataset('features', (10, 5), dtype='float32')
         features[...] = numpy.arange(50, dtype='float32').reshape((10, 5))
-        split_dict = {'train': {'features': (0, 10)}}
+        targets = h5file.create_dataset('targets', (10, 1), dtype='float32')
+        targets[...] = numpy.arange(10, dtype='float32').reshape((10, 1))
+        split_dict = {'train': {'features': (0, 5), 'targets': (0, 5)},
+                      'test': {'features': (5, 10), 'targets': (5, 10)}}
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         h5file.flush()
         h5file.close()
         dataset = H5PYDataset(
-            path='tmp.hdf5', which_set='train', load_in_memory=False)
+            path='tmp.hdf5', which_set='test', load_in_memory=False)
         handle = dataset.open()
         assert_equal(
-            dataset.get_data(state=handle, request=slice(0, 10))[0],
-            numpy.arange(50).reshape((10, 5)))
+            dataset.get_data(state=handle, request=slice(3, 5))[1],
+            numpy.arange(10).reshape((10, 1))[8:10])
         dataset.close(handle)
     finally:
         if os.path.exists('tmp.hdf5'):
