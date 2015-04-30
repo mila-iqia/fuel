@@ -321,20 +321,20 @@ class H5PYDataset(Dataset):
         rval = []
         for source_name, subset in zip(self.sources, self.subsets):
             if isinstance(request, slice):
-                request = slice(request.start + subset.start,
-                                request.stop + subset.start, request.step)
-                data = state[source_name][request]
+                req = slice(request.start + subset.start,
+                            request.stop + subset.start, request.step)
+                data = state[source_name][req]
             elif isinstance(request, list):
-                request = [index + subset.start for index in request]
+                req = [index + subset.start for index in request]
                 if self.sort_indices:
-                    indices = numpy.argsort(request)
+                    indices = numpy.argsort(req)
                     source = state[source_name]
                     data = numpy.empty(
-                        shape=(len(request),) + source.shape[1:],
+                        shape=(len(req),) + source.shape[1:],
                         dtype=source.dtype)
-                    data[indices] = source[numpy.array(request)[indices], ...]
+                    data[indices] = source[numpy.array(req)[indices], ...]
                 else:
-                    data = state[source_name][request]
+                    data = state[source_name][req]
             else:
                 raise ValueError
             if source_name in self.flatten:
