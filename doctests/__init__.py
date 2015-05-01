@@ -27,7 +27,7 @@ class Py23DocChecker(OutputChecker):
         if sys.version_info[0] < 3:
             got = re.sub("u'(.*?)'", "'\\1'", got)
             got = re.sub('u"(.*?)"', '"\\1"', got)
-        return doctest.OutputChecker.check_output(self, want, got, optionflags)
+        return OutputChecker.check_output(self, want, got, optionflags)
 
 
 def setup(testobj):
