@@ -229,17 +229,87 @@ Try downloading and converting the data file:
 
 You can now use the Iris dataset like you would use any other built-in dataset:
 
-.. code-block:: python
+.. doctest::
+    :hide:
+    >>> import os
+    >>> from fuel.downloaders.base import default_downloader
+    >>> def iris_downloader(subparser):
+    ...     subparser.set_defaults(
+    ...         func=default_downloader,
+    ...         urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
+    ...               'iris/iris.data'],
+    ...         filenames=['iris.data'])
+    >>> import argparse
+    >>> parser = argparse.ArgumentParser()
+    >>> __ = parser.add_argument("--directory", type=str, default=os.getcwd())
+    >>> __ = parser.add_argument("--clear", action='store_true')
+    >>> subparsers = parser.add_subparsers()
+    >>> iris_downloader(subparsers.add_parser('iris'))
+    >>> args = parser.parse_args(['iris'])
+    >>> args.func(args)
+
+.. doctest::
+    :hide:
+    >>> import h5py
+    >>> import numpy
+    >>> from fuel.converters.base import fill_hdf5_file
+    >>> def iris_converter(input_directory, save_path):
+    ...    h5file = h5py.File(save_path, mode="w")
+    ...    classes = {b'Iris-setosa': 0, b'Iris-versicolor': 1, b'Iris-virginica': 2}
+    ...    data = numpy.loadtxt(
+    ...        os.path.join(input_directory, 'iris.data'),
+    ...        converters={4: lambda x: classes[x]},
+    ...        delimiter=',')
+    ...    numpy.random.shuffle(data)
+    ...    features = data[:, :-1].astype('float32')
+    ...    targets = data[:, -1:].astype('uint8')
+    ...    train_features = features[:100]
+    ...    train_targets = targets[:100]
+    ...    valid_features = features[100:120]
+    ...    valid_targets = targets[100:120]
+    ...    test_features = features[120:]
+    ...    data = (('train', 'features', train_features),
+    ...            ('train', 'targets', train_targets),
+    ...            ('valid', 'features', valid_features),
+    ...            ('valid', 'targets', valid_targets),
+    ...            ('test', 'features', test_features))
+    ...    fill_hdf5_file(h5file, data)
+    ...    h5file['features'].dims[0].label = 'batch'
+    ...    h5file['features'].dims[1].label = 'feature'
+    ...    h5file['targets'].dims[0].label = 'batch'
+    ...    h5file['targets'].dims[1].label = 'index'
+    ...    h5file.flush()
+    ...    h5file.close()
+    >>> iris_converter('./', 'iris.hdf5')
+    >>> os.remove('iris.data')
+
+.. doctest::
+    :hide:
+    >>> import os
+    >>> from fuel import config
+    >>> from fuel.datasets import H5PYDataset
+    >>> class Iris(H5PYDataset):
+    ...    def __init__(self, which_set, **kwargs):
+    ...        kwargs.setdefault('load_in_memory', True)
+    ...        super(Iris, self).__init__('iris.hdf5', which_set, **kwargs)
+
+.. doctest::
 
     >>> from fuel.datasets.iris import Iris # doctest: +SKIP
-    >>> train_set = Iris('train') # doctest: +SKIP
-    >>> print(train_set.axis_labels) # doctest: +SKIP
-    {'features': ('batch', 'feature'), 'targets': ('batch', 'index')}
-    >>> handle = train_set.open() # doctest: +SKIP
-    >>> data = train_set.get_data(handle, slice(0, 10)) # doctest: +SKIP
-    >>> print((data[0].shape, data[1].shape)) # doctest: +SKIP
-    ((10, 4), (10,))
-    >>> train_set.close(handle) # doctest: +SKIP
+    >>> train_set = Iris('train')
+    >>> print(train_set.axis_labels['features'])
+    (u'batch', u'feature')
+    >>> print(train_set.axis_labels['targets'])
+    (u'batch', u'index')
+    >>> handle = train_set.open()
+    >>> data = train_set.get_data(handle, slice(0, 10))
+    >>> print((data[0].shape, data[1].shape))
+    ((10, 4), (10, 1))
+    >>> train_set.close(handle)
+
+.. doctest::
+    :hide:
+    >>> os.remove('iris.hdf5')
 
 .. _Iris dataset: https://archive.ics.uci.edu/ml/datasets/Iris
 .. _iris.data: https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data
