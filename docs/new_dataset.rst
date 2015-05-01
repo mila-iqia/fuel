@@ -298,9 +298,9 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> from fuel.datasets.iris import Iris # doctest: +SKIP
     >>> train_set = Iris('train')
     >>> print(train_set.axis_labels['features'])
-    (u'batch', u'feature')
+    ('batch', 'feature')
     >>> print(train_set.axis_labels['targets'])
-    (u'batch', u'index')
+    ('batch', 'index')
     >>> handle = train_set.open()
     >>> data = train_set.get_data(handle, slice(0, 10))
     >>> print((data[0].shape, data[1].shape))
