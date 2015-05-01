@@ -7,12 +7,13 @@ import os
 import pkgutil
 import re
 import sys
+from doctest import OutputChecker
 
 import fuel
 from tests import skip_if_not_available
 
 
-class Py23DocChecker(doctest.OutputChecker):
+class Py23DocChecker(OutputChecker):
     """Single-source Python 2/3 output checker
 
     For more information, see the `original blog post`_.
@@ -20,6 +21,7 @@ class Py23DocChecker(doctest.OutputChecker):
     .. _original blog post:
        https://dirkjan.ochtman.nl/writing/2014/07/06/
        single-source-python-23-doctests.html
+
     """
     def check_output(self, want, got, optionflags):
         if sys.version_info[0] > 2:
