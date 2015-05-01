@@ -49,7 +49,6 @@ def mnist(input_directory, save_path, dtype=None):
             ('train', 'targets', train_labels),
             ('test', 'features', test_features),
             ('test', 'targets', test_labels))
-    print train_features.shape
     fill_hdf5_file(h5file, data)
     h5file['features'].dims[0].label = 'batch'
     h5file['features'].dims[1].label = 'channel'

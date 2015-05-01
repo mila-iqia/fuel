@@ -12,10 +12,10 @@ class MNIST(H5PYDataset):
     u"""MNIST dataset.
 
     MNIST (Mixed National Institute of Standards and Technology) [LBBH] is
-    a database of handwritten digits. It is one of the most famous datasets
-    in machine learning and consists of 60,000 training images and 10,000
-    testing images. The images are grayscale and 28 x 28 pixels large. It is
-    accessible through Yann LeCun's website [LECUN].
+    a database of handwritten digits. It is one of the most famous
+    datasets in machine learning and consists of 60,000 training images
+    and 10,000 testing images. The images are grayscale and 28 x 28 pixels
+    large. It is accessible through Yann LeCun's website [LECUN].
 
     .. [LBBH] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner,
        *Gradient-based learning applied to document recognition*,
