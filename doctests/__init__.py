@@ -14,7 +14,7 @@ from tests import skip_if_not_available
 
 
 class Py23DocChecker(OutputChecker):
-    """Single-source Python 2/3 output checker
+    """Single-source Python 2/3 output checker.
 
     For more information, see the `original blog post`_.
 
