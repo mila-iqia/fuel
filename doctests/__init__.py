@@ -5,9 +5,29 @@ import fnmatch
 import importlib
 import os
 import pkgutil
+import re
+import sys
+from doctest import OutputChecker
 
 import fuel
 from tests import skip_if_not_available
+
+
+class Py23DocChecker(OutputChecker):
+    """Single-source Python 2/3 output checker.
+
+    For more information, see the `original blog post`_.
+
+    .. _original blog post:
+       https://dirkjan.ochtman.nl/writing/2014/07/06/
+       single-source-python-23-doctests.html
+
+    """
+    def check_output(self, want, got, optionflags):
+        if sys.version_info[0] < 3:
+            got = re.sub("u'(.*?)'", "'\\1'", got)
+            got = re.sub('u"(.*?)"', '"\\1"', got)
+        return OutputChecker.check_output(self, want, got, optionflags)
 
 
 def setup(testobj):
@@ -27,7 +47,8 @@ def load_tests(loader, tests, ignore):
         try:
             tests.addTests(doctest.DocTestSuite(
                 module=importlib.import_module(module), setUp=setup,
-                optionflags=doctest.IGNORE_EXCEPTION_DETAIL))
+                optionflags=doctest.IGNORE_EXCEPTION_DETAIL,
+                checker=Py23DocChecker()))
         except:
             pass
 
@@ -39,6 +60,7 @@ def load_tests(loader, tests, ignore):
             docs.append(os.path.abspath(os.path.join(root, doc)))
     tests.addTests(doctest.DocFileSuite(
         *docs, module_relative=False, setUp=setup,
-        optionflags=doctest.IGNORE_EXCEPTION_DETAIL))
+        optionflags=doctest.IGNORE_EXCEPTION_DETAIL,
+        checker=Py23DocChecker()))
 
     return tests
