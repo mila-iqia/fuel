@@ -6,6 +6,7 @@ import h5py
 import numpy
 
 from fuel.converters.base import fill_hdf5_file
+
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
@@ -55,6 +56,7 @@ def mnist(input_directory, save_path, dtype=None):
     h5file['features'].dims[2].label = 'height'
     h5file['features'].dims[3].label = 'width'
     h5file['targets'].dims[0].label = 'batch'
+    h5file['targets'].dims[1].label = 'index'
 
     h5file.flush()
     h5file.close()
@@ -121,7 +123,7 @@ def read_mnist_labels(filename):
 
     Returns
     -------
-    labels : :class:`~numpy.ndarray`, shape (nlabels,)
+    labels : :class:`~numpy.ndarray`, shape (nlabels, 1)
         A one-dimensional unsigned byte array containing the
         labels as integers.
 
@@ -131,4 +133,5 @@ def read_mnist_labels(filename):
         if magic != MNIST_LABEL_MAGIC:
             raise ValueError("Wrong magic number reading MNIST label file")
         array = numpy.frombuffer(f.read(), dtype='uint8')
+    array = array.reshape(array.size, 1)
     return array

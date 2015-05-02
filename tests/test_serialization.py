@@ -11,16 +11,19 @@ from tests import skip_if_not_available
 
 
 def test_in_memory():
-    skip_if_not_available(datasets=['mnist'])
+    skip_if_not_available(datasets=['mnist.hdf5'])
     # Load MNIST and get two batches
-    mnist = MNIST('train')
+    mnist = MNIST('train', load_in_memory=True)
     data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
         examples=mnist.num_examples, batch_size=256))
     epoch = data_stream.get_epoch_iterator()
     for i, (features, targets) in enumerate(epoch):
         if i == 1:
             break
-    assert numpy.all(features == mnist.features[256:512])
+    handle = mnist.open()
+    known_features, _ = mnist.get_data(handle, slice(256, 512))
+    mnist.close(handle)
+    assert numpy.all(features == known_features)
 
     # Pickle the epoch and make sure that the data wasn't dumped
     with tempfile.NamedTemporaryFile(delete=False) as f:
@@ -33,4 +36,7 @@ def test_in_memory():
     with open(filename, 'rb') as f:
         epoch = cPickle.load(f)
     features, targets = next(epoch)
-    assert numpy.all(features == mnist.features[512:768])
+    handle = mnist.open()
+    known_features, _ = mnist.get_data(handle, slice(512, 768))
+    mnist.close(handle)
+    assert numpy.all(features == known_features)

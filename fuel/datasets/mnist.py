@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-import logging
 import os
 
 from fuel import config
 from fuel.datasets import H5PYDataset
-
-logger = logging.getLogger(__name__)
 
 
 class MNIST(H5PYDataset):
@@ -39,3 +36,10 @@ class MNIST(H5PYDataset):
     @property
     def data_path(self):
         return os.path.join(config.data_path, self.filename)
+
+    def get_data(self, state=None, request=None):
+        rval = list(super(MNIST, self).get_data(state=state, request=request))
+        if 'features' in self.sources:
+            i = self.sources.index('features')
+            rval[i] = (rval[i] / 255.).astype(config.floatX)
+        return tuple(rval)
