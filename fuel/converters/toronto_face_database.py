@@ -9,23 +9,9 @@ from fuel.converters.base import fill_hdf5_file
 
 
 def toronto_face_database(input_directory, save_path):
-    """Converts the binarized MNIST dataset to HDF5.
+"""Converts the Toronto Face Database to HDF5.
 
-    Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN
-    paper [DBN] to an HDF5 dataset compatible with
-    :class:`fuel.datasets.BinarizedMNIST`. The converted dataset is
-    saved as 'binarized_mnist.hdf5'.
-
-    This method assumes the existence of the files
-    `binarized_mnist_{train,valid,test}.amat`, which are accessible
-    through Hugo Larochelle's website [HUGO].
-
-    .. [DBN] Ruslan Salakhutdinov and Iain Murray, *On the Quantitative
-       Analysis of Deep Belief Networks*, Proceedings of the 25th
-       international conference on Machine learning, 2008, pp. 872-879.
-
-    .. [HUGO] http://www.cs.toronto.edu/~larocheh/public/datasets/
-       binarized_mnist/binarized_mnist_{train,valid,test}.amat
+    ToDo
 
     Parameters
     ----------
@@ -48,8 +34,6 @@ def toronto_face_database(input_directory, save_path):
     train1_mask = folds[:,0] == 1
     valid1_mask = folds[:,0] == 2
     test1_mask  = folds[:,0] == 3
-
-    import ipdb; ipdb.set_trace()
 
     data = (('unlabeled', 'features', features[unlabeled_mask]),
             ('train', 'features', features[train1_mask]),
