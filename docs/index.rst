@@ -73,7 +73,7 @@ For example, after downloading the MNIST data to ``/home/your_data/mnist`` we
 construct a handle to the data.
 
 >>> from fuel.datasets import MNIST
->>> mnist = MNIST(which_set='train')
+>>> mnist = MNIST(which_set='train', flatten=('features',))
 
 In order to start reading the data, we need to initialize a *data stream*. A
 data stream combines a dataset with a particular iteration scheme to read data
