@@ -1,17 +1,10 @@
 import os
-from collections import OrderedDict
-
-import numpy
-import six
-from six.moves import cPickle
 
 from fuel import config
-from fuel.datasets import IndexableDataset
-from fuel.utils import do_not_pickle_attributes
+from fuel.datasets import H5PYDataset
 
 
-@do_not_pickle_attributes('indexables')
-class CIFAR10(IndexableDataset):
+class CIFAR10(H5PYDataset):
     """The CIFAR10 dataset of natural images.
 
     This dataset is a labeled subset of the ``80 million tiny images''
@@ -34,52 +27,29 @@ class CIFAR10(IndexableDataset):
         (10,000 samples). Note that CIFAR10 does not have a validation
         set; usually you will create your own training/validation split
         using the start and stop arguments.
-    flatten : bool
-        Whether to flatten the images. If ``False``, returns images of the
-        format (3, 32, 32). Is ``True`` by default.
 
     """
     provides_sources = ('features', 'targets')
-    folder = 'cifar10'
-    files = {
-        'train': [os.path.join('cifar-10-batches-py',
-                               'data_batch_{}'.format(i))
-                  for i in range(1, 6)],
-        'test': ['cifar-10-batches-py/test_batch']
-    }
+    filename = 'cifar10.hdf5'
 
-    def __init__(self, which_set, flatten=True, **kwargs):
+    def __init__(self, which_set, **kwargs):
         if which_set not in ('train', 'test'):
             raise ValueError("CIFAR10 only has a train and test set")
 
+        kwargs.setdefault('load_in_memory', True)
         self.which_set = which_set
-        self.flatten = flatten
 
-        super(CIFAR10, self).__init__(OrderedDict(zip(self.provides_sources,
-                                                      self._load_cifar10())),
+        super(CIFAR10, self).__init__(self.data_path, which_set,
                                       **kwargs)
 
-    def load(self):
-        self.indexables = [data[self.start:self.stop] for source, data
-                           in zip(self.provides_sources, self._load_cifar10())
-                           if source in self.sources]
+    @property
+    def data_path(self):
+        return os.path.join(config.data_path, self.filename)
 
-    def _load_cifar10(self):
-        base_path = os.path.join(config.data_path, self.folder)
-        num_examples = 50000 if self.which_set == 'train' else 10000
-        image_shape = (3072,) if self.flatten else (3, 32, 32)
-        images = numpy.zeros((num_examples,) + image_shape,
-                             dtype=config.floatX)
-        labels = numpy.zeros((num_examples, 1), dtype='uint8')
-        for i, fname in enumerate(self.files[self.which_set]):
-            with open(os.path.join(base_path, fname), 'rb') as f:
-                if six.PY3:
-                    batch = cPickle.load(f, encoding='latin1')
-                else:
-                    batch = cPickle.load(f)
-                if not self.flatten:
-                    batch['data'] = batch['data'].reshape((10000, 3, 32, 32))
-                images[10000 * i:10000 * (i + 1)] = batch['data']
-                labels[10000 * i:10000 * (i + 1)] = numpy.asarray(
-                    batch['labels'], dtype='uint8')[:, None]
-        return images, labels
+    def get_data(self, state=None, request=None):
+        rval = list(super(CIFAR10, self).get_data(state=state,
+                                                  request=request))
+        if 'features' in self.sources:
+            i = self.sources.index('features')
+            rval[i] = (rval[i] / 255.0).astype(config.floatX)
+        return tuple(rval)
