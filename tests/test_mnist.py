@@ -1,37 +1,65 @@
-import numpy
-from numpy.testing import assert_raises
-from six.moves import cPickle
+import os
 
+import numpy
+
+from numpy.testing import assert_raises, assert_equal, assert_allclose
+
+from fuel import config
 from fuel.datasets import MNIST
 from tests import skip_if_not_available
 
 
-def test_mnist():
-    skip_if_not_available(datasets=['mnist'])
-    mnist_train = MNIST('train', start=20000)
-    assert len(mnist_train.features) == 40000
-    assert len(mnist_train.targets) == 40000
-    assert mnist_train.num_examples == 40000
-    mnist_test = MNIST('test', sources=('targets',))
-    assert len(mnist_test.targets) == 10000
-    assert mnist_test.num_examples == 10000
+def test_mnist_train():
+    skip_if_not_available(datasets=['mnist.hdf5'])
 
-    first_feature, first_target = mnist_train.get_data(request=[0])
-    assert first_feature.shape == (1, 784)
-    assert first_feature.dtype.kind == 'f'
-    assert first_target.shape == (1, 1)
-    assert first_target.dtype is numpy.dtype('uint8')
+    dataset = MNIST('train', load_in_memory=False)
+    handle = dataset.open()
+    data, labels = dataset.get_data(handle, slice(0, 10))
+    assert data.dtype == config.floatX
+    assert data.shape == (10, 1, 28, 28)
+    assert labels.shape == (10, 1)
+    known = numpy.array([0, 0, 0, 0, 0, 0, 0, 0, 30, 36, 94, 154, 170, 253,
+                         253, 253, 253, 253, 225, 172, 253, 242, 195,  64, 0,
+                         0, 0, 0])
+    assert_allclose(data[0][0][6], known/255.)
+    assert labels[0][0] == 5
+    assert dataset.num_examples == 60000
+    dataset.close(handle)
 
-    first_target, = mnist_test.get_data(request=[0, 1])
-    assert first_target.shape == (2, 1)
 
-    binary_mnist = MNIST('test', binary=True, sources=('features',))
-    first_feature, = binary_mnist.get_data(request=[0])
-    assert first_feature.dtype.kind == 'b'
-    assert_raises(ValueError, MNIST, 'valid')
+def test_mnist_test():
+    skip_if_not_available(datasets=['mnist.hdf5'])
 
-    mnist_train = cPickle.loads(cPickle.dumps(mnist_train))
-    assert len(mnist_train.features) == 40000
+    dataset = MNIST('test', load_in_memory=False)
+    handle = dataset.open()
+    data, labels = dataset.get_data(handle, slice(0, 10))
+    assert data.dtype == config.floatX
+    assert data.shape == (10, 1, 28, 28)
+    assert labels.shape == (10, 1)
+    known = numpy.array([0, 0, 0, 0, 0, 0, 84, 185, 159, 151, 60, 36, 0, 0, 0,
+                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    assert_allclose(data[0][0][7], known/255.)
+    assert labels[0][0] == 7
+    assert dataset.num_examples == 10000
+    dataset.close(handle)
 
-    mnist_test_unflattened = MNIST('test', flatten=False)
-    assert mnist_test_unflattened.features.shape == (10000, 28, 28)
+
+def test_mnist_axes():
+    skip_if_not_available(datasets=['mnist.hdf5'])
+
+    dataset = MNIST('train', load_in_memory=False)
+    assert_equal(dataset.axis_labels['features'],
+                 ('batch', 'channel', 'height', 'width'))
+
+
+def test_mnist_invalid_split():
+    skip_if_not_available(datasets=['mnist.hdf5'])
+
+    assert_raises(ValueError, MNIST, 'dummy')
+
+
+def test_mnist_data_path():
+    skip_if_not_available(datasets=['mnist.hdf5'])
+
+    assert MNIST('train').data_path == os.path.join(config.data_path,
+                                                    'mnist.hdf5')

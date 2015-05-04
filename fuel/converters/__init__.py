@@ -11,5 +11,6 @@ command-line arguments, and is expected to download the required files.
 
 """
 from fuel.converters.binarized_mnist import binarized_mnist
+from fuel.converters.mnist import mnist
 
-__all__ = ('binarized_mnist',)
+__all__ = ('binarized_mnist', 'mnist')

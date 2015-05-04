@@ -7,5 +7,6 @@ Download functions accept two arguments:
 
 """
 from fuel.downloaders.binarized_mnist import binarized_mnist
+from fuel.downloaders.mnist import mnist
 
-__all__ = ('binarized_mnist',)
+__all__ = ('binarized_mnist', 'mnist')

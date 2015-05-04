@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-import logging
 import os
 
 from fuel import config
 from fuel.datasets import H5PYDataset
-
-logger = logging.getLogger(__name__)
 
 
 class BinarizedMNIST(H5PYDataset):
