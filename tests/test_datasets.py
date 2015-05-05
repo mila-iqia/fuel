@@ -31,6 +31,30 @@ def test_dataset():
     assert next(stream.get_epoch_iterator(as_dict=True)) == {"data": 1}
 
 
+def test_dataset_no_axis_labels():
+    dataset = IterableDataset(numpy.eye(2))
+    assert dataset.axis_labels is None
+
+
+def test_dataset_axis_labels():
+    axis_labels = {'data': ('batch', 'features')}
+    dataset = IterableDataset(numpy.eye(2), axis_labels=axis_labels)
+    assert dataset.axis_labels == axis_labels
+
+
+def test_data_stream_no_axis_labels():
+    dataset = IterableDataset(numpy.eye(2))
+    stream = DataStream(dataset)
+    assert stream.axis_labels is None
+
+
+def test_data_stream_axis_labels():
+    axis_labels = {'data': ('batch', 'features')}
+    dataset = IterableDataset(numpy.eye(2), axis_labels=axis_labels)
+    stream = DataStream(dataset)
+    assert stream.axis_labels == axis_labels
+
+
 def test_data_stream_mapping():
     data = [1, 2, 3]
     data_doubled = [2, 4, 6]
@@ -108,6 +132,14 @@ def test_floatx():
     assert str(data[1].dtype) == "int64"
 
 
+def test_floatx_axis_labels():
+    x = numpy.eye(2).astype('float64')
+    axis_labels = {'x': ('batch', 'feature')}
+    dataset = IterableDataset({'x': x}, axis_labels=axis_labels)
+    stream = ForceFloatX(DataStream(dataset))
+    assert stream.axis_labels == axis_labels
+
+
 def test_sources_selection():
     features = [5, 6, 7, 1]
     targets = [1, 0, 1, 1]
@@ -126,6 +158,7 @@ def test_data_driven_epochs():
         sources = ('data',)
 
         def __init__(self):
+            self.axis_labels = None
             self.data = [[1, 2, 3, 4],
                          [5, 6, 7, 8]]
 

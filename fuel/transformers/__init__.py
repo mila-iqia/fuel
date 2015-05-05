@@ -26,7 +26,7 @@ class Transformer(AbstractDataStream):
         is working on example or batch
 
     """
-    def __init__(self, data_stream, batch_input=False,  **kwargs):
+    def __init__(self, data_stream, batch_input=False, **kwargs):
         super(Transformer, self).__init__(**kwargs)
         self.data_stream = data_stream
         self.batch_input = batch_input
@@ -120,7 +120,8 @@ class Mapping(Transformer):
 class ForceFloatX(Transformer):
     """Force all floating point numpy arrays to be floatX."""
     def __init__(self, data_stream):
-        super(ForceFloatX, self).__init__(data_stream)
+        super(ForceFloatX, self).__init__(
+            data_stream, axis_labels=data_stream.axis_labels)
 
     def get_data(self, request=None):
         if request is not None:
