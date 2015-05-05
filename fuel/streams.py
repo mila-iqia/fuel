@@ -36,8 +36,9 @@ class AbstractDataStream(object):
         given by the dataset.
 
     """
-    def __init__(self, iteration_scheme=None):
+    def __init__(self, iteration_scheme=None, axis_labels=None):
         self.iteration_scheme = iteration_scheme
+        self.axis_labels = axis_labels
 
     def get_data(self, request=None):
         """Request data from the dataset or the wrapped stream.
@@ -49,11 +50,6 @@ class AbstractDataStream(object):
 
         """
         pass
-
-    @property
-    def axis_labels(self):
-        """Returns a dict mapping sources to axis labels."""
-        return None
 
     @abstractmethod
     def reset(self):
@@ -106,6 +102,7 @@ class DataStream(AbstractDataStream):
 
     """
     def __init__(self, dataset, **kwargs):
+        kwargs.setdefault('axis_labels', dataset.axis_labels)
         super(DataStream, self).__init__(**kwargs)
         self.dataset = dataset
         self.data_state = self.dataset.open()
@@ -120,10 +117,6 @@ class DataStream(AbstractDataStream):
     @sources.setter
     def sources(self, value):
         self._sources = value
-
-    @property
-    def axis_labels(self):
-        return self.dataset.axis_labels
 
     def close(self):
         self.data_state = self.dataset.close(self.data_state)

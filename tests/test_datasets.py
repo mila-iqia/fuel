@@ -158,6 +158,7 @@ def test_data_driven_epochs():
         sources = ('data',)
 
         def __init__(self):
+            self.axis_labels = None
             self.data = [[1, 2, 3, 4],
                          [5, 6, 7, 8]]
 
