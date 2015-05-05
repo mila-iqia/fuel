@@ -16,17 +16,6 @@ before_install:
   - ./miniconda.sh -b
   - export PATH=$HOME/miniconda/bin:$PATH
   - conda update -q --yes conda
-    # Download CIFAR10 for tests if not loaded from cache
-  - |
-      if [ ! -d $TRAVIS_BUILD_DIR/data/cifar10 ]; then
-        mkdir $TRAVIS_BUILD_DIR/data/cifar10
-      fi
-  - |
-      if find $TRAVIS_BUILD_DIR/data/cifar10 -empty | read; then
-        cd $TRAVIS_BUILD_DIR/data/cifar10
-        curl http://www.cs.utoronto.ca/~kriz/cifar-10-python.tar.gz | tar xzf -
-        cd -
-      fi
   - export FUEL_DATA_PATH=$TRAVIS_BUILD_DIR/data
 install:
   # Install all Python dependencies
@@ -50,6 +39,15 @@ script:
         fuel-download mnist
         fuel-convert mnist
         fuel-download --clear mnist
+        cd -
+      fi
+  # Download and process CIFAR10 for tests if not loaded from cache
+  - |
+      if [ ! -f $FUEL_DATA_PATH/cifar10.hdf5 ]; then
+        cd $FUEL_DATA_PATH
+        fuel-download cifar10
+        fuel-convert cifar10
+        fuel-download --clear cifar10
         cd -
       fi
   # With Fuel installed we can install Blocks
