@@ -77,42 +77,8 @@ class Dataset(object):
     def example_iteration_scheme(self, value):
         self._example_iteration_scheme = value
 
-    @property
-    def batch_iteration_scheme(self):
-        if not hasattr(self, '_batch_iteration_scheme'):
-            raise AttributeError("dataset does not provide a batch "
-                                 "iteration scheme")
-        return self._batch_iteration_scheme
-
-    @batch_iteration_scheme.setter
-    def batch_iteration_scheme(self, value):
-        self._batch_iteration_scheme = value
-
-    def apply_default_transformers(self, stream):
-        """Applies default transformers to a stream.
-
-        Does nothing by default. Subclasses can override this method e.g.
-        to scale and shift the data by default.
-
-        Parameters
-        ----------
-        stream : :class:`~.streams.AbstractDataStream`
-            A data stream.
-
-        """
-        return stream
-
-    def get_example_stream(self, iteration_scheme=None):
-        if not iteration_scheme:
-            iteration_scheme = self.example_iteration_scheme
-        return self.apply_default_transformers(
-            DataStream(self, iteration_scheme=iteration_scheme))
-
-    def get_batch_stream(self, iteration_scheme=None):
-        if not iteration_scheme:
-            iteration_scheme = self.batch_iteration_scheme
-        return self.apply_default_transformers(
-            DataStream(self, iteration_scheme=iteration_scheme))
+    def get_example_stream(self):
+        return DataStream(self, iteration_scheme=self.example_iteration_scheme)
 
     def open(self):
         """Return the state if the dataset requires one.

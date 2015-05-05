@@ -26,10 +26,22 @@ class Transformer(AbstractDataStream):
         is working on example or batch
 
     """
-    def __init__(self, data_stream, batch_input=False, **kwargs):
+    def __init__(self, data_stream=None, batch_input=False,  **kwargs):
         super(Transformer, self).__init__(**kwargs)
-        self.data_stream = data_stream
+        if data_stream:
+            self.data_stream = data_stream
         self.batch_input = batch_input
+
+    @property
+    def data_stream(self):
+        if hasattr(self, '_data_stream'):
+            return self._data_stream
+        else:
+            raise AttributeError("data stream hasn't been set")
+
+    @data_stream.setter
+    def data_stream(self, data_stream):
+        self._data_stream = data_stream
 
     @property
     def sources(self):
@@ -97,8 +109,8 @@ class Mapping(Transformer):
         data under source names `add_sources`.
 
     """
-    def __init__(self, data_stream, mapping, add_sources=None):
-        super(Mapping, self).__init__(data_stream)
+    def __init__(self, mapping, add_sources=None, **kwargs):
+        super(Mapping, self).__init__(**kwargs)
         self.mapping = mapping
         self.add_sources = add_sources
 
@@ -119,10 +131,6 @@ class Mapping(Transformer):
 
 class ForceFloatX(Transformer):
     """Force all floating point numpy arrays to be floatX."""
-    def __init__(self, data_stream):
-        super(ForceFloatX, self).__init__(
-            data_stream, axis_labels=data_stream.axis_labels)
-
     def get_data(self, request=None):
         if request is not None:
             raise ValueError
@@ -149,8 +157,8 @@ class Filter(Transformer):
         Should return ``True`` for the samples to be kept.
 
     """
-    def __init__(self, data_stream, predicate):
-        super(Filter, self).__init__(data_stream)
+    def __init__(self, predicate, **kwargs):
+        super(Filter, self).__init__(**kwargs)
         self.predicate = predicate
 
     def get_epoch_iterator(self, **kwargs):
@@ -182,14 +190,26 @@ class Cache(Transformer):
         refilled when needed through the :meth:`get_data` method.
 
     """
-    def __init__(self, data_stream, iteration_scheme):
+    def __init__(self, iteration_scheme, **kwargs):
+        batch_input = kwargs.pop('batch_input', True)
+        if not batch_input:
+            raise ValueError("Cache supports only `batch_input == True`")
         super(Cache, self).__init__(
-            data_stream, iteration_scheme=iteration_scheme, batch_input=True)
-        self.cache = [[] for _ in self.sources]
+            iteration_scheme=iteration_scheme, batch_input=True, **kwargs)
+
+    @property
+    def cache(self):
+        if not hasattr(self, '_cache'):
+            self._cache = [[] for _ in self.sources]
+        return self._cache
+
+    @cache.setter
+    def cache(self, value):
+        self._cache = value
 
     def get_data_from_batch(self, request=None):
         if request > len(self.cache[0]):
-            self._cache()
+            self._fill_cache()
         data = []
         for i, cache in enumerate(self.cache):
             data.append(numpy.asarray(cache[:request]))
@@ -200,7 +220,7 @@ class Cache(Transformer):
         self.cache = [[] for _ in self.sources]
         return super(Cache, self).get_epoch_iterator(**kwargs)
 
-    def _cache(self):
+    def _fill_cache(self):
         for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
             cache.extend(data)
 
@@ -255,9 +275,9 @@ class Batch(Transformer):
         raised if a batch of the requested size cannot be provided.
 
     """
-    def __init__(self, data_stream, iteration_scheme, strictness=0):
+    def __init__(self, iteration_scheme, strictness=0, **kwargs):
         super(Batch, self).__init__(
-            data_stream, iteration_scheme=iteration_scheme)
+            iteration_scheme=iteration_scheme, **kwargs)
         self.strictness = strictness
 
     def get_data_from_example(self, request=None):
@@ -293,8 +313,11 @@ class Unpack(Transformer):
         The data stream to unpack
 
     """
-    def __init__(self, data_stream):
-        super(Unpack, self).__init__(data_stream, batch_input=True)
+    def __init__(self, **kwargs):
+        batch_input = kwargs.pop('batch_input', True)
+        if not batch_input:
+            raise ValueError("Unpack supports only `batch_input == True`")
+        super(Unpack, self).__init__(batch_input=True, **kwargs)
         self.data = None
 
     def get_data_from_batch(self, request=None):
@@ -333,15 +356,27 @@ class Padding(Transformer):
         be used.
 
     """
-    def __init__(self, data_stream, mask_sources=None, mask_dtype=None):
-        super(Padding, self).__init__(data_stream, batch_input=True)
-        if mask_sources is None:
-            mask_sources = self.data_stream.sources
-        self.mask_sources = mask_sources
+    def __init__(self, mask_sources=None, mask_dtype=None, **kwargs):
+        batch_input = kwargs.pop('batch_input', True)
+        if not batch_input:
+            raise ValueError("Padding supports only `batch_input == True`")
+        super(Padding, self).__init__(batch_input=True, **kwargs)
+        if mask_sources:
+            self.mask_sources = mask_sources
         if mask_dtype is None:
             self.mask_dtype = config.floatX
         else:
             self.mask_dtype = mask_dtype
+
+    @property
+    def mask_sources(self):
+        if not hasattr(self, '_mask_sources'):
+            self._mask_sources = self.data_stream.sources
+        return self._mask_sources
+
+    @mask_sources.setter
+    def mask_sources(self, value):
+        self._mask_sources = value
 
     @property
     def sources(self):
@@ -487,12 +522,19 @@ class MultiProcessing(Transformer):
     robust approach might need to be considered.
 
     """
-    def __init__(self, data_stream, max_store=100):
-        super(MultiProcessing, self).__init__(data_stream)
-        self.background = BackgroundProcess(data_stream, max_store)
-        self.proc = Process(target=self.background.main)
-        self.proc.daemon = True
-        self.proc.start()
+    def __init__(self, max_store=100, **kwargs):
+        super(MultiProcessing, self).__init__(**kwargs)
+        self.max_store = max_store
+
+    @property
+    def background(self):
+        if not hasattr(self, '_background'):
+            self._background = BackgroundProcess(
+                self.data_stream, self.max_store)
+            self.proc = Process(target=self.background.main)
+            self.proc.daemon = True
+            self.proc.start()
+        return self._background
 
     def get_data(self, request=None):
         if request is not None:
