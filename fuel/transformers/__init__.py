@@ -117,6 +117,66 @@ class Mapping(Transformer):
         return data + image
 
 
+class OneToOneMapping(Mapping):
+    """Applies a one-to-one mapping to the wrapped data stream's data.
+
+    Parameters
+    ----------
+    data_stream : instance of :class:`DataStream`
+        The wrapped data stream.
+    mapping : callable
+        The mapping to be applied.
+    which_sources : tuple of str, optional
+        Which sources to apply the mapping to. Defaults to `None`, in
+        which case the mapping is applied to all sources.
+    prefix : str, optional
+        Prefix for source names. Defaults to 'mapped_'
+    add_mapped_sources : bool, optional
+        If `True`, mapped sources are added to the original data with
+        `prefix` as a prefix for the source name. Defaults to `False`.
+
+    """
+    def __init__(self, data_stream, fn, which_sources=None, prefix='mapped_',
+                 add_mapped_sources=False):
+        self.fn = fn
+        if which_sources is None:
+            which_sources = data_stream.sources
+        self.which_sources = which_sources
+        if add_mapped_sources:
+            add_sources = tuple(
+                prefix + source_name for source_name in data_stream.sources)
+        else:
+            add_sources = None
+        super(OneToOneMapping, self).__init__(
+            data_stream, self.apply_mapping, add_sources=add_sources)
+
+    def apply_mapping(self, data):
+        data = list(data)
+        for i, source_name in enumerate(self.data_stream.sources):
+            if source_name in self.which_sources:
+                data[i] = self.fn(data[i])
+        return tuple(data)
+
+
+class Flatten(OneToOneMapping):
+    def __init__(self, data_stream, **kwargs):
+        super(Flatten, self).__init__(data_stream, self.flatten, **kwargs)
+
+    def flatten(self, data):
+        return data.reshape((data.shape[0], -1))
+
+
+class ScaleAndShift(OneToOneMapping):
+    def __init__(self, data_stream, scale, shift, **kwargs):
+        self.scale = scale
+        self.shift = shift
+        super(ScaleAndShift, self).__init__(
+            data_stream, self.scale_and_shift, **kwargs)
+
+    def scale_and_shift(self, data):
+        return data * self.scale + self.shift
+
+
 class ForceFloatX(Transformer):
     """Force all floating point numpy arrays to be floatX."""
     def __init__(self, data_stream):
