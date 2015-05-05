@@ -7,7 +7,7 @@ import tables
 from six.moves import zip
 
 from fuel.datasets import Dataset
-from fuel.transformers import Mapping
+from fuel.transformers import Flatten
 from fuel.utils import do_not_pickle_attributes
 
 
@@ -317,13 +317,7 @@ class H5PYDataset(Dataset):
 
     def apply_default_transformer(self, stream):
         if self.flatten:
-            fns = (
-                lambda d: d.reshape((d.shape[0], -1))
-                if source_name in self.flatten else None
-                for source_name in stream.sources)
-            stream = Mapping(
-                stream,
-                lambda t: tuple(f(s) if f else s for f, s in zip(fns, t)))
+            stream = Flatten(stream, which_sources=self.flatten)
         return stream
 
     def get_data(self, state=None, request=None):
