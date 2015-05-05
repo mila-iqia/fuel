@@ -3,6 +3,7 @@ import os
 
 from fuel import config
 from fuel.datasets import H5PYDataset
+from fuel.transformers import ForceFloatX, ScaleAndShift
 
 
 class MNIST(H5PYDataset):
@@ -37,9 +38,7 @@ class MNIST(H5PYDataset):
     def data_path(self):
         return os.path.join(config.data_path, self.filename)
 
-    def get_data(self, state=None, request=None):
-        rval = list(super(MNIST, self).get_data(state=state, request=request))
-        if 'features' in self.sources:
-            i = self.sources.index('features')
-            rval[i] = (rval[i] / 255.).astype(config.floatX)
-        return tuple(rval)
+    def apply_default_transformer(self, stream):
+        stream = super(MNIST, self).apply_default_transformer(stream)
+        return ForceFloatX(
+            ScaleAndShift(stream, 1 / 255.0, 0, which_sources=('features',)))
