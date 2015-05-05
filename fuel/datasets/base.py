@@ -66,6 +66,20 @@ class Dataset(object):
     def sources(self, sources):
         self._sources = sources
 
+    def apply_default_transformer(self, stream):
+        """Applies a default transformer to a stream.
+
+        Does nothing by default. Subclasses can override this method e.g.
+        to scale and shift the data by default.
+
+        Parameters
+        ----------
+        stream : :class:`~.streams.AbstractDataStream`
+            A data stream.
+
+        """
+        return stream
+
     @property
     def example_iteration_scheme(self):
         if not hasattr(self, '_example_iteration_scheme'):
