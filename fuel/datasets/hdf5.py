@@ -317,13 +317,13 @@ class H5PYDataset(Dataset):
 
     def apply_default_transformer(self, stream):
         if self.flatten:
-            functions = (
+            fns = (
                 lambda d: d.reshape((d.shape[0], -1))
-                if source_name in self.flatten else lambda d: d
+                if source_name in self.flatten else None
                 for source_name in stream.sources)
             stream = Mapping(
                 stream,
-                lambda t: tuple(f(s) for f, s in zip(functions, t)))
+                lambda t: tuple(f(s) if f else s for f, s in zip(fns, t)))
         return stream
 
     def get_data(self, state=None, request=None):
