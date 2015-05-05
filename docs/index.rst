@@ -82,8 +82,13 @@ minibatches of size 512.
 
 >>> from fuel.streams import DataStream
 >>> from fuel.schemes import ShuffledScheme
->>> stream = DataStream(
-...     mnist, iteration_scheme=ShuffledScheme(mnist.num_examples, 512))
+>>> stream = mnist.apply_default_transformer(DataStream(
+...     mnist, iteration_scheme=ShuffledScheme(mnist.num_examples, 512)))
+
+Datasets can apply various default transformations on the original
+data stream if their ``apply_default_transformer`` method is called. In
+this case, MNIST rescaled pixel values in the unit interval and flattened
+the images into vectors.
 
 This stream can now provide us with a Python iterator which will provide a
 total of 60,000 examples (``mnist.num_examples``) in the form of batches of
