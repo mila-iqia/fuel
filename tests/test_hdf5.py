@@ -8,6 +8,7 @@ from numpy.testing import assert_equal, assert_raises
 from six.moves import range
 
 from fuel.datasets.hdf5 import Hdf5Dataset, H5PYDataset
+from fuel.schemes import SequentialScheme
 from fuel.streams import DataStream
 
 
@@ -206,7 +207,7 @@ def test_h5py_dataset_in_memory():
             os.remove('tmp.hdf5')
 
 
-def test_h5py_flatten_in_memory():
+def test_h5py_flatten():
     try:
         h5file = h5py.File(name='tmp.hdf5', mode="w")
         features = h5file.create_dataset(
@@ -220,36 +221,12 @@ def test_h5py_flatten_in_memory():
         h5file.close()
         dataset = H5PYDataset(which_set='train', path='tmp.hdf5',
                               load_in_memory=True, flatten=['features'])
-        handle = dataset.open()
-        assert_equal(
-            dataset.get_data(state=handle, request=slice(0, 10))[0],
-            numpy.arange(60).reshape((10, 6)))
+        stream = dataset.apply_default_transformer(
+            DataStream(dataset, iteration_scheme=SequentialScheme(10, 10)))
+        assert_equal(next(stream.get_epoch_iterator())[0],
+                     numpy.arange(60).reshape((10, 6)))
     finally:
-        dataset.close(handle)
-        if os.path.exists('tmp.hdf5'):
-            os.remove('tmp.hdf5')
-
-
-def test_h5py_flatten_out_of_memory():
-    try:
-        h5file = h5py.File(name='tmp.hdf5', mode="w")
-        features = h5file.create_dataset(
-            'features', (10, 2, 3), dtype='float32')
-        features[...] = numpy.arange(60, dtype='float32').reshape((10, 2, 3))
-        targets = h5file.create_dataset('targets', (10,), dtype='uint8')
-        targets[...] = numpy.arange(10, dtype='uint8')
-        split_dict = {'train': {'features': (0, 10), 'targets': (0, 10)}}
-        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
-        h5file.flush()
-        h5file.close()
-        dataset = H5PYDataset(path='tmp.hdf5', load_in_memory=False,
-                              which_set='train', flatten=['features'])
-        handle = dataset.open()
-        assert_equal(
-            dataset.get_data(state=handle, request=slice(0, 10))[0],
-            numpy.arange(60).reshape((10, 6)))
-    finally:
-        dataset.close(handle)
+        stream.close()
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')
 

@@ -4,8 +4,10 @@ from collections import defaultdict, OrderedDict
 import h5py
 import numpy
 import tables
+from six.moves import zip
 
 from fuel.datasets import Dataset
+from fuel.transformers import Mapping
 from fuel.utils import do_not_pickle_attributes
 
 
@@ -276,14 +278,10 @@ class H5PYDataset(Dataset):
         if self.load_in_memory:
             self._out_of_memory_open()
             handle = self._file_handle
-            data_sources = []
-            for source_name, subset in zip(self.sources, self.subsets):
-                data = handle[source_name][subset]
-                if source_name in self.flatten:
-                    data = data.reshape((data.shape[0], -1))
-                data_sources.append(data)
-            self.data_sources = data_sources
-            self._out_of_memory_close()
+            self.data_sources = tuple(
+                handle[source_name][subset] for source_name, subset in
+                zip(self.sources, self.subsets))
+            self._out_of_memory_close(handle)
         else:
             self.data_sources = None
 
@@ -317,6 +315,17 @@ class H5PYDataset(Dataset):
             raise IOError('no open handle for file {}'.format(self.path))
         return self._file_handles[self.path]
 
+    def apply_default_transformer(self, stream):
+        if self.flatten:
+            functions = (
+                lambda d: d.reshape((d.shape[0], -1))
+                if source_name in self.flatten else lambda d: d
+                for source_name in stream.sources)
+            stream = Mapping(
+                stream,
+                lambda t: tuple(f(s) for f, s in zip(functions, t)))
+        return stream
+
     def get_data(self, state=None, request=None):
         if self.load_in_memory:
             return self._in_memory_get_data(state=state, request=request)
@@ -349,7 +358,5 @@ class H5PYDataset(Dataset):
                     data = handle[source_name][req]
             else:
                 raise ValueError
-            if source_name in self.flatten:
-                data = data.reshape((data.shape[0], -1))
             rval.append(data)
         return tuple(rval)
