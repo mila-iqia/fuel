@@ -8,6 +8,7 @@ from six.moves import zip, range
 from fuel.datasets import IterableDataset, IndexableDataset
 from fuel.streams import DataStream
 from fuel.schemes import BatchSizeScheme, ConstantScheme
+from fuel.transformers import Mapping
 
 
 def test_dataset():
@@ -23,6 +24,18 @@ def test_dataset():
 
     # Check whether the returning as a dictionary of sources works
     assert next(stream.get_epoch_iterator(as_dict=True)) == {"data": 1}
+
+
+def test_dataset_default_transformer():
+    class DoublingDataset(IterableDataset):
+        def apply_default_transformer(self, stream):
+            return Mapping(
+                stream, lambda sources: tuple(2 * s for s in sources))
+
+    dataset = DoublingDataset([1, 2, 3])
+    stream = dataset.apply_default_transformer(DataStream(dataset))
+    epoch = stream.get_epoch_iterator()
+    assert list(epoch) == [(2,), (4,), (6,)]
 
 
 def test_dataset_no_axis_labels():
