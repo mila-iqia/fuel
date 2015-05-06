@@ -108,8 +108,10 @@ def test_h5py_dataset_multiple_instances():
         handle_2 = dataset_2.open()
         dataset_1.get_data(state=handle_1, request=slice(0, 10))
         dataset_2.get_data(state=handle_2, request=slice(0, 10))
-        dataset_1.close(handle_1)
-        dataset_2.close(handle_2)
+        #dataset_1.close(handle_1)
+        #dataset_2.close(handle_2)
+        dataset_1.close()
+        dataset_2.close()
     finally:
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')
@@ -135,8 +137,10 @@ def test_h5py_dataset_split():
         assert_equal(
             test_set.get_data(state=test_handle, request=slice(0, 2))[0],
             numpy.arange(50).reshape((10, 5))[8:])
-        train_set.close(train_handle)
-        test_set.close(test_handle)
+        #train_set.close(train_handle)
+        #test_set.close(test_handle)
+        train_set.close()
+        test_set.close()
     finally:
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')
@@ -160,7 +164,8 @@ def test_h5py_dataset_out_of_memory():
         assert_equal(
             dataset.get_data(state=handle, request=slice(3, 5))[1],
             numpy.arange(10).reshape((10, 1))[8:10])
-        dataset.close(handle)
+        #dataset.close(handle)
+        dataset.close()
     finally:
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')
@@ -181,7 +186,8 @@ def test_h5py_dataset_in_memory():
         assert_equal(
             dataset.get_data(state=handle, request=slice(0, 10))[0],
             numpy.arange(50).reshape((10, 5)))
-        dataset.close(handle)
+        #dataset.close(handle)
+        dataset.close()
     finally:
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')
@@ -205,7 +211,8 @@ def test_h5py_flatten_in_memory():
         assert_equal(
             dataset.get_data(state=handle, request=slice(0, 10))[0],
             numpy.arange(60).reshape((10, 6)))
-        dataset.close(handle)
+        #dataset.close(handle)
+        dataset.close()
     finally:
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')
@@ -229,7 +236,8 @@ def test_h5py_flatten_out_of_memory():
         assert_equal(
             dataset.get_data(state=handle, request=slice(0, 10))[0],
             numpy.arange(60).reshape((10, 6)))
-        dataset.close(handle)
+        #dataset.close(handle)
+        dataset.close()
     finally:
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')
@@ -251,7 +259,8 @@ def test_h5py_dataset_out_of_memory_sorted_indices():
         assert_equal(
             dataset.get_data(state=handle, request=[7, 4, 6, 2, 5])[0],
             numpy.arange(50).reshape((10, 5))[[7, 4, 6, 2, 5]])
-        dataset.close(handle)
+        #dataset.close(handle)
+        dataset.close()
     finally:
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')
@@ -271,7 +280,8 @@ def test_h5py_dataset_out_of_memory_unsorted_indices():
             sort_indices=False)
         handle = dataset.open()
         assert_raises(TypeError, dataset.get_data, handle, [7, 4, 6, 2, 5])
-        dataset.close(handle)
+        #dataset.close(handle)
+        dataset.close()
     finally:
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')
@@ -295,7 +305,8 @@ def test_h5py_flatten_raises_error_on_invalid_name():
         assert_raises(
             ValueError, H5PYDataset, 'tmp.hdf5',
             None, None, False, 'foo', None)
-        dataset.close(handle)
+        #dataset.close(handle)
+        dataset.close()
     finally:
         if os.path.exists('tmp.hdf5'):
             os.remove('tmp.hdf5')

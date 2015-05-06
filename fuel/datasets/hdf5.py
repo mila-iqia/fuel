@@ -119,7 +119,8 @@ class H5PYDataset(Dataset):
         indices are ordered.
 
     """
-    ref_counts = defaultdict(int)
+    _ref_counts = defaultdict(int)
+    _file_handles = defaultdict()
 
     def __init__(self, path, which_set, subset=None, load_in_memory=False,
                  flatten=None, driver=None, sort_indices=True, **kwargs):
@@ -223,29 +224,22 @@ class H5PYDataset(Dataset):
                 split_dict[split][source] = (start, stop, comment)
         return split_dict
 
-    def _get_file_id(self):
-        file_id = [f for f in self.ref_counts.keys() if f.name == self.path]
-        if not file_id:
-            return self.path
-        file_id, = file_id
-        return file_id
-
     @property
     def split_dict(self):
         if not hasattr(self, '_split_dict'):
-            handle = self._out_of_memory_open()
+            handle = self.get_file_handle()
             split_array = handle.attrs['split']
             self._split_dict = H5PYDataset.parse_split_array(split_array)
-            self._out_of_memory_close(handle)
+            self.release_file_handle()
         return self._split_dict
 
     def load_axis_labels(self):
-        handle = self._out_of_memory_open()
+        handle = self.get_file_handle()
         axis_labels = {}
         for source_name in handle:
             axis_labels[source_name] = tuple(
                 dim.label for dim in handle[source_name].dims)
-        self._out_of_memory_close(handle)
+        self.release_file_handle()
         return axis_labels
 
     @property
@@ -260,7 +254,6 @@ class H5PYDataset(Dataset):
     def subsets(self):
         if not hasattr(self, '_subsets'):
             subsets = [self._subset_template for source in self.sources]
-            handle = self._out_of_memory_open()
             num_examples = None
             for i, source_name in enumerate(self.sources):
                 start, stop = self.split_dict[self.which_set][source_name][:2]
@@ -275,12 +268,25 @@ class H5PYDataset(Dataset):
                 if num_examples != subset.stop - subset.start:
                     raise ValueError("sources have different lengths")
             self._subsets = subsets
-            self._out_of_memory_close(handle)
         return self._subsets
+
+    def get_file_handle(self):
+        if self.path not in self._file_handles.keys():
+            handle = h5py.File(name=self.path, mode="r", driver=self.driver)
+            self._file_handles[self.path] = handle
+        self._ref_counts[self.path] += 1
+        return self._file_handles[self.path]
+
+    def release_file_handle(self):
+        self._ref_counts[self.path] -= 1
+        if not self._ref_counts[self.path]:
+            del self._ref_counts[self.path]
+            self._file_handles[self.path].close()
+            del self._file_handles[self.path]
 
     def load(self):
         if self.load_in_memory:
-            handle = self._out_of_memory_open()
+            handle = self.get_file_handle()
             data_sources = []
             for source_name, subset in zip(self.sources, self.subsets):
                 data = handle[source_name][subset]
@@ -288,7 +294,7 @@ class H5PYDataset(Dataset):
                     data = data.reshape((data.shape[0], -1))
                 data_sources.append(data)
             self.data_sources = data_sources
-            self._out_of_memory_close(handle)
+            self.release_file_handle()
         else:
             self.data_sources = None
 
@@ -300,20 +306,12 @@ class H5PYDataset(Dataset):
         return None if self.load_in_memory else self._out_of_memory_open()
 
     def _out_of_memory_open(self):
-        file_id = self._get_file_id()
-        state = h5py.File(name=file_id, mode="r", driver=self.driver)
-        self.ref_counts[state.id] += 1
-        return state
+        self.get_file_handle()
+        return self.path
 
-    def close(self, state):
+    def close(self):
         if not self.load_in_memory:
-            self._out_of_memory_close(state)
-
-    def _out_of_memory_close(self, state):
-        self.ref_counts[state.id] -= 1
-        if not self.ref_counts[state.id]:
-            del self.ref_counts[state.id]
-            state.close()
+            self.release_file_handle()
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:
@@ -328,25 +326,27 @@ class H5PYDataset(Dataset):
 
     def _out_of_memory_get_data(self, state=None, request=None):
         rval = []
+        handle = self.get_file_handle()
         for source_name, subset in zip(self.sources, self.subsets):
             if isinstance(request, slice):
                 req = slice(request.start + subset.start,
                             request.stop + subset.start, request.step)
-                data = state[source_name][req]
+                data = handle[source_name][req]
             elif isinstance(request, list):
                 req = [index + subset.start for index in request]
                 if self.sort_indices:
                     indices = numpy.argsort(req)
-                    source = state[source_name]
+                    source = handle[source_name]
                     data = numpy.empty(
                         shape=(len(req),) + source.shape[1:],
                         dtype=source.dtype)
                     data[indices] = source[numpy.array(req)[indices], ...]
                 else:
-                    data = state[source_name][req]
+                    data = handle[source_name][req]
             else:
                 raise ValueError
             if source_name in self.flatten:
                 data = data.reshape((data.shape[0], -1))
             rval.append(data)
+        self.release_file_handle()
         return tuple(rval)
