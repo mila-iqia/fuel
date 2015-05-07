@@ -11,8 +11,7 @@ from fuel.schemes import ConstantScheme, SequentialScheme
 from fuel.streams import DataStream
 from fuel.transformers import (
     Transformer, Mapping, SortMapping, ForceFloatX, Filter, Cache, Batch,
-    Padding, MultiProcessing, Unpack, Merge, SingleMapping, Flatten,
-    ScaleAndShift, Cast)
+    Padding, MultiProcessing, Unpack, Merge, Flatten, ScaleAndShift, Cast)
 
 
 class IdentityTransformer(Transformer):
