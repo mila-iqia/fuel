@@ -3,7 +3,7 @@ import os
 
 from fuel import config
 from fuel.datasets import H5PYDataset
-from fuel.transformers import ForceFloatX, ScaleAndShift
+from fuel.transformers.defaults import uint8_pixels_to_floatX
 
 
 class MNIST(H5PYDataset):
@@ -29,13 +29,11 @@ class MNIST(H5PYDataset):
 
     """
     filename = 'mnist.hdf5'
+    default_transformers = uint8_pixels_to_floatX(('features',))
 
     def __init__(self, which_set, **kwargs):
         kwargs.setdefault('load_in_memory', True)
         super(MNIST, self).__init__(self.data_path, which_set, **kwargs)
-        self.default_transformers += (
-            (ScaleAndShift, [1 / 255.0, 0], {'which_sources': ('features',)}),
-            (ForceFloatX, [], {}))
 
     @property
     def data_path(self):

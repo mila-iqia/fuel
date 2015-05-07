@@ -207,30 +207,6 @@ def test_h5py_dataset_in_memory():
             os.remove('tmp.hdf5')
 
 
-def test_h5py_flatten():
-    try:
-        h5file = h5py.File(name='tmp.hdf5', mode="w")
-        features = h5file.create_dataset(
-            'features', (10, 2, 3), dtype='float32')
-        features[...] = numpy.arange(60, dtype='float32').reshape((10, 2, 3))
-        targets = h5file.create_dataset('targets', (10,), dtype='uint8')
-        targets[...] = numpy.arange(10, dtype='uint8')
-        split_dict = {'train': {'features': (0, 10), 'targets': (0, 10)}}
-        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
-        h5file.flush()
-        h5file.close()
-        dataset = H5PYDataset(which_set='train', path='tmp.hdf5',
-                              load_in_memory=True, flatten=['features'])
-        stream = DataStream.default_stream(
-            dataset, iteration_scheme=SequentialScheme(10, 10))
-        assert_equal(next(stream.get_epoch_iterator())[0],
-                     numpy.arange(60).reshape((10, 6)))
-    finally:
-        stream.close()
-        if os.path.exists('tmp.hdf5'):
-            os.remove('tmp.hdf5')
-
-
 def test_h5py_dataset_out_of_memory_sorted_indices():
     try:
         h5file = h5py.File(name='tmp.hdf5', mode="w")
@@ -267,30 +243,6 @@ def test_h5py_dataset_out_of_memory_unsorted_indices():
             sort_indices=False)
         handle = dataset.open()
         assert_raises(TypeError, dataset.get_data, handle, [7, 4, 6, 2, 5])
-    finally:
-        dataset.close(handle)
-        if os.path.exists('tmp.hdf5'):
-            os.remove('tmp.hdf5')
-
-
-def test_h5py_flatten_raises_error_on_invalid_name():
-    try:
-        h5file = h5py.File(name='tmp.hdf5', mode="w")
-        features = h5file.create_dataset(
-            'features', (10, 2, 3), dtype='float32')
-        features[...] = numpy.arange(60, dtype='float32').reshape((10, 2, 3))
-        targets = h5file.create_dataset('targets', (10,), dtype='uint8')
-        targets[...] = numpy.arange(10, dtype='uint8')
-        split_dict = {'train': {'features': (0, 10), 'targets': (0, 10)}}
-        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
-        h5file.flush()
-        h5file.close()
-        dataset = H5PYDataset(path='tmp.hdf5', load_in_memory=False,
-                              which_set='train', flatten=['features'])
-        handle = dataset.open()
-        assert_raises(
-            ValueError, H5PYDataset, 'tmp.hdf5',
-            None, None, False, 'foo', None)
     finally:
         dataset.close(handle)
         if os.path.exists('tmp.hdf5'):

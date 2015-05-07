@@ -45,6 +45,7 @@ class Dataset(object):
 
     """
     provides_sources = None
+    default_transformers = tuple()
 
     def __init__(self, sources=None, axis_labels=None):
         if not self.provides_sources:
@@ -65,16 +66,6 @@ class Dataset(object):
     @sources.setter
     def sources(self, sources):
         self._sources = sources
-
-    @property
-    def default_transformers(self):
-        if not hasattr(self, '_default_transformers'):
-            self._default_transformers = tuple()
-        return self._default_transformers
-
-    @default_transformers.setter
-    def default_transformers(self, default_transformers):
-        self._default_transformers = default_transformers
 
     def apply_default_transformers(self, stream):
         """Applies default transformers to a stream.

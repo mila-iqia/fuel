@@ -125,7 +125,7 @@ class H5PYDataset(Dataset):
     _file_handles = {}
 
     def __init__(self, path, which_set, subset=None, load_in_memory=False,
-                 flatten=None, driver=None, sort_indices=True, **kwargs):
+                 driver=None, sort_indices=True, **kwargs):
         self.path = path
         self.driver = driver
         self.sort_indices = sort_indices
@@ -140,20 +140,9 @@ class H5PYDataset(Dataset):
             raise ValueError("subset.step must be either 1 or None")
         self._subset_template = subset
         self.load_in_memory = load_in_memory
-        self.flatten = [] if flatten is None else flatten
 
         kwargs.setdefault('axis_labels', self.load_axis_labels())
         super(H5PYDataset, self).__init__(**kwargs)
-
-        if self.flatten:
-            self.default_transformers = (
-                (Flatten, [], {'which_sources': self.flatten}),)
-
-        for source in self.flatten:
-            if source not in self.provides_sources:
-                raise ValueError(
-                    "trying to flatten source '{}' which is ".format(source) +
-                    "not provided by the '{}' split".format(self.which_set))
 
     @staticmethod
     def create_split_array(split_dict):
