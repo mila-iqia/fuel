@@ -273,7 +273,7 @@ class H5PYDataset(Dataset):
             self.data_sources = tuple(
                 handle[source_name][subset] for source_name, subset in
                 zip(self.sources, self.subsets))
-            self._out_of_memory_close(handle)
+            self._out_of_memory_close()
         else:
             self.data_sources = None
 
