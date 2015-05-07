@@ -274,6 +274,7 @@ class H5PYDataset(Dataset):
 
     def load(self):
         if self.load_in_memory:
+            self._out_of_memory_open()
             handle = self._file_handle
             data_sources = []
             for source_name, subset in zip(self.sources, self.subsets):
@@ -282,6 +283,7 @@ class H5PYDataset(Dataset):
                     data = data.reshape((data.shape[0], -1))
                 data_sources.append(data)
             self.data_sources = data_sources
+            self._out_of_memory_close()
         else:
             self.data_sources = None
 
@@ -298,7 +300,7 @@ class H5PYDataset(Dataset):
             self._file_handles[self.path] = handle
         self._ref_counts[self.path] += 1
 
-    def close(self, handle):
+    def close(self, state):
         if not self.load_in_memory:
             self._out_of_memory_close()
 
