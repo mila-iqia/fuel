@@ -28,7 +28,7 @@ def test_mnist_train():
     assert dataset.num_examples == 60000
     dataset.close(handle)
 
-    stream = dataset.apply_default_transformer(
+    stream = dataset.apply_default_transformers(
         DataStream(dataset, iteration_scheme=SequentialScheme(10, 10)))
     data = next(stream.get_epoch_iterator())[0]
     assert data.min() >= 0.0 and data.max() <= 1.0
@@ -51,7 +51,7 @@ def test_mnist_test():
     assert dataset.num_examples == 10000
     dataset.close(handle)
 
-    stream = dataset.apply_default_transformer(
+    stream = dataset.apply_default_transformers(
         DataStream(dataset, iteration_scheme=SequentialScheme(10, 10)))
     data = next(stream.get_epoch_iterator())[0]
     assert data.min() >= 0.0 and data.max() <= 1.0

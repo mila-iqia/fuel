@@ -33,12 +33,10 @@ class MNIST(H5PYDataset):
     def __init__(self, which_set, **kwargs):
         kwargs.setdefault('load_in_memory', True)
         super(MNIST, self).__init__(self.data_path, which_set, **kwargs)
+        self.default_transformers += (
+            (ScaleAndShift, [1 / 255.0, 0], {'which_sources': ('features',)}),
+            (ForceFloatX, [], {}))
 
     @property
     def data_path(self):
         return os.path.join(config.data_path, self.filename)
-
-    def apply_default_transformer(self, stream):
-        stream = super(MNIST, self).apply_default_transformer(stream)
-        return ForceFloatX(
-            ScaleAndShift(stream, 1 / 255.0, 0, which_sources=('features',)))

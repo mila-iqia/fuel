@@ -34,20 +34,12 @@ class CIFAR10(H5PYDataset):
     filename = 'cifar10.hdf5'
 
     def __init__(self, which_set, **kwargs):
-        if which_set not in ('train', 'test'):
-            raise ValueError("CIFAR10 only has a train and test set")
-
         kwargs.setdefault('load_in_memory', True)
-        self.which_set = which_set
-
-        super(CIFAR10, self).__init__(self.data_path, which_set,
-                                      **kwargs)
+        super(CIFAR10, self).__init__(self.data_path, which_set, **kwargs)
+        self.default_transformers += (
+            (ScaleAndShift, [1 / 255.0, 0], {'which_sources': ('features',)}),
+            (ForceFloatX, [], {}))
 
     @property
     def data_path(self):
         return os.path.join(config.data_path, self.filename)
-
-    def apply_default_transformer(self, stream):
-        stream = super(CIFAR10, self).apply_default_transformer(stream)
-        return ForceFloatX(
-            ScaleAndShift(stream, 1 / 255.0, 0, which_sources=('features',)))

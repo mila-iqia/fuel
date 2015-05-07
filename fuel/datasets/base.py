@@ -66,11 +66,18 @@ class Dataset(object):
     def sources(self, sources):
         self._sources = sources
 
-    def apply_default_transformer(self, stream):
-        """Applies a default transformer to a stream.
+    @property
+    def default_transformers(self):
+        if not hasattr(self, '_default_transformers'):
+            self._default_transformers = tuple()
+        return self._default_transformers
 
-        Does nothing by default. Subclasses can override this method e.g.
-        to scale and shift the data by default.
+    @default_transformers.setter
+    def default_transformers(self, default_transformers):
+        self._default_transformers = default_transformers
+
+    def apply_default_transformers(self, stream):
+        """Applies default transformers to a stream.
 
         Parameters
         ----------
@@ -78,6 +85,9 @@ class Dataset(object):
             A data stream.
 
         """
+        for (cls, args, kwargs) in self.default_transformers:
+            args = [stream] + args
+            stream = cls(*args, **kwargs)
         return stream
 
     @property

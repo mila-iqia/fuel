@@ -145,6 +145,10 @@ class H5PYDataset(Dataset):
         kwargs.setdefault('axis_labels', self.load_axis_labels())
         super(H5PYDataset, self).__init__(**kwargs)
 
+        if self.flatten:
+            self.default_transformers = tuple(
+                (Flatten, [], {'which_sources': self.flatten}))
+
         for source in self.flatten:
             if source not in self.provides_sources:
                 raise ValueError(
@@ -314,11 +318,6 @@ class H5PYDataset(Dataset):
         if self.path not in self._file_handles:
             raise IOError('no open handle for file {}'.format(self.path))
         return self._file_handles[self.path]
-
-    def apply_default_transformer(self, stream):
-        if self.flatten:
-            stream = Flatten(stream, which_sources=self.flatten)
-        return stream
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:

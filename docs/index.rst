@@ -82,11 +82,11 @@ minibatches of size 512.
 
 >>> from fuel.streams import DataStream
 >>> from fuel.schemes import ShuffledScheme
->>> stream = mnist.apply_default_transformer(DataStream(
+>>> stream = mnist.apply_default_transformers(DataStream(
 ...     mnist, iteration_scheme=ShuffledScheme(mnist.num_examples, 512)))
 
 Datasets can apply various default transformations on the original
-data stream if their ``apply_default_transformer`` method is called. In
+data stream if their ``apply_default_transformers`` method is called. In
 this case, MNIST rescaled pixel values in the unit interval and flattened
 the images into vectors.
 
