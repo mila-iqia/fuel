@@ -333,8 +333,6 @@ class IndexableDataset(Dataset):
 
         self.example_iteration_scheme = SequentialExampleScheme(
             self.num_examples)
-        self.batch_iteration_scheme = SequentialScheme(
-            examples=self.num_examples, batch_size=self.num_examples)
 
         self.start = start
         self.stop = stop
