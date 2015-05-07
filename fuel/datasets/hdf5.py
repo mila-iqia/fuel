@@ -146,8 +146,8 @@ class H5PYDataset(Dataset):
         super(H5PYDataset, self).__init__(**kwargs)
 
         if self.flatten:
-            self.default_transformers = tuple(
-                (Flatten, [], {'which_sources': self.flatten}))
+            self.default_transformers = (
+                (Flatten, [], {'which_sources': self.flatten}),)
 
         for source in self.flatten:
             if source not in self.provides_sources:

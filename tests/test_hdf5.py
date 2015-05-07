@@ -221,8 +221,8 @@ def test_h5py_flatten():
         h5file.close()
         dataset = H5PYDataset(which_set='train', path='tmp.hdf5',
                               load_in_memory=True, flatten=['features'])
-        stream = dataset.apply_default_transformer(
-            DataStream(dataset, iteration_scheme=SequentialScheme(10, 10)))
+        stream = DataStream.default_stream(
+            dataset, iteration_scheme=SequentialScheme(10, 10))
         assert_equal(next(stream.get_epoch_iterator())[0],
                      numpy.arange(60).reshape((10, 6)))
     finally:
