@@ -8,6 +8,7 @@ from numpy.testing import assert_equal, assert_raises
 from six.moves import range
 
 from fuel.datasets.hdf5 import Hdf5Dataset, H5PYDataset
+from fuel.streams import DataStream
 
 
 def test_hdf5_dataset():
