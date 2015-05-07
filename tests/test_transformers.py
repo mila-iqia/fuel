@@ -78,14 +78,6 @@ def test_mapping_sort_multisource():
     assert list(wrapper.get_epoch_iterator()) == data_sorted
 
 
-def test_single_mapping():
-    stream = DataStream(
-        IterableDataset({'features': [1, 2, 3], 'targets': [0, 1, 0]}))
-    wrapper = SingleMapping(
-        stream, lambda d: 2 * d, which_sources=('features',))
-    assert list(wrapper.get_epoch_iterator()) == [(2, 0), (4, 1), (6, 0)]
-
-
 def test_flatten():
     stream = DataStream(
         IndexableDataset({'features': numpy.ones((4, 2, 2)),

@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from multiprocessing import Process, Queue
 
 import numpy
@@ -117,57 +117,53 @@ class Mapping(Transformer):
         return data + image
 
 
-class SingleMapping(Mapping):
+@add_metaclass(ABCMeta)
+class SingleMapping(Transformer):
     """Applies a single mapping to multiple sources.
 
     Parameters
     ----------
     data_stream : instance of :class:`DataStream`
         The wrapped data stream.
-    mapping : callable
-        The mapping to be applied.
     which_sources : tuple of str, optional
         Which sources to apply the mapping to. Defaults to `None`, in
         which case the mapping is applied to all sources.
 
     """
-    def __init__(self, data_stream, mapping, which_sources=None):
-        self._mapping = mapping
+    def __init__(self, data_stream, which_sources=None):
         if which_sources is None:
             which_sources = data_stream.sources
         self.which_sources = which_sources
-        super(SingleMapping, self).__init__(data_stream, self.apply_mapping)
+        super(SingleMapping, self).__init__(data_stream)
 
-    def apply_mapping(self, sources):
+    @abstractmethod
+    def mapping(self, source):
         """Applies a single mapping to selected sources.
 
         Parameters
         ----------
-        sources : tuple of :class:`numpy.ndarray`
-            Input sources.
+        source : :class:`numpy.ndarray`
+            Input source.
 
         """
-        sources = list(sources)
+        pass
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = list(next(self.child_epoch_iterator))
         for i, source_name in enumerate(self.data_stream.sources):
             if source_name in self.which_sources:
-                sources[i] = self._mapping(sources[i])
-        return tuple(sources)
+                data[i] = self.mapping(data[i])
+        return tuple(data)
 
 
 class Flatten(SingleMapping):
     """Flattens selected sources along all but the first axis."""
     def __init__(self, data_stream, **kwargs):
-        super(Flatten, self).__init__(data_stream, self.flatten, **kwargs)
+        super(Flatten, self).__init__(data_stream, **kwargs)
 
-    def flatten(self, source):
-        """Flattens a source along all but the first axis.
-
-        Parameters
-        ----------
-        source : :class:`numpy.ndarray`
-            Source to flatten.
-
-        """
+    def mapping(self, source):
         return source.reshape((source.shape[0], -1))
 
 
@@ -185,18 +181,9 @@ class ScaleAndShift(SingleMapping):
     def __init__(self, data_stream, scale, shift, **kwargs):
         self.scale = scale
         self.shift = shift
-        super(ScaleAndShift, self).__init__(
-            data_stream, self.scale_and_shift, **kwargs)
+        super(ScaleAndShift, self).__init__(data_stream, **kwargs)
 
-    def scale_and_shift(self, source):
-        """Scales and shifts a source by scalar quantities.
-
-        Parameters
-        ----------
-        source : :class:`numpy.ndarray`
-            Source to scale and shift.
-
-        """
+    def mapping(self, source):
         return source * self.scale + self.shift
 
 
@@ -214,17 +201,9 @@ class Cast(SingleMapping):
         if dtype == 'floatX':
             dtype = config.floatX
         self.dtype = dtype
-        super(Cast, self).__init__(data_stream, self.cast, **kwargs)
+        super(Cast, self).__init__(data_stream, **kwargs)
 
-    def cast(self, source):
-        """Scales and shifts a source by scalar quantities.
-
-        Parameters
-        ----------
-        source : :class:`numpy.ndarray`
-            Source to scale and shift.
-
-        """
+    def mapping(self, source):
         return source.astype(self.dtype)
 
 
