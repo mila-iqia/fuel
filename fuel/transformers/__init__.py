@@ -117,8 +117,8 @@ class Mapping(Transformer):
         return data + image
 
 
-class OneToOneMapping(Mapping):
-    """Applies a one-to-one mapping to the wrapped data stream's data.
+class SingleMapping(Mapping):
+    """Applies a single mapping to multiple sources.
 
     Parameters
     ----------
@@ -129,52 +129,103 @@ class OneToOneMapping(Mapping):
     which_sources : tuple of str, optional
         Which sources to apply the mapping to. Defaults to `None`, in
         which case the mapping is applied to all sources.
-    prefix : str, optional
-        Prefix for source names. Defaults to 'mapped_'
-    add_mapped_sources : bool, optional
-        If `True`, mapped sources are added to the original data with
-        `prefix` as a prefix for the source name. Defaults to `False`.
 
     """
-    def __init__(self, data_stream, fn, which_sources=None, prefix='mapped_',
-                 add_mapped_sources=False):
-        self.fn = fn
+    def __init__(self, data_stream, mapping, which_sources=None):
+        self._mapping = mapping
         if which_sources is None:
             which_sources = data_stream.sources
         self.which_sources = which_sources
-        if add_mapped_sources:
-            add_sources = tuple(
-                prefix + source_name for source_name in data_stream.sources)
-        else:
-            add_sources = None
-        super(OneToOneMapping, self).__init__(
-            data_stream, self.apply_mapping, add_sources=add_sources)
+        super(SingleMapping, self).__init__(data_stream, self.apply_mapping)
 
-    def apply_mapping(self, data):
-        data = list(data)
+    def apply_mapping(self, sources):
+        """Applies a single mapping to selected sources.
+
+        Parameters
+        ----------
+        sources : tuple of :class:`numpy.ndarray`
+            Input sources.
+
+        """
+        sources = list(sources)
         for i, source_name in enumerate(self.data_stream.sources):
             if source_name in self.which_sources:
-                data[i] = self.fn(data[i])
-        return tuple(data)
+                sources[i] = self._mapping(sources[i])
+        return tuple(sources)
 
 
-class Flatten(OneToOneMapping):
+class Flatten(SingleMapping):
+    """Flattens selected sources along all but the first axis."""
     def __init__(self, data_stream, **kwargs):
         super(Flatten, self).__init__(data_stream, self.flatten, **kwargs)
 
-    def flatten(self, data):
-        return data.reshape((data.shape[0], -1))
+    def flatten(self, source):
+        """Flattens a source along all but the first axis.
+
+        Parameters
+        ----------
+        source : :class:`numpy.ndarray`
+            Source to flatten.
+
+        """
+        return source.reshape((source.shape[0], -1))
 
 
-class ScaleAndShift(OneToOneMapping):
+class ScaleAndShift(SingleMapping):
+    """Scales and shifts selected sources by scalar quantities.
+
+    Parameters
+    ----------
+    scale : float
+        Scaling factor.
+    shift : float
+        Shifting factor.
+
+    """
     def __init__(self, data_stream, scale, shift, **kwargs):
         self.scale = scale
         self.shift = shift
         super(ScaleAndShift, self).__init__(
             data_stream, self.scale_and_shift, **kwargs)
 
-    def scale_and_shift(self, data):
-        return data * self.scale + self.shift
+    def scale_and_shift(self, source):
+        """Scales and shifts a source by scalar quantities.
+
+        Parameters
+        ----------
+        source : :class:`numpy.ndarray`
+            Source to scale and shift.
+
+        """
+        return source * self.scale + self.shift
+
+
+class Cast(SingleMapping):
+    """Casts selected sources as some dtype.
+
+    Parameters
+    ----------
+    dtype : str
+        Data type to cast to. Can be any valid numpy dtype, or 'floatX',
+        in which case ``fuel.config.floatX`` is used.
+
+    """
+    def __init__(self, data_stream, dtype, **kwargs):
+        if dtype == 'floatX':
+            dtype = config.floatX
+        self.dtype = dtype
+        super(Cast, self).__init__(data_stream, self.cast, **kwargs)
+
+    def cast(self, source):
+        """Scales and shifts a source by scalar quantities.
+
+        Parameters
+        ----------
+        source : :class:`numpy.ndarray`
+            Source to scale and shift.
+
+        """
+        return source.astype(self.dtype)
 
 
 class ForceFloatX(Transformer):

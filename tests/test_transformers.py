@@ -2,16 +2,17 @@ import operator
 from collections import OrderedDict
 
 import numpy
-from numpy.testing import assert_raises
+from numpy.testing import assert_raises, assert_equal
 from six.moves import zip
 
 from fuel import config
-from fuel.datasets import IterableDataset
-from fuel.schemes import ConstantScheme
+from fuel.datasets import IterableDataset, IndexableDataset
+from fuel.schemes import ConstantScheme, SequentialScheme
 from fuel.streams import DataStream
-from fuel.transformers import (Transformer, Mapping, SortMapping, ForceFloatX,
-                               Filter, Cache, Batch, Padding, MultiProcessing,
-                               Unpack, Merge)
+from fuel.transformers import (
+    Transformer, Mapping, SortMapping, ForceFloatX, Filter, Cache, Batch,
+    Padding, MultiProcessing, Unpack, Merge, SingleMapping, Flatten,
+    ScaleAndShift, Cast)
 
 
 class IdentityTransformer(Transformer):
@@ -75,6 +76,44 @@ def test_mapping_sort_multisource():
     stream = DataStream(IterableDataset(data))
     wrapper = Mapping(stream, mapping=SortMapping(operator.itemgetter(0)))
     assert list(wrapper.get_epoch_iterator()) == data_sorted
+
+
+def test_single_mapping():
+    stream = DataStream(
+        IterableDataset({'features': [1, 2, 3], 'targets': [0, 1, 0]}))
+    wrapper = SingleMapping(
+        stream, lambda d: 2 * d, which_sources=('features',))
+    assert list(wrapper.get_epoch_iterator()) == [(2, 0), (4, 1), (6, 0)]
+
+
+def test_flatten():
+    stream = DataStream(
+        IndexableDataset({'features': numpy.ones((4, 2, 2)),
+                         'targets': numpy.array([0, 1, 0, 1])}),
+        iteration_scheme=SequentialScheme(4, 2))
+    wrapper = Flatten(stream, which_sources=('features',))
+    assert_equal(
+        list(wrapper.get_epoch_iterator()),
+        [(numpy.ones((2, 4)), numpy.array([0, 1])),
+         (numpy.ones((2, 4)), numpy.array([0, 1]))])
+
+
+def test_scale_and_shift():
+    stream = DataStream(
+        IterableDataset({'features': [1, 2, 3], 'targets': [0, 1, 0]}))
+    wrapper = ScaleAndShift(stream, 2, -1, which_sources=('targets',))
+    assert list(wrapper.get_epoch_iterator()) == [(1, -1), (2, 1), (3, -1)]
+
+
+def test_cast():
+    stream = DataStream(
+        IterableDataset({'features': numpy.array([1, 2, 3]).astype('float64'),
+                         'targets': [0, 1, 0]}))
+    wrapper = Cast(stream, 'float32', which_sources=('features',))
+    assert_equal(
+        list(wrapper.get_epoch_iterator()),
+        [(numpy.array(1), 0), (numpy.array(2), 1), (numpy.array(3), 0)])
+    assert all(f.dtype == 'float32' for f, t in wrapper.get_epoch_iterator())
 
 
 def test_force_floatx():
