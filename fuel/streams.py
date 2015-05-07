@@ -140,6 +140,11 @@ class DataStream(AbstractDataStream):
             self._fresh_state = False
         return super(DataStream, self).get_epoch_iterator(**kwargs)
 
+    @classmethod
+    def default_stream(cls, dataset, **kwargs):
+        data_stream = cls(dataset, **kwargs)
+        return dataset.apply_default_transformers(data_stream)
+
 
 class ServerDataStream(AbstractDataStream):
     """A data stream that receives batches from a Fuel server.

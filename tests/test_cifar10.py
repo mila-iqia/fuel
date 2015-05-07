@@ -25,8 +25,8 @@ def test_cifar10():
     assert targets.dtype == numpy.uint8
     test.close(handle)
 
-    stream = test.apply_default_transformers(
-        DataStream(test, iteration_scheme=SequentialScheme(10, 10)))
+    stream = DataStream.default_stream(
+        test, iteration_scheme=SequentialScheme(10, 10))
     data = next(stream.get_epoch_iterator())[0]
     assert data.min() >= 0.0 and data.max() <= 1.0
     assert data.dtype == config.floatX
