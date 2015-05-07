@@ -4,7 +4,7 @@ from six import add_metaclass
 
 from picklable_itertools import iter_, izip
 
-from fuel.schemes import SequentialScheme, SequentialExampleScheme
+from fuel.schemes import SequentialExampleScheme
 from fuel.streams import DataStream
 
 
