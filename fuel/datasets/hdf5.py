@@ -7,7 +7,6 @@ import tables
 from six.moves import zip
 
 from fuel.datasets import Dataset
-from fuel.transformers import Flatten
 from fuel.utils import do_not_pickle_attributes
 
 
