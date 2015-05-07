@@ -120,7 +120,7 @@ class H5PYDataset(Dataset):
 
     """
     _ref_counts = defaultdict(int)
-    _file_handles = defaultdict()
+    _file_handles = {}
 
     def __init__(self, path, which_set, subset=None, load_in_memory=False,
                  flatten=None, driver=None, sort_indices=True, **kwargs):
@@ -227,19 +227,21 @@ class H5PYDataset(Dataset):
     @property
     def split_dict(self):
         if not hasattr(self, '_split_dict'):
-            handle = self.get_file_handle()
+            self._out_of_memory_open()
+            handle = self._file_handle
             split_array = handle.attrs['split']
             self._split_dict = H5PYDataset.parse_split_array(split_array)
-            self.release_file_handle()
+            self._out_of_memory_close()
         return self._split_dict
 
     def load_axis_labels(self):
-        handle = self.get_file_handle()
+        self._out_of_memory_open()
+        handle = self._file_handle
         axis_labels = {}
         for source_name in handle:
             axis_labels[source_name] = tuple(
                 dim.label for dim in handle[source_name].dims)
-        self.release_file_handle()
+        self._out_of_memory_close()
         return axis_labels
 
     @property
@@ -270,23 +272,9 @@ class H5PYDataset(Dataset):
             self._subsets = subsets
         return self._subsets
 
-    def get_file_handle(self):
-        if self.path not in self._file_handles.keys():
-            handle = h5py.File(name=self.path, mode="r", driver=self.driver)
-            self._file_handles[self.path] = handle
-        self._ref_counts[self.path] += 1
-        return self._file_handles[self.path]
-
-    def release_file_handle(self):
-        self._ref_counts[self.path] -= 1
-        if not self._ref_counts[self.path]:
-            del self._ref_counts[self.path]
-            self._file_handles[self.path].close()
-            del self._file_handles[self.path]
-
     def load(self):
         if self.load_in_memory:
-            handle = self.get_file_handle()
+            handle = self._file_handle
             data_sources = []
             for source_name, subset in zip(self.sources, self.subsets):
                 data = handle[source_name][subset]
@@ -294,7 +282,6 @@ class H5PYDataset(Dataset):
                     data = data.reshape((data.shape[0], -1))
                 data_sources.append(data)
             self.data_sources = data_sources
-            self.release_file_handle()
         else:
             self.data_sources = None
 
@@ -306,12 +293,27 @@ class H5PYDataset(Dataset):
         return None if self.load_in_memory else self._out_of_memory_open()
 
     def _out_of_memory_open(self):
-        self.get_file_handle()
-        return self.path
+        if self.path not in self._file_handles:
+            handle = h5py.File(name=self.path, mode="r", driver=self.driver)
+            self._file_handles[self.path] = handle
+        self._ref_counts[self.path] += 1
 
-    def close(self):
+    def close(self, handle):
         if not self.load_in_memory:
-            self.release_file_handle()
+            self._out_of_memory_close()
+
+    def _out_of_memory_close(self):
+        self._ref_counts[self.path] -= 1
+        if not self._ref_counts[self.path]:
+            del self._ref_counts[self.path]
+            self._file_handles[self.path].close()
+            del self._file_handles[self.path]
+
+    @property
+    def _file_handle(self):
+        if self.path not in self._file_handles:
+            raise IOError('no open handle for file {}'.format(self.path))
+        return self._file_handles[self.path]
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:
@@ -326,7 +328,7 @@ class H5PYDataset(Dataset):
 
     def _out_of_memory_get_data(self, state=None, request=None):
         rval = []
-        handle = self.get_file_handle()
+        handle = self._file_handle
         for source_name, subset in zip(self.sources, self.subsets):
             if isinstance(request, slice):
                 req = slice(request.start + subset.start,
@@ -348,5 +350,4 @@ class H5PYDataset(Dataset):
             if source_name in self.flatten:
                 data = data.reshape((data.shape[0], -1))
             rval.append(data)
-        self.release_file_handle()
         return tuple(rval)
