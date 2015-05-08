@@ -72,7 +72,7 @@ class Hdf5Dataset(Dataset):
         return data
 
 
-@do_not_pickle_attributes('data_sources')
+@do_not_pickle_attributes('data_sources', '_external_file_handle')
 class H5PYDataset(Dataset):
     """An h5py-fueled HDF5 dataset.
 
@@ -273,6 +273,8 @@ class H5PYDataset(Dataset):
         return self._subsets
 
     def load(self):
+        if not hasattr(self, '_external_file_handle'):
+            self._external_file_handle = None
         if self.load_in_memory:
             self._out_of_memory_open()
             handle = self._file_handle
