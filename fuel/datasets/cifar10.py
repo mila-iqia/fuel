@@ -2,6 +2,7 @@ import os
 
 from fuel import config
 from fuel.datasets import H5PYDataset
+from fuel.transformers.defaults import uint8_pixels_to_floatX
 
 
 class CIFAR10(H5PYDataset):
@@ -29,27 +30,13 @@ class CIFAR10(H5PYDataset):
         using the start and stop arguments.
 
     """
-    provides_sources = ('features', 'targets')
     filename = 'cifar10.hdf5'
+    default_transformers = uint8_pixels_to_floatX(('features',))
 
     def __init__(self, which_set, **kwargs):
-        if which_set not in ('train', 'test'):
-            raise ValueError("CIFAR10 only has a train and test set")
-
         kwargs.setdefault('load_in_memory', True)
-        self.which_set = which_set
-
-        super(CIFAR10, self).__init__(self.data_path, which_set,
-                                      **kwargs)
+        super(CIFAR10, self).__init__(self.data_path, which_set, **kwargs)
 
     @property
     def data_path(self):
         return os.path.join(config.data_path, self.filename)
-
-    def get_data(self, state=None, request=None):
-        rval = list(super(CIFAR10, self).get_data(state=state,
-                                                  request=request))
-        if 'features' in self.sources:
-            i = self.sources.index('features')
-            rval[i] = (rval[i] / 255.0).astype(config.floatX)
-        return tuple(rval)

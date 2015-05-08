@@ -3,6 +3,7 @@ import os
 
 from fuel import config
 from fuel.datasets import H5PYDataset
+from fuel.transformers.defaults import uint8_pixels_to_floatX
 
 
 class MNIST(H5PYDataset):
@@ -28,6 +29,7 @@ class MNIST(H5PYDataset):
 
     """
     filename = 'mnist.hdf5'
+    default_transformers = uint8_pixels_to_floatX(('features',))
 
     def __init__(self, which_set, **kwargs):
         kwargs.setdefault('load_in_memory', True)
@@ -36,10 +38,3 @@ class MNIST(H5PYDataset):
     @property
     def data_path(self):
         return os.path.join(config.data_path, self.filename)
-
-    def get_data(self, state=None, request=None):
-        rval = list(super(MNIST, self).get_data(state=state, request=request))
-        if 'features' in self.sources:
-            i = self.sources.index('features')
-            rval[i] = (rval[i] / 255.).astype(config.floatX)
-        return tuple(rval)

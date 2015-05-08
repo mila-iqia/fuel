@@ -45,6 +45,7 @@ class Dataset(object):
 
     """
     provides_sources = None
+    default_transformers = tuple()
 
     def __init__(self, sources=None, axis_labels=None):
         if not self.provides_sources:
@@ -65,6 +66,20 @@ class Dataset(object):
     @sources.setter
     def sources(self, sources):
         self._sources = sources
+
+    def apply_default_transformers(self, stream):
+        """Applies default transformers to a stream.
+
+        Parameters
+        ----------
+        stream : :class:`~.streams.AbstractDataStream`
+            A data stream.
+
+        """
+        for (cls, args, kwargs) in self.default_transformers:
+            args = [stream] + args
+            stream = cls(*args, **kwargs)
+        return stream
 
     @property
     def example_iteration_scheme(self):

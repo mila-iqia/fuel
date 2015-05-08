@@ -4,6 +4,7 @@ from collections import defaultdict, OrderedDict
 import h5py
 import numpy
 import tables
+from six.moves import zip
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
@@ -123,7 +124,7 @@ class H5PYDataset(Dataset):
     _file_handles = {}
 
     def __init__(self, path, which_set, subset=None, load_in_memory=False,
-                 flatten=None, driver=None, sort_indices=True, **kwargs):
+                 driver=None, sort_indices=True, **kwargs):
         self.path = path
         self.driver = driver
         self.sort_indices = sort_indices
@@ -138,16 +139,9 @@ class H5PYDataset(Dataset):
             raise ValueError("subset.step must be either 1 or None")
         self._subset_template = subset
         self.load_in_memory = load_in_memory
-        self.flatten = [] if flatten is None else flatten
 
         kwargs.setdefault('axis_labels', self.load_axis_labels())
         super(H5PYDataset, self).__init__(**kwargs)
-
-        for source in self.flatten:
-            if source not in self.provides_sources:
-                raise ValueError(
-                    "trying to flatten source '{}' which is ".format(source) +
-                    "not provided by the '{}' split".format(self.which_set))
 
     @staticmethod
     def create_split_array(split_dict):
@@ -276,13 +270,9 @@ class H5PYDataset(Dataset):
         if self.load_in_memory:
             self._out_of_memory_open()
             handle = self._file_handle
-            data_sources = []
-            for source_name, subset in zip(self.sources, self.subsets):
-                data = handle[source_name][subset]
-                if source_name in self.flatten:
-                    data = data.reshape((data.shape[0], -1))
-                data_sources.append(data)
-            self.data_sources = data_sources
+            self.data_sources = tuple(
+                handle[source_name][subset] for source_name, subset in
+                zip(self.sources, self.subsets))
             self._out_of_memory_close()
         else:
             self.data_sources = None
@@ -349,7 +339,5 @@ class H5PYDataset(Dataset):
                     data = handle[source_name][req]
             else:
                 raise ValueError
-            if source_name in self.flatten:
-                data = data.reshape((data.shape[0], -1))
             rval.append(data)
         return tuple(rval)
