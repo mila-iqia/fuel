@@ -97,8 +97,8 @@ class H5PYDataset(Dataset):
 
     Parameters
     ----------
-    path : str
-        Path to the HDF5 file.
+    file_or_path : :class:`h5py.File` or str
+        HDF5 file handle, or path to the HDF5 file.
     which_set : str
         Which split to use.
     subset : slice, optional
@@ -123,9 +123,15 @@ class H5PYDataset(Dataset):
     _ref_counts = defaultdict(int)
     _file_handles = {}
 
-    def __init__(self, path, which_set, subset=None, load_in_memory=False,
-                 driver=None, sort_indices=True, **kwargs):
-        self.path = path
+    def __init__(self, file_or_path, which_set, subset=None,
+                 load_in_memory=False, driver=None, sort_indices=True,
+                 **kwargs):
+        if isinstance(file_or_path, h5py.File):
+            self.path = file_or_path.filename
+            self._external_file_handle = file_or_path
+        else:
+            self.path = file_or_path
+            self._external_file_handle = None
         self.driver = driver
         self.sort_indices = sort_indices
         if which_set not in self.available_splits:
@@ -285,27 +291,33 @@ class H5PYDataset(Dataset):
         return None if self.load_in_memory else self._out_of_memory_open()
 
     def _out_of_memory_open(self):
-        if self.path not in self._file_handles:
-            handle = h5py.File(name=self.path, mode="r", driver=self.driver)
-            self._file_handles[self.path] = handle
-        self._ref_counts[self.path] += 1
+        if not self._external_file_handle:
+            if self.path not in self._file_handles:
+                handle = h5py.File(
+                    name=self.path, mode="r", driver=self.driver)
+                self._file_handles[self.path] = handle
+            self._ref_counts[self.path] += 1
 
     def close(self, state):
         if not self.load_in_memory:
             self._out_of_memory_close()
 
     def _out_of_memory_close(self):
-        self._ref_counts[self.path] -= 1
-        if not self._ref_counts[self.path]:
-            del self._ref_counts[self.path]
-            self._file_handles[self.path].close()
-            del self._file_handles[self.path]
+        if not self._external_file_handle:
+            self._ref_counts[self.path] -= 1
+            if not self._ref_counts[self.path]:
+                del self._ref_counts[self.path]
+                self._file_handles[self.path].close()
+                del self._file_handles[self.path]
 
     @property
     def _file_handle(self):
-        if self.path not in self._file_handles:
+        if self._external_file_handle:
+            return self._external_file_handle
+        elif self.path in self._file_handles:
+            return self._file_handles[self.path]
+        else:
             raise IOError('no open handle for file {}'.format(self.path))
-        return self._file_handles[self.path]
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:

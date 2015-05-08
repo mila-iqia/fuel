@@ -49,11 +49,11 @@ def test_h5py_dataset_split_parsing():
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         h5file.flush()
         h5file.close()
-        train_set = H5PYDataset(path='tmp.hdf5', which_set='train')
+        train_set = H5PYDataset('tmp.hdf5', which_set='train')
         assert train_set.provides_sources == ('features', 'targets')
-        test_set = H5PYDataset(path='tmp.hdf5', which_set='test')
+        test_set = H5PYDataset('tmp.hdf5', which_set='test')
         assert test_set.provides_sources == ('features', 'targets')
-        unlabeled_set = H5PYDataset(path='tmp.hdf5', which_set='unlabeled')
+        unlabeled_set = H5PYDataset('tmp.hdf5', which_set='unlabeled')
         assert unlabeled_set.provides_sources == ('features',)
     finally:
         if os.path.exists('tmp.hdf5'):
@@ -71,7 +71,7 @@ def test_h5py_dataset_axis_labels():
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         h5file.flush()
         h5file.close()
-        dataset = H5PYDataset(path='tmp.hdf5', which_set='train')
+        dataset = H5PYDataset('tmp.hdf5', which_set='train')
         assert dataset.axis_labels == {'features': ('batch', 'feature')}
     finally:
         if os.path.exists('tmp.hdf5'):
@@ -87,7 +87,7 @@ def test_h5py_dataset_pickles():
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         h5file.flush()
         h5file.close()
-        dataset = H5PYDataset(path='tmp.hdf5', which_set='train')
+        dataset = H5PYDataset('tmp.hdf5', which_set='train')
         pickle.loads(pickle.dumps(dataset))
     finally:
         if os.path.exists('tmp.hdf5'):
@@ -103,7 +103,7 @@ def test_h5py_dataset_datastream_pickles():
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         h5file.flush()
         h5file.close()
-        dataset = H5PYDataset(path='tmp.hdf5', which_set='train')
+        dataset = H5PYDataset('tmp.hdf5', which_set='train')
         stream = DataStream(dataset)
         pickle.loads(pickle.dumps(stream))
     finally:
@@ -121,8 +121,8 @@ def test_h5py_dataset_multiple_instances():
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         h5file.flush()
         h5file.close()
-        dataset_1 = H5PYDataset(path='tmp.hdf5', which_set='train')
-        dataset_2 = H5PYDataset(path='tmp.hdf5', which_set='train')
+        dataset_1 = H5PYDataset('tmp.hdf5', which_set='train')
+        dataset_2 = H5PYDataset('tmp.hdf5', which_set='train')
         handle_1 = dataset_1.open()
         handle_2 = dataset_2.open()
         dataset_1.get_data(state=handle_1, request=slice(0, 10))
@@ -144,8 +144,8 @@ def test_h5py_dataset_split():
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         h5file.flush()
         h5file.close()
-        train_set = H5PYDataset(path='tmp.hdf5', which_set='train')
-        test_set = H5PYDataset(path='tmp.hdf5', which_set='test')
+        train_set = H5PYDataset('tmp.hdf5', which_set='train')
+        test_set = H5PYDataset('tmp.hdf5', which_set='test')
         train_handle = train_set.open()
         test_handle = test_set.open()
         assert_equal(
@@ -174,7 +174,7 @@ def test_h5py_dataset_out_of_memory():
         h5file.flush()
         h5file.close()
         dataset = H5PYDataset(
-            path='tmp.hdf5', which_set='test', load_in_memory=False)
+            'tmp.hdf5', which_set='test', load_in_memory=False)
         handle = dataset.open()
         assert_equal(
             dataset.get_data(state=handle, request=slice(3, 5))[1],
@@ -195,7 +195,7 @@ def test_h5py_dataset_in_memory():
         h5file.flush()
         h5file.close()
         dataset = H5PYDataset(
-            path='tmp.hdf5', which_set='train', load_in_memory=True)
+            'tmp.hdf5', which_set='train', load_in_memory=True)
         handle = dataset.open()
         assert_equal(
             dataset.get_data(state=handle, request=slice(0, 10))[0],
@@ -216,7 +216,7 @@ def test_h5py_dataset_out_of_memory_sorted_indices():
         h5file.flush()
         h5file.close()
         dataset = H5PYDataset(
-            path='tmp.hdf5', which_set='train', load_in_memory=False,
+            'tmp.hdf5', which_set='train', load_in_memory=False,
             sort_indices=True)
         handle = dataset.open()
         assert_equal(
@@ -238,7 +238,7 @@ def test_h5py_dataset_out_of_memory_unsorted_indices():
         h5file.flush()
         h5file.close()
         dataset = H5PYDataset(
-            path='tmp.hdf5', which_set='train', load_in_memory=False,
+            'tmp.hdf5', which_set='train', load_in_memory=False,
             sort_indices=False)
         handle = dataset.open()
         assert_raises(TypeError, dataset.get_data, handle, [7, 4, 6, 2, 5])
