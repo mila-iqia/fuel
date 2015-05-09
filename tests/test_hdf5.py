@@ -44,7 +44,7 @@ class TestH5PYDataset(object):
 
     def setUp(self):
         self.h5file = h5py.File(
-            'file.hdf5', mode="w", device='core', backing_store=False)
+            'file.hdf5', mode='w', driver='core', backing_store=False)
         self.h5file['features'] = self.features
         self.h5file['features'].dims[0].label = 'batch'
         self.h5file['features'].dims[1].label = 'feature'
