@@ -61,6 +61,7 @@ def test_ngram_stream():
     ngrams = NGrams(4, stream)
     assert len(list(ngrams.get_epoch_iterator())) == 4
 
+
 def test_ngram_stream_error_on_multiple_sources():
     sentences = [list(numpy.random.randint(10, size=sentence_length))
                  for sentence_length in [3, 5, 7]]

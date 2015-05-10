@@ -59,6 +59,7 @@ class TestDataset(object):
     def test_attribute_error_on_no_example_iteration_scheme(self):
         class FaultyDataset(Dataset):
             provides_sources = ('data',)
+
             def get_data(self, state=None, request=None):
                 pass
 

@@ -3,7 +3,6 @@ import tarfile
 
 import h5py
 import numpy
-import six
 from numpy.testing import assert_equal, assert_raises
 from six.moves import range, zip, cPickle
 
