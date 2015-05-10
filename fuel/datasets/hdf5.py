@@ -10,7 +10,7 @@ from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
 
 
-@do_not_pickle_attributes('nodes')
+@do_not_pickle_attributes('nodes', 'h5file')
 class Hdf5Dataset(Dataset):
     """An HDF5 dataset.
 
@@ -46,13 +46,16 @@ class Hdf5Dataset(Dataset):
         super(Hdf5Dataset, self).__init__(self.provides_sources)
 
     def open_file(self, path):
-        h5file = tables.open_file(path, mode="r")
-        node = h5file.getNode('/', self.data_node)
+        self.h5file = tables.open_file(path, mode="r")
+        node = self.h5file.getNode('/', self.data_node)
 
         self.nodes = [getattr(node, source) for source in self.sources_in_file]
 
     def load(self):
         self.open_file(self.path)
+
+    def close(self):
+        self.h5file.close()
 
     def get_data(self, state=None, request=None):
         """ Returns data from HDF5 dataset.
@@ -64,11 +67,12 @@ class Hdf5Dataset(Dataset):
             if isinstance(request, slice):
                 request = slice(request.start + self.start,
                                 request.stop + self.start, request.step)
+                data = [node[request] for node in self.nodes]
             elif isinstance(request, list):
                 request = [index + self.start for index in request]
+                data = [node[request, ...] for node in self.nodes]
             else:
                 raise ValueError
-        data = [node[request] for node in self.nodes]
         return data
 
 

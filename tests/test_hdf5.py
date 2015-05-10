@@ -1,39 +1,49 @@
 import os
-import pickle
 import tables
 
 import h5py
 import numpy
 from numpy.testing import assert_equal, assert_raises
-from six.moves import range
+from six.moves import range, cPickle
 
 from fuel.datasets.hdf5 import Hdf5Dataset, H5PYDataset
 from fuel.streams import DataStream
 
 
-def test_hdf5_dataset():
-    num_rows = 500
-    filters = tables.Filters(complib='blosc', complevel=5)
+class TestHdf5Dataset(object):
+    def setUp(self):
+        num_rows = 500
+        filters = tables.Filters(complib='blosc', complevel=5)
+        h5file = tables.open_file(
+            'tmp.h5', mode='w', title='Test', filters=filters)
+        group = h5file.create_group("/", 'Data')
+        atom = tables.UInt8Atom()
+        y = h5file.create_carray(group, 'y', atom=atom, title='Data targets',
+                                 shape=(num_rows, 1), filters=filters)
+        for i in range(num_rows):
+            y[i] = i
+        h5file.flush()
+        h5file.close()
+        self.dataset = Hdf5Dataset(['y'], 20, 500, 'tmp.h5')
 
-    h5file = tables.open_file("tmp.h5", mode="w", title="Test file",
-                              filters=filters)
-    group = h5file.create_group("/", 'Data')
-    atom = tables.UInt8Atom()
-    y = h5file.create_carray(group, 'y', atom=atom, title='Data targets',
-                             shape=(num_rows, 1), filters=filters)
-    for i in range(num_rows):
-        y[i] = i
-    h5file.flush()
-    h5file.close()
+    def tearDown(self):
+        self.dataset.close()
+        os.remove('tmp.h5')
 
-    dataset = Hdf5Dataset(['y'], 0, 500, 'tmp.h5')
-    assert_equal(dataset.get_data(request=slice(0, 10))[0],
-                 numpy.arange(10).reshape(10, 1))
-    # Test if pickles
-    dump = pickle.dumps(dataset)
-    pickle.loads(dump)
+    def test_get_data_slice_request(self):
+        assert_equal(self.dataset.get_data(request=slice(0, 10))[0],
+                     numpy.arange(20, 30).reshape(10, 1))
 
-    os.remove('tmp.h5')
+    def test_get_data_list_request(self):
+        assert_equal(self.dataset.get_data(request=list(range(10)))[0],
+                     numpy.arange(20, 30).reshape(10, 1))
+
+    def test_get_data_value_error(self):
+        assert_raises(ValueError, self.dataset.get_data, None, True)
+
+    def test_pickling(self):
+        dataset = cPickle.loads(cPickle.dumps(self.dataset))
+        assert_equal(len(dataset.nodes), 1)
 
 
 class TestH5PYDataset(object):
@@ -70,11 +80,13 @@ class TestH5PYDataset(object):
                                        'targets': ('batch', 'index')}
 
     def test_pickling(self):
-        pickle.loads(pickle.dumps(H5PYDataset(self.h5file, which_set='train')))
+        dataset = cPickle.loads(
+            cPickle.dumps(H5PYDataset(self.h5file, which_set='train')))
+        assert dataset.data_sources is None
 
     def test_data_stream_pickling(self):
         stream = DataStream(H5PYDataset(self.h5file, which_set='train'))
-        pickle.loads(pickle.dumps(stream))
+        cPickle.loads(cPickle.dumps(stream))
         stream.close()
 
     def test_multiple_instances(self):
@@ -133,3 +145,34 @@ class TestH5PYDataset(object):
         handle = dataset.open()
         assert_raises(TypeError, dataset.get_data, handle, [7, 4, 6, 2, 5])
         dataset.close(handle)
+
+    def test_value_error_on_subset_step_gt_1(self):
+        def instantiate_h5py_dataset():
+            return H5PYDataset(
+                self.h5file, which_set='train', subset=slice(0, 10, 2))
+        assert_raises(ValueError, instantiate_h5py_dataset)
+
+    def test_value_error_on_unequal_sources(self):
+        def get_subsets():
+            return H5PYDataset(self.h5file, which_set='train').subsets
+        split_dict = {'train': {'features': (0, 20, '.'), 'targets': (0, 15)},
+                      'test': {'features': (20, 30, ''), 'targets': (20, 30)},
+                      'unlabeled': {'features': (30, 100)}}
+        self.h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+        assert_raises(ValueError, get_subsets)
+
+    def test_io_error_on_unopened_file_handle(self):
+        def get_file_handle():
+            dataset = H5PYDataset(self.h5file, which_set='train')
+            dataset._external_file_handle = None
+            return dataset._file_handle
+        assert_raises(IOError, get_file_handle)
+
+    def test_value_error_in_memory_get_data(self):
+        dataset = H5PYDataset(self.h5file, which_set='train')
+        assert_raises(ValueError, dataset._in_memory_get_data, None, None)
+        assert_raises(ValueError, dataset._in_memory_get_data, True, None)
+
+    def test_value_error_out_of_memory_get_data(self):
+        dataset = H5PYDataset(self.h5file, which_set='train')
+        assert_raises(ValueError, dataset._out_of_memory_get_data, None, True)
