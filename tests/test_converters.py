@@ -1,11 +1,14 @@
 import os
+import tarfile
 
 import h5py
 import numpy
+import six
 from numpy.testing import assert_equal, assert_raises
+from six.moves import range, zip, cPickle
 
 from fuel.converters.base import fill_hdf5_file
-from fuel.converters import binarized_mnist
+from fuel.converters import binarized_mnist, cifar10
 
 
 class TestFillHDF5File(object):
@@ -92,3 +95,56 @@ class TestBinarizedMNIST(object):
         assert_equal(str(h5file['features'].dtype), 'uint8')
         assert_equal(tuple(dim.label for dim in h5file['features'].dims),
                      ('batch', 'channel', 'height', 'width'))
+
+
+class TestCIFAR10(object):
+    def setUp(self):
+        numpy.random.seed(9 + 5 + 2015)
+        self.train_features_mock = [
+            numpy.random.randint(0, 256, (10, 3, 32, 32)).astype('uint8')
+            for i in range(5)]
+        self.train_targets_mock = [
+            numpy.random.randint(0, 10, (10,)).astype('uint8')
+            for i in range(5)]
+        self.test_features_mock = numpy.random.randint(
+            0, 256, (10, 3, 32, 32)).astype('uint8')
+        self.test_targets_mock = numpy.random.randint(
+            0, 10, (10,)).astype('uint8')
+        os.mkdir('cifar-10-batches-py')
+        for i, (x, y) in enumerate(zip(self.train_features_mock,
+                                       self.train_targets_mock)):
+            filename = 'cifar-10-batches-py/data_batch_{}'.format(i + 1)
+            with open(filename, 'wb') as f:
+                cPickle.dump({'data': x, 'labels': y}, f)
+        with open('cifar-10-batches-py/test_batch', 'wb') as f:
+            cPickle.dump({'data': self.test_features_mock,
+                          'labels': self.test_targets_mock},
+                         f)
+        tar_file = tarfile.open('cifar-10-python.tar.gz', 'w:gz')
+        tar_file.add('cifar-10-batches-py')
+        tar_file.close()
+
+    def tearDown(self):
+        for i in range(1, 6):
+            os.remove('cifar-10-batches-py/data_batch_{}'.format(i))
+        os.remove('cifar-10-batches-py/test_batch')
+        os.rmdir('cifar-10-batches-py')
+        os.remove('cifar-10-python.tar.gz')
+        os.remove('mock_cifar10.hdf5')
+
+    def test_converter(self):
+        cifar10('.', 'mock_cifar10.hdf5')
+        h5file = h5py.File('mock_cifar10.hdf5', mode='r')
+        assert_equal(
+            h5file['features'][...],
+            numpy.vstack(
+                self.train_features_mock + [self.test_features_mock]).reshape(
+                    (-1, 3, 32, 32)))
+        assert_equal(
+            h5file['targets'][...],
+            numpy.hstack(self.train_targets_mock + [self.test_targets_mock]))
+        assert_equal(str(h5file['features'].dtype), 'uint8')
+        assert_equal(str(h5file['targets'].dtype), 'uint8')
+        assert_equal(tuple(dim.label for dim in h5file['features'].dims),
+                     ('batch', 'channel', 'height', 'width'))
+        assert_equal(h5file['targets'].dims[0].label, 'batch')
