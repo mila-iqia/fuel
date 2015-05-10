@@ -1,6 +1,7 @@
 from multiprocessing import Process
 
 from numpy.testing import assert_allclose, assert_raises
+from six.moves import cPickle
 
 from fuel.datasets import MNIST
 from fuel.schemes import SequentialScheme
@@ -9,22 +10,46 @@ from fuel.streams import DataStream, ServerDataStream
 
 
 def get_stream():
-    mnist = MNIST('train')
-    data_stream = DataStream(
-        mnist, iteration_scheme=SequentialScheme(1500, 500)
-    )
-    return data_stream
+    return DataStream(
+        MNIST('train'), iteration_scheme=SequentialScheme(1500, 500))
 
 
-def test_server():
-    server_process = Process(target=start_server, args=(get_stream(),))
-    server_process.start()
-    try:
-        server_data = ServerDataStream(('f', 't')).get_epoch_iterator()
+class TestServer(object):
+    def setUp(self):
+        self.server_process = Process(
+            target=start_server, args=(get_stream(),))
+        self.server_process.start()
+        self.stream = ServerDataStream(('f', 't'))
+
+    def tearDown(self):
+        self.server_process.terminate()
+        self.stream = None
+
+    def test_server(self):
+        server_data = self.stream.get_epoch_iterator()
         expected_data = get_stream().get_epoch_iterator()
         for _, s, e in zip(range(3), server_data, expected_data):
             for data in zip(s, e):
                 assert_allclose(*data)
         assert_raises(StopIteration, next, server_data)
-    finally:
-        server_process.terminate()
+
+    def test_pickling(self):
+        self.stream = cPickle.loads(cPickle.dumps(self.stream))
+        server_data = self.stream.get_epoch_iterator()
+        expected_data = get_stream().get_epoch_iterator()
+        for _, s, e in zip(range(3), server_data, expected_data):
+            for data in zip(s, e):
+                assert_allclose(*data)
+        assert_raises(StopIteration, next, server_data)
+
+    def test_value_error_on_request(self):
+        assert_raises(ValueError, self.stream.get_data, [0, 1])
+
+    def test_close(self):
+        self.stream.close()
+
+    def test_next_epoch(self):
+        self.stream.next_epoch()
+
+    def test_reset(self):
+        self.stream.reset()
