@@ -37,12 +37,9 @@ def test_hdf5_dataset():
 
 
 class TestH5PYDataset(object):
-    def __init__(self):
-        self.h5file = None
+    def setUp(self):
         self.features = numpy.arange(3600, dtype='uint8').reshape((100, 36))
         self.targets = numpy.arange(30, dtype='uint8').reshape((30, 1))
-
-    def setUp(self):
         self.h5file = h5py.File(
             'file.hdf5', mode='w', driver='core', backing_store=False)
         self.h5file['features'] = self.features
@@ -58,7 +55,6 @@ class TestH5PYDataset(object):
 
     def tearDown(self):
         self.h5file.close()
-        self.h5file = None
 
     def test_split_parsing(self):
         train_set = H5PYDataset(self.h5file, which_set='train')
