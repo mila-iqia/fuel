@@ -1,4 +1,6 @@
+import gzip
 import os
+import struct
 import tarfile
 
 import h5py
@@ -7,7 +9,7 @@ from numpy.testing import assert_equal, assert_raises
 from six.moves import range, zip, cPickle
 
 from fuel.converters.base import fill_hdf5_file
-from fuel.converters import binarized_mnist, cifar10
+from fuel.converters import binarized_mnist, cifar10, mnist
 
 
 class TestFillHDF5File(object):
@@ -69,6 +71,56 @@ class TestFillHDF5File(object):
             ValueError, fill_hdf5_file, self.h5file,
             (('train', 'features', self.train_features),
              ('test', 'features', test_features)))
+
+
+class TestMNIST(object):
+    def setUp(self):
+        MNIST_IMAGE_MAGIC = 2051
+        MNIST_LABEL_MAGIC = 2049
+        numpy.random.seed(9 + 5 + 2015)
+        self.train_features_mock = numpy.random.randint(
+            0, 256, (10, 1, 28, 28)).astype('uint8')
+        self.train_targets_mock = numpy.random.randint(
+            0, 10, (10, 1)).astype('uint8')
+        self.test_features_mock = numpy.random.randint(
+            0, 256, (10, 1, 28, 28)).astype('uint8')
+        self.test_targets_mock = numpy.random.randint(
+            0, 10, (10, 1)).astype('uint8')
+        with gzip.open('train-images-idx3-ubyte.gz', 'wb') as f:
+            f.write(struct.pack('>iiii', *(MNIST_IMAGE_MAGIC, 10, 28, 28)))
+            f.write(numpy.getbuffer(self.train_features_mock.flatten()))
+        with gzip.open('train-labels-idx1-ubyte.gz', 'wb') as f:
+            f.write(struct.pack('>ii', *(MNIST_LABEL_MAGIC, 10)))
+            f.write(numpy.getbuffer(self.train_targets_mock.flatten()))
+        with gzip.open('t10k-images-idx3-ubyte.gz', 'wb') as f:
+            f.write(struct.pack('>iiii', *(MNIST_IMAGE_MAGIC, 10, 28, 28)))
+            f.write(numpy.getbuffer(self.test_features_mock.flatten()))
+        with gzip.open('t10k-labels-idx1-ubyte.gz', 'wb') as f:
+            f.write(struct.pack('>ii', *(MNIST_LABEL_MAGIC, 10)))
+            f.write(numpy.getbuffer(self.test_targets_mock.flatten()))
+
+    def tearDown(self):
+        os.remove('train-images-idx3-ubyte.gz')
+        os.remove('train-labels-idx1-ubyte.gz')
+        os.remove('t10k-images-idx3-ubyte.gz')
+        os.remove('t10k-labels-idx1-ubyte.gz')
+
+    def test_converter(self):
+        mnist('.', 'mock_mnist.hdf5')
+        h5file = h5py.File('mock_mnist.hdf5', mode='r')
+        assert_equal(
+            h5file['features'][...],
+            numpy.vstack(
+                [self.train_features_mock, self.test_features_mock]))
+        assert_equal(
+            h5file['targets'][...],
+            numpy.vstack([self.train_targets_mock, self.test_targets_mock]))
+        assert_equal(str(h5file['features'].dtype), 'uint8')
+        assert_equal(str(h5file['targets'].dtype), 'uint8')
+        assert_equal(tuple(dim.label for dim in h5file['features'].dims),
+                     ('batch', 'channel', 'height', 'width'))
+        assert_equal(tuple(dim.label for dim in h5file['targets'].dims),
+                     ('batch', 'index'))
 
 
 class TestBinarizedMNIST(object):
@@ -139,8 +191,7 @@ class TestCIFAR10(object):
         assert_equal(
             h5file['features'][...],
             numpy.vstack(
-                self.train_features_mock + [self.test_features_mock]).reshape(
-                    (-1, 3, 32, 32)))
+                self.train_features_mock + [self.test_features_mock]))
         assert_equal(
             h5file['targets'][...],
             numpy.hstack(self.train_targets_mock + [self.test_targets_mock]))
