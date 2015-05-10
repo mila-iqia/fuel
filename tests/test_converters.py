@@ -30,7 +30,7 @@ class TestFillHDF5File(object):
     def test_data(self):
         fill_hdf5_file(
             self.h5file,
-            (('train', 'features', self.train_features),
+            (('train', 'features', self.train_features, '.'),
              ('train', 'targets', self.train_targets),
              ('test', 'features', self.test_features),
              ('test', 'targets', self.test_targets)))
@@ -56,14 +56,16 @@ class TestFillHDF5File(object):
                        ('train', 'targets', train_targets)))
 
     def test_multiple_dtype_error(self):
-        test_features = numpy.arange(8, dtype='float32').reshape((2, 2, 2)) + 3
+        test_features = numpy.arange(
+            8, dtype='float32').reshape((2, 2, 2)) + 3
         assert_raises(
             ValueError, fill_hdf5_file, self.h5file,
             (('train', 'features', self.train_features),
              ('test', 'features', test_features)))
 
     def test_multiple_shape_error(self):
-        test_features = numpy.arange(16, dtype='float32').reshape((2, 4, 2)) + 3
+        test_features = numpy.arange(
+            16, dtype='float32').reshape((2, 4, 2)) + 3
         assert_raises(
             ValueError, fill_hdf5_file, self.h5file,
             (('train', 'features', self.train_features),

@@ -172,7 +172,6 @@ class Dataset(object):
             A tuple of data matching the order of :attr:`sources`.
 
         """
-        raise NotImplementedError
 
     def filter_sources(self, data):
         """Filter the requested sources from those provided by the dataset.
