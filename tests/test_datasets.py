@@ -82,7 +82,7 @@ class TestDataset(object):
 
     def test_filter_sources(self):
         dataset = IterableDataset(
-            {'1': [1, 2], '2': [3, 4]}, sources=('1',))
+            OrderedDict([('1', [1, 2]), ('2', [3, 4])]), sources=('1',))
         assert_equal(dataset.filter_sources(([1, 2], [3, 4])), ([1, 2],))
 
 

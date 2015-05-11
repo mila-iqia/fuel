@@ -139,8 +139,9 @@ def test_single_mapping_value_error_on_request():
 
 def test_flatten():
     stream = DataStream(
-        IndexableDataset({'features': numpy.ones((4, 2, 2)),
-                         'targets': numpy.array([0, 1, 0, 1])}),
+        IndexableDataset(
+            OrderedDict([('features', numpy.ones((4, 2, 2))),
+                         ('targets', numpy.array([0, 1, 0, 1]))])),
         iteration_scheme=SequentialScheme(4, 2))
     wrapper = Flatten(stream, which_sources=('features',))
     assert_equal(
@@ -151,15 +152,18 @@ def test_flatten():
 
 def test_scale_and_shift():
     stream = DataStream(
-        IterableDataset({'features': [1, 2, 3], 'targets': [0, 1, 0]}))
+        IterableDataset(
+            OrderedDict([('features', [1, 2, 3]), ('targets', [0, 1, 0])])))
     wrapper = ScaleAndShift(stream, 2, -1, which_sources=('targets',))
     assert list(wrapper.get_epoch_iterator()) == [(1, -1), (2, 1), (3, -1)]
 
 
 def test_cast():
     stream = DataStream(
-        IterableDataset({'features': numpy.array([1, 2, 3]).astype('float64'),
-                         'targets': [0, 1, 0]}))
+        IterableDataset(
+            OrderedDict([
+                ('features', numpy.array([1, 2, 3]).astype('float64')),
+                ('targets', [0, 1, 0])])))
     wrapper = Cast(stream, 'float32', which_sources=('features',))
     assert_equal(
         list(wrapper.get_epoch_iterator()),
