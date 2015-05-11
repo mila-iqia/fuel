@@ -76,7 +76,7 @@ class Hdf5Dataset(Dataset):
         return data
 
 
-@do_not_pickle_attributes('data_sources', '_external_file_handle')
+@do_not_pickle_attributes('data_sources', 'external_file_handle')
 class H5PYDataset(Dataset):
     """An h5py-fueled HDF5 dataset.
 
@@ -132,10 +132,10 @@ class H5PYDataset(Dataset):
                  **kwargs):
         if isinstance(file_or_path, h5py.File):
             self.path = file_or_path.filename
-            self._external_file_handle = file_or_path
+            self.external_file_handle = file_or_path
         else:
             self.path = file_or_path
-            self._external_file_handle = None
+            self.external_file_handle = None
         self.driver = driver
         self.sort_indices = sort_indices
         if which_set not in self.available_splits:
@@ -278,7 +278,7 @@ class H5PYDataset(Dataset):
 
     def load(self):
         if not hasattr(self, '_external_file_handle'):
-            self._external_file_handle = None
+            self.external_file_handle = None
         if self.load_in_memory:
             self._out_of_memory_open()
             handle = self._file_handle
