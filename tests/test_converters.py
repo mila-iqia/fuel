@@ -99,13 +99,20 @@ class TestMNIST(object):
         with gzip.open('t10k-labels-idx1-ubyte.gz', 'wb') as f:
             f.write(struct.pack('>ii', *(MNIST_LABEL_MAGIC, 10)))
             f.write(numpy.getbuffer(self.test_targets_mock.flatten()))
+        with gzip.open('wrong_images.gz', 'wb') as f:
+            f.write(struct.pack('>iiii', *(2000, 10, 28, 28)))
+        with gzip.open('wrong_labels.gz', 'wb') as f:
+            f.write(struct.pack('>ii', *(2000, 10)))
 
     def tearDown(self):
         os.remove('train-images-idx3-ubyte.gz')
         os.remove('train-labels-idx1-ubyte.gz')
         os.remove('t10k-images-idx3-ubyte.gz')
         os.remove('t10k-labels-idx1-ubyte.gz')
-        os.remove('mock_mnist.hdf5')
+        os.remove('wrong_images.gz')
+        os.remove('wrong_labels.gz')
+        if os.path.isfile('mock_mnist.hdf5'):
+            os.remove('mock_mnist.hdf5')
 
     def test_converter(self):
         parser = argparse.ArgumentParser()
@@ -129,6 +136,26 @@ class TestMNIST(object):
                      ('batch', 'channel', 'height', 'width'))
         assert_equal(tuple(dim.label for dim in h5file['targets'].dims),
                      ('batch', 'index'))
+
+    def test_wrong_image_magic(self):
+        assert_raises(ValueError, mnist.read_mnist_images, 'wrong_images.gz')
+
+    def test_wrong_label_magic(self):
+        assert_raises(ValueError, mnist.read_mnist_labels, 'wrong_labels.gz')
+
+    def test_read_image_bool(self):
+        assert_equal(
+            mnist.read_mnist_images('train-images-idx3-ubyte.gz', 'bool'),
+            self.train_features_mock >= 128)
+
+    def test_read_image_float(self):
+        rval = mnist.read_mnist_images('train-images-idx3-ubyte.gz', 'float32')
+        assert_equal(rval, self.train_features_mock.astype('float32') / 255.)
+        assert_equal(str(rval.dtype), 'float32')
+
+    def test_read_image_value_error(self):
+        assert_raises(ValueError, mnist.read_mnist_images,
+                      'train-images-idx3-ubyte.gz', 'int32')
 
 
 class TestBinarizedMNIST(object):
