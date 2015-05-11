@@ -6,6 +6,7 @@ from fuel.utils import do_not_pickle_attributes
 from fuel.datasets import IndexableDataset
 from fuel import config
 
+
 @do_not_pickle_attributes('indexables')
 class MusicSequence(IndexableDataset):
     def __init__(self, which_dataset, which_set='train', **kwargs):
@@ -23,30 +24,26 @@ class MusicSequence(IndexableDataset):
 
         self.sources = ('features', 'targets')
 
-        X = np.asarray(
-                [np.asarray(
-                    [self.list_to_nparray(time_step,
-                    max_label) for time_step in \
-                    np.asarray(raw[i][:-1])]) \
-                    for i in xrange(len(raw))]
-            )
+        X = np.asarray([np.asarray(
+                       [self.list_to_nparray(time_step,
+                        max_label) for time_step in
+                        np.asarray(raw[i][:-1])]) for i in xrange(len(raw))]
+                       )
         y = np.asarray(
-            [np.asarray([self.list_to_nparray(time_step,
-                max_label) for time_step in np.asarray(raw[i][1:])])
-                for i in xrange(len(raw))]
+            [np.asarray([self.list_to_nparray(time_step, max_label) for time_step in np.asarray(raw[i][1:])])
+             for i in xrange(len(raw))]
             )
 
-        super(MusicSequence, self).__init__(
-                OrderedDict(zip(self.sources, [X,y])),
-                **kwargs)
+        super(MusicSequence, self).__init__(OrderedDict(zip(self.sources, [X, y])),
+                                            **kwargs)
 
     def load(self):
         self.indexables = [data[self.start:self.stop] for source, data
-                            in zip(self.provide_sources,
-                            self._load_data(
-                                self.which_dataset,
-                                self.which_set))
-                            ]
+                           in zip(self.provide_sources,
+                           self._load_data(
+                               self.which_dataset,
+                               self.which_set))
+                           ]
 
     def _load_data(self, which_dataset, which_set):
         """
@@ -55,11 +52,11 @@ class MusicSequence(IndexableDataset):
         # Check which_set
         if which_set not in ['train', 'valid', 'test']:
             raise ValueError(which_set + " is not a recognized value. " +
-                        "Valid values are ['train', 'valid', 'test'].")
+                             "Valid values are ['train', 'valid', 'test'].")
         # Check which_dataset
         if which_dataset not in ['midi', 'nottingham', 'muse', 'jsb']:
             raise ValueError(which_set + " is not a recognized value. " +
-                "Valid values are ['midi', 'nottingham', 'muse', 'jsb'].")
+                             "Valid values are ['midi', 'nottingham', 'muse', 'jsb'].")
         _data_path = os.path.join(config.data_path, 'midi')
         if which_dataset == 'midi':
             _path = os.path.join(_data_path, "Piano-midi.de.pickle")
