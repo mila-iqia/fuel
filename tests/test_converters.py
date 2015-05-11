@@ -67,7 +67,7 @@ class TestFillHDF5File(object):
 
     def test_multiple_shape_error(self):
         test_features = numpy.arange(
-            16, dtype='float32').reshape((2, 4, 2)) + 3
+            16, dtype='uint8').reshape((2, 4, 2)) + 3
         assert_raises(
             ValueError, fill_hdf5_file, self.h5file,
             (('train', 'features', self.train_features),
