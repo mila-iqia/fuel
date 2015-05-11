@@ -86,6 +86,38 @@ class TestDataset(object):
         assert_equal(dataset.filter_sources(([1, 2], [3, 4])), ([1, 2],))
 
 
+class TestIterableDataset(object):
+    def test_value_error_on_non_iterable_dict(self):
+        assert_raises(ValueError, IterableDataset, {'x': None, 'y': None})
+
+    def test_value_error_on_non_iterable(self):
+        assert_raises(ValueError, IterableDataset, None)
+
+    def test_value_error_get_data_none_state(self):
+        assert_raises(
+            ValueError, IterableDataset([1, 2, 3]).get_data, None, None)
+
+    def test_value_error_get_data_request(self):
+        assert_raises(
+            ValueError, IterableDataset([1, 2, 3]).get_data, [1, 2, 3], True)
+
+
+class TestIndexableDataset(object):
+    def test_getattr(self):
+        assert_equal(getattr(IndexableDataset({'a': (1, 2)}), 'a'), (1, 2))
+
+    def test_value_error_on_non_iterable(self):
+        assert_raises(ValueError, IterableDataset, None)
+
+    def test_value_error_get_data_state(self):
+        assert_raises(
+            ValueError, IndexableDataset([1, 2, 3]).get_data, True, [1, 2])
+
+    def test_value_error_get_data_none_request(self):
+        assert_raises(
+            ValueError, IndexableDataset([1, 2, 3]).get_data, None, None)
+
+
 def test_sources_selection():
     features = [5, 6, 7, 1]
     targets = [1, 0, 1, 1]
