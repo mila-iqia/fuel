@@ -6,6 +6,7 @@ import tarfile
 
 import h5py
 import numpy
+import six
 from numpy.testing import assert_equal, assert_raises
 from six.moves import range, zip, cPickle
 
@@ -89,16 +90,28 @@ class TestMNIST(object):
             0, 10, (10, 1)).astype('uint8')
         with gzip.open('train-images-idx3-ubyte.gz', 'wb') as f:
             f.write(struct.pack('>iiii', *(MNIST_IMAGE_MAGIC, 10, 28, 28)))
-            f.write(numpy.getbuffer(self.train_features_mock.flatten()))
+            if six.PY3:
+                f.write(memoryview(self.train_features_mock.flatten()))
+            else:
+                f.write(numpy.getbuffer(self.train_features_mock.flatten()))
         with gzip.open('train-labels-idx1-ubyte.gz', 'wb') as f:
             f.write(struct.pack('>ii', *(MNIST_LABEL_MAGIC, 10)))
-            f.write(numpy.getbuffer(self.train_targets_mock.flatten()))
+            if six.PY3:
+                f.write(memoryview(self.train_targets_mock.flatten()))
+            else:
+                f.write(numpy.getbuffer(self.train_targets_mock.flatten()))
         with gzip.open('t10k-images-idx3-ubyte.gz', 'wb') as f:
             f.write(struct.pack('>iiii', *(MNIST_IMAGE_MAGIC, 10, 28, 28)))
-            f.write(numpy.getbuffer(self.test_features_mock.flatten()))
+            if six.PY3:
+                f.write(memoryview(self.test_features_mock.flatten()))
+            else:
+                f.write(numpy.getbuffer(self.test_features_mock.flatten()))
         with gzip.open('t10k-labels-idx1-ubyte.gz', 'wb') as f:
             f.write(struct.pack('>ii', *(MNIST_LABEL_MAGIC, 10)))
-            f.write(numpy.getbuffer(self.test_targets_mock.flatten()))
+            if six.PY3:
+                f.write(memoryview(self.test_targets_mock.flatten()))
+            else:
+                f.write(numpy.getbuffer(self.test_targets_mock.flatten()))
         with gzip.open('wrong_images.gz', 'wb') as f:
             f.write(struct.pack('>iiii', *(2000, 10, 28, 28)))
         with gzip.open('wrong_labels.gz', 'wb') as f:
