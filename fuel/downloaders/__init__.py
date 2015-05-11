@@ -8,6 +8,7 @@ Download functions accept two arguments:
 """
 from fuel.downloaders.binarized_mnist import binarized_mnist
 from fuel.downloaders.cifar10 import cifar10
+from fuel.downloaders.cifar100 import cifar100
 from fuel.downloaders.mnist import mnist
 
-__all__ = ('binarized_mnist', 'cifar10', 'mnist')
+__all__ = ('binarized_mnist', 'cifar10', 'cifar100', 'mnist')
