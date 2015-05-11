@@ -1,7 +1,7 @@
 from fuel.downloaders.base import default_downloader
 
 
-def cifar10(subparser):
+def fill_subparser(subparser):
     """Sets up a subparser to download the CIFAR-10 dataset file.
 
     The CIFAR-10 dataset file is downloaded from Alex Krizhevsky's

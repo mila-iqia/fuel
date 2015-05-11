@@ -1,7 +1,7 @@
 from fuel.downloaders.base import default_downloader
 
 
-def binarized_mnist(subparser):
+def fill_subparser(subparser):
     """Sets up a subparser to download the binarized MNIST dataset files.
 
     The binarized MNIST dataset files

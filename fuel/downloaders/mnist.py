@@ -1,7 +1,7 @@
 from fuel.downloaders.base import default_downloader
 
 
-def mnist(subparser):
+def fill_subparser(subparser):
     """Sets up a subparser to download the MNIST dataset files.
 
     The following MNIST dataset files are downoladed from Yann LeCun's

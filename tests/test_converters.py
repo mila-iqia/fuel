@@ -1,3 +1,4 @@
+import argparse
 import gzip
 import os
 import struct
@@ -104,9 +105,16 @@ class TestMNIST(object):
         os.remove('train-labels-idx1-ubyte.gz')
         os.remove('t10k-images-idx3-ubyte.gz')
         os.remove('t10k-labels-idx1-ubyte.gz')
+        os.remove('mock_mnist.hdf5')
 
     def test_converter(self):
-        mnist('.', 'mock_mnist.hdf5')
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('mnist')
+        subparser.set_defaults(directory='./', output_file='mock_mnist.hdf5')
+        mnist.fill_subparser(subparser)
+        args = parser.parse_args(['mnist'])
+        args.func(args)
         h5file = h5py.File('mock_mnist.hdf5', mode='r')
         assert_equal(
             h5file['features'][...],
@@ -140,7 +148,14 @@ class TestBinarizedMNIST(object):
         os.remove('mock_binarized_mnist.hdf5')
 
     def test_converter(self):
-        binarized_mnist('.', 'mock_binarized_mnist.hdf5')
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('binarized_mnist')
+        subparser.set_defaults(
+            directory='./', output_file='mock_binarized_mnist.hdf5')
+        binarized_mnist.fill_subparser(subparser)
+        args = parser.parse_args(['binarized_mnist'])
+        args.func(args)
         h5file = h5py.File('mock_binarized_mnist.hdf5', mode='r')
         assert_equal(h5file['features'][...],
                      numpy.vstack([self.train_mock, self.valid_mock,
@@ -186,7 +201,13 @@ class TestCIFAR10(object):
         os.remove('mock_cifar10.hdf5')
 
     def test_converter(self):
-        cifar10('.', 'mock_cifar10.hdf5')
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('cifar10')
+        subparser.set_defaults(directory='./', output_file='mock_cifar10.hdf5')
+        cifar10.fill_subparser(subparser)
+        args = parser.parse_args(['cifar10'])
+        args.func(args)
         h5file = h5py.File('mock_cifar10.hdf5', mode='r')
         assert_equal(
             h5file['features'][...],

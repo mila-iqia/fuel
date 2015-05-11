@@ -40,8 +40,8 @@ to make available for users to download.
 The preferred way of downloading dataset files in Fuel is the ``fuel-download``
 script. Dataset implementations include a function for downloading their required
 files in the ``fuel.downloaders`` subpackage. In order to make that function
-accessible to ``fuel-download``, they need to include it in the ``__all__``
-attribute of the ``fuel.downloaders`` subpackage.
+accessible to ``fuel-download``, they need to include it in the
+``all_downloaders`` attribute of the ``fuel.downloaders`` subpackage.
 
 The function accepts an :class:`argparse.ArgumentParser` instance as input and
 should set a function as the default value for the ``func`` argument of the
@@ -52,23 +52,26 @@ module (you'll have to create it):
 
     from fuel.downloaders.base import default_downloader
 
-    def iris(subparser):
+    def fill_subparser(subparser):
         subparser.set_defaults(
             func=default_downloader,
             urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
                   'iris/iris.data'],
             filenames=['iris.data'])
 
-You should also import the function you just defined and add ``'iris'`` inside
-the ``__all__`` attribute of the ``fuel.downladers`` init file. Here's an
-example of how the init file might look:
+You should also register Iris as a downloadable dataset via the
+``all_downloaders`` attribute. It's a tuple of pairs of name and subparser
+filler function. Here's an example of how the ``fuel.downloaders`` init file
+might look:
 
 .. code-block:: python
 
-    from fuel.downloaders.binarized_mnist import binarized_mnist
-    from fuel.downloaders.iris import iris
+    from fuel.downloaders import binarized_mnist
+    from fuel.downloaders import iris
 
-    __all__ = ('binarized_mnist', 'iris')
+    all_downloaders = (
+        ('binarized_mnist', binarized_mnist.fill_subparser),
+        ('iris', iris.fill_subparser))
 
 A lot is going on in these few lines of code, so let's break it down.
 
@@ -91,7 +94,7 @@ and downloads each URL, saving it under its corresponding filename. This is why
 we also included the ``urls`` and ``filenames`` default arguments.
 
 If your use case is more exotic, you can just as well define your own download
-function. Be aware of the following parser-level arguments:
+function. Be aware of the following default arguments:
 
 * ``directory`` : in which directory the files need to be saved
 * ``clear`` : if ``True``, your download function is expected to remove the
@@ -108,10 +111,11 @@ file to store our data. For more information, see the :ref:`dedicated tutorial
 
 Much like for downloading data files, the preferred way of converting data
 files in Fuel is through the ``fuel-convert`` script. Its implementation is
-somewhat simpler: instead of registering a function that fills a subparser,
-you register a function that takes an input directory path and an output file
-path as argument. It looks for its required files in the input directory path
-and saves the converted data at the output file path.
+very similar to ``fuel-download``. The arguments to be aware of in the subparser
+are
+
+* ``directory`` : in which directory the input files reside
+* ``output-file`` : where to save the converted dataset
 
 Put the following piece of code inside the ``fuel.converters.iris``
 module (you'll have to create it):
@@ -127,8 +131,10 @@ module (you'll have to create it):
     from fuel.converters.base import fill_hdf5_file
 
 
-    def iris(input_directory, save_path):
-        h5file = h5py.File(save_path, mode="w")
+    def convert_iris(args):
+        input_directory = args.directory
+        output_file = args.output_file
+        h5file = h5py.File(output_file, mode='w')
         classes = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2}
         data = numpy.loadtxt(
             os.path.join(input_directory, 'iris.data'),
@@ -156,6 +162,9 @@ module (you'll have to create it):
         h5file.flush()
         h5file.close()
 
+    def fill_subparser(subparser):
+        subparser.set_defaults(func=convert_iris)
+
 We used the convenience :meth:`~.converters.base.fill_hdf5_file` function
 to populate our HDF5 file and create the split array. This function expects
 a tuple of tuples, one per split/source pair, containing the split name,
@@ -167,16 +176,18 @@ allowed us to specify that target values are categorical (``'index``'). Note
 that you can use whatever label you want in Fuel, although certain frameworks
 using Fuel may have some hard-coded assumptions about which labels to use.
 
-As for the download code, you should import the function you just defined and
-add ``'iris'`` inside the ``__all__`` attribute of the ``fuel.converters`` init
-file. Here's an example of how the init file might look:
+As for the download code, you should register Iris as a convertible dataset
+via the ``all_converters`` attribute of the ``fuel.converters`` subpackage.
+Here's an example of how the init file might look:
 
 .. code-block:: python
 
-    from fuel.converters.binarized_mnist import binarized_mnist
-    from fuel.converters.iris import iris
+    from fuel.converters import binarized_mnist
+    from fuel.converters import iris
 
-    __all__ = ('binarized_mnist', 'iris')
+    all_converters = (
+        ('binarized_mnist', binarized_mnist.convert_binarized_mnist),
+        ('iris', iris.convert_iris))
 
 Dataset subclass
 ----------------
@@ -233,7 +244,7 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     :hide:
     >>> import os
     >>> from fuel.downloaders.base import default_downloader
-    >>> def iris_downloader(subparser):
+    >>> def fill_downloader_subparser(subparser):
     ...     subparser.set_defaults(
     ...         func=default_downloader,
     ...         urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
@@ -244,7 +255,7 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> __ = parser.add_argument("--directory", type=str, default=os.getcwd())
     >>> __ = parser.add_argument("--clear", action='store_true')
     >>> subparsers = parser.add_subparsers()
-    >>> iris_downloader(subparsers.add_parser('iris'))
+    >>> fill_downloader_subparser(subparsers.add_parser('iris'))
     >>> args = parser.parse_args(['iris'])
     >>> args.func(args)
 
@@ -253,34 +264,44 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> import h5py
     >>> import numpy
     >>> from fuel.converters.base import fill_hdf5_file
-    >>> def iris_converter(input_directory, save_path):
-    ...    h5file = h5py.File(save_path, mode="w")
-    ...    classes = {b'Iris-setosa': 0, b'Iris-versicolor': 1, b'Iris-virginica': 2}
-    ...    data = numpy.loadtxt(
-    ...        os.path.join(input_directory, 'iris.data'),
-    ...        converters={4: lambda x: classes[x]},
-    ...        delimiter=',')
-    ...    numpy.random.shuffle(data)
-    ...    features = data[:, :-1].astype('float32')
-    ...    targets = data[:, -1:].astype('uint8')
-    ...    train_features = features[:100]
-    ...    train_targets = targets[:100]
-    ...    valid_features = features[100:120]
-    ...    valid_targets = targets[100:120]
-    ...    test_features = features[120:]
-    ...    data = (('train', 'features', train_features),
-    ...            ('train', 'targets', train_targets),
-    ...            ('valid', 'features', valid_features),
-    ...            ('valid', 'targets', valid_targets),
-    ...            ('test', 'features', test_features))
-    ...    fill_hdf5_file(h5file, data)
-    ...    h5file['features'].dims[0].label = 'batch'
-    ...    h5file['features'].dims[1].label = 'feature'
-    ...    h5file['targets'].dims[0].label = 'batch'
-    ...    h5file['targets'].dims[1].label = 'index'
-    ...    h5file.flush()
-    ...    h5file.close()
-    >>> iris_converter('./', 'iris.hdf5')
+    >>> def iris_converter(args):
+    ...     input_directory = args.directory
+    ...     output_file = args.output_file
+    ...     h5file = h5py.File(output_file, mode='w')
+    ...     classes = {b'Iris-setosa': 0, b'Iris-versicolor': 1, b'Iris-virginica': 2}
+    ...     data = numpy.loadtxt(
+    ...         os.path.join(input_directory, 'iris.data'),
+    ...         converters={4: lambda x: classes[x]},
+    ...         delimiter=',')
+    ...     numpy.random.shuffle(data)
+    ...     features = data[:, :-1].astype('float32')
+    ...     targets = data[:, -1:].astype('uint8')
+    ...     train_features = features[:100]
+    ...     train_targets = targets[:100]
+    ...     valid_features = features[100:120]
+    ...     valid_targets = targets[100:120]
+    ...     test_features = features[120:]
+    ...     data = (('train', 'features', train_features),
+    ...             ('train', 'targets', train_targets),
+    ...             ('valid', 'features', valid_features),
+    ...             ('valid', 'targets', valid_targets),
+    ...             ('test', 'features', test_features))
+    ...     fill_hdf5_file(h5file, data)
+    ...     h5file['features'].dims[0].label = 'batch'
+    ...     h5file['features'].dims[1].label = 'feature'
+    ...     h5file['targets'].dims[0].label = 'batch'
+    ...     h5file['targets'].dims[1].label = 'index'
+    ...     h5file.flush()
+    ...     h5file.close()
+    >>> def fill_converter_subparser(subparser):
+    ...     subparser.set_defaults(func=iris_converter)
+    >>> parser = argparse.ArgumentParser()
+    >>> __ = parser.add_argument("--directory", type=str, default=os.getcwd())
+    >>> __ = parser.add_argument("--output-file", type=str, default='iris.hdf5')
+    >>> subparsers = parser.add_subparsers()
+    >>> fill_converter_subparser(subparsers.add_parser('iris'))
+    >>> args = parser.parse_args(['iris'])
+    >>> args.func(args)
     >>> os.remove('iris.data')
 
 .. doctest::

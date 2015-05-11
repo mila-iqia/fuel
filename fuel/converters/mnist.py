@@ -11,7 +11,7 @@ MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
 
-def mnist(input_directory, save_path, dtype=None):
+def convert_mnist(args):
     """Converts the MNIST dataset to HDF5.
 
     Converts the MNIST dataset to an HDF5 dataset compatible with
@@ -22,18 +22,32 @@ def mnist(input_directory, save_path, dtype=None):
     `train-images-idx3-ubyte.gz`, `train-labels-idx1-ubyte.gz`
     `t10k-images-idx3-ubyte.gz`, `t10k-labels-idx1-ubyte.gz`
 
+    This function takes an :class:`argparse.Namespace` instance as
+    argument and expects it to contain two attributes:
+
+    * `directory` : directory in which input files reside
+    * `output_file` : where to save the converted dataset
+    * `dtype` : 'float32', 'float64', or 'bool'. If unspecified, images
+       will be returned in their original unsigned byte format.
+
+    It assumes the existence of the following files:
+
+    * `train-images-idx3-ubyte.gz`
+    * `train-labels-idx1-ubyte.gz`
+    * `t10k-images-idx3-ubyte.gz`
+    * `t10k-labels-idx1-ubyte.gz`
+
     Parameters
     ----------
-    input_directory : str
-        Directory in which the required input files reside.
-    save_path : str
-        Where to save the converted dataset.
-    dtype : 'float32', 'float64', or 'bool'
-        If unspecified, images will be returned in their original
-        unsigned byte format.
+    args : :class:`argparse.Namespace`
+        Parsed command line arguments
 
     """
-    h5file = h5py.File(save_path, mode="w")
+    input_directory = args.directory
+    output_file = args.output_file
+    dtype = args.dtype
+    h5file = h5py.File(output_file, mode='w')
+
     train_feat_path = os.path.join(input_directory,
                                    'train-images-idx3-ubyte.gz')
     train_features = read_mnist_images(train_feat_path, dtype)
@@ -60,6 +74,22 @@ def mnist(input_directory, save_path, dtype=None):
 
     h5file.flush()
     h5file.close()
+
+
+def fill_subparser(subparser):
+    """Sets up a subparser to convert the MNIST dataset files.
+
+    Parameters
+    ----------
+    subparser : :class:`argparse.ArgumentParser`
+        Subparser handling the `mnist` command.
+
+    """
+    subparser.add_argument(
+        "--dtype", help="dtype to save to; by default, images will be " +
+        "returned in their original unsigned byte format",
+        choices=('float32', 'float64', 'bool'), type=str, default=None)
+    subparser.set_defaults(func=convert_mnist)
 
 
 def read_mnist_images(filename, dtype=None):

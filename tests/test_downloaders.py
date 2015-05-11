@@ -1,9 +1,12 @@
+import argparse
 import hashlib
 import os
 import shutil
 import tempfile
-from unittest import TestCase
 
+from numpy.testing import assert_equal
+
+from fuel.downloaders import mnist, binarized_mnist, cifar10
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url)
 
@@ -30,7 +33,46 @@ def test_download():
     f.close()
 
 
-class TestDefaultDownloader(TestCase):
+def test_mnist():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    mnist.fill_subparser(subparsers.add_parser('mnist'))
+    args = parser.parse_args(['mnist'])
+    filenames = ['train-images-idx3-ubyte.gz', 'train-labels-idx1-ubyte.gz',
+                 't10k-images-idx3-ubyte.gz', 't10k-labels-idx1-ubyte.gz']
+    urls = ['http://yann.lecun.com/exdb/mnist/' + f for f in filenames]
+    assert_equal(args.filenames, filenames)
+    assert_equal(args.urls, urls)
+    assert args.func is default_downloader
+
+
+def test_binarized_mnist():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    binarized_mnist.fill_subparser(subparsers.add_parser('binarized_mnist'))
+    args = parser.parse_args(['binarized_mnist'])
+    sets = ['train', 'valid', 'test']
+    urls = ['http://www.cs.toronto.edu/~larocheh/public/datasets/' +
+            'binarized_mnist/binarized_mnist_{}.amat'.format(s) for s in sets]
+    filenames = ['binarized_mnist_{}.amat'.format(s) for s in sets]
+    assert_equal(args.filenames, filenames)
+    assert_equal(args.urls, urls)
+    assert args.func is default_downloader
+
+
+def test_cifar10():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    cifar10.fill_subparser(subparsers.add_parser('cifar10'))
+    args = parser.parse_args(['cifar10'])
+    filenames = ['cifar-10-python.tar.gz']
+    urls = ['http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz']
+    assert_equal(args.filenames, filenames)
+    assert_equal(args.urls, urls)
+    assert args.func is default_downloader
+
+
+class TestDefaultDownloader(object):
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()
 
