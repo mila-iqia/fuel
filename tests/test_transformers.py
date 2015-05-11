@@ -368,7 +368,7 @@ class TestMerge(object):
             ({'english': 'Hello world!', 'french': 'Bonjour le monde!'}))
 
     def test_error_on_wrong_number_of_sources(self):
-        assert_raises(ValueError(Merge, self.streams, ('english',)))
+        assert_raises(ValueError, Merge, self.streams, ('english',))
 
 
 class TestMultiprocessing(object):
