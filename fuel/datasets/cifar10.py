@@ -33,7 +33,7 @@ class CIFAR10(H5PYDataset):
     filename = 'cifar10.hdf5'
     default_transformers = uint8_pixels_to_floatX(('features',))
 
-    def __init__(self, which_set, **kwargs):
+    def __init__(self, which_set, **kwargs):       
         kwargs.setdefault('load_in_memory', True)
         super(CIFAR10, self).__init__(self.data_path, which_set, **kwargs)
 
