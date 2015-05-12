@@ -5,6 +5,7 @@ from fuel.datasets.base import (Dataset, IterableDataset,
 from fuel.datasets.hdf5 import H5PYDataset
 from fuel.datasets.binarized_mnist import BinarizedMNIST
 from fuel.datasets.cifar10 import CIFAR10
+from fuel.datasets.cifar100 import CIFAR100
 from fuel.datasets.mnist import MNIST
 from fuel.datasets.text import TextFile
 from fuel.datasets.billion import OneBillionWord

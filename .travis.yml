@@ -50,6 +50,15 @@ script:
         fuel-download --clear cifar10
         cd -
       fi
+  # Download and process CIFAR100 for tests if not loaded from cache
+  - |
+       if [ ! -f $FUEL_DATA_PATH/cifar100.hdf5 ]; then
+         cd $FUEL_DATA_PATH
+         fuel-download cifar100
+         fuel-convert cifar100
+         fuel-download --clear cifar100
+         cd -
+       fi
   # With Fuel installed we can install Blocks
   - pip install -e git+git://github.com/bartvm/blocks.git#egg=blocks[test,plot] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
   # Run the Blocks test to make sure we didn't break anything
