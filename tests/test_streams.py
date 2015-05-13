@@ -1,17 +1,25 @@
 import numpy
+from numpy.testing import assert_equal
 
 from fuel.datasets import IterableDataset
 from fuel.streams import DataStream
 
 
-def test_data_stream_no_axis_labels():
-    dataset = IterableDataset(numpy.eye(2))
-    stream = DataStream(dataset)
-    assert stream.axis_labels is None
+class TestDataStream(object):
+    def setUp(self):
+        self.dataset = IterableDataset(numpy.eye(2))
 
+    def test_sources_setter(self):
+        stream = DataStream(self.dataset)
+        stream.sources = ('features',)
+        assert_equal(stream.sources, ('features',))
 
-def test_data_stream_axis_labels():
-    axis_labels = {'data': ('batch', 'features')}
-    dataset = IterableDataset(numpy.eye(2), axis_labels=axis_labels)
-    stream = DataStream(dataset)
-    assert stream.axis_labels == axis_labels
+    def test_no_axis_labels(self):
+        stream = DataStream(self.dataset)
+        assert stream.axis_labels is None
+
+    def test_axis_labels(self):
+        axis_labels = {'data': ('batch', 'features')}
+        self.dataset.axis_labels = axis_labels
+        stream = DataStream(self.dataset)
+        assert_equal(stream.axis_labels, axis_labels)

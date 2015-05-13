@@ -10,7 +10,7 @@ from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
 
 
-@do_not_pickle_attributes('nodes')
+@do_not_pickle_attributes('nodes', 'h5file')
 class Hdf5Dataset(Dataset):
     """An HDF5 dataset.
 
@@ -46,13 +46,16 @@ class Hdf5Dataset(Dataset):
         super(Hdf5Dataset, self).__init__(self.provides_sources)
 
     def open_file(self, path):
-        h5file = tables.open_file(path, mode="r")
-        node = h5file.getNode('/', self.data_node)
+        self.h5file = tables.open_file(path, mode="r")
+        node = self.h5file.getNode('/', self.data_node)
 
         self.nodes = [getattr(node, source) for source in self.sources_in_file]
 
     def load(self):
         self.open_file(self.path)
+
+    def close(self):
+        self.h5file.close()
 
     def get_data(self, state=None, request=None):
         """ Returns data from HDF5 dataset.
@@ -64,15 +67,16 @@ class Hdf5Dataset(Dataset):
             if isinstance(request, slice):
                 request = slice(request.start + self.start,
                                 request.stop + self.start, request.step)
+                data = [node[request] for node in self.nodes]
             elif isinstance(request, list):
                 request = [index + self.start for index in request]
+                data = [node[request, ...] for node in self.nodes]
             else:
                 raise ValueError
-        data = [node[request] for node in self.nodes]
         return data
 
 
-@do_not_pickle_attributes('data_sources')
+@do_not_pickle_attributes('data_sources', 'external_file_handle')
 class H5PYDataset(Dataset):
     """An h5py-fueled HDF5 dataset.
 
@@ -97,8 +101,8 @@ class H5PYDataset(Dataset):
 
     Parameters
     ----------
-    path : str
-        Path to the HDF5 file.
+    file_or_path : :class:`h5py.File` or str
+        HDF5 file handle, or path to the HDF5 file.
     which_set : str
         Which split to use.
     subset : slice, optional
@@ -123,9 +127,15 @@ class H5PYDataset(Dataset):
     _ref_counts = defaultdict(int)
     _file_handles = {}
 
-    def __init__(self, path, which_set, subset=None, load_in_memory=False,
-                 driver=None, sort_indices=True, **kwargs):
-        self.path = path
+    def __init__(self, file_or_path, which_set, subset=None,
+                 load_in_memory=False, driver=None, sort_indices=True,
+                 **kwargs):
+        if isinstance(file_or_path, h5py.File):
+            self.path = file_or_path.filename
+            self.external_file_handle = file_or_path
+        else:
+            self.path = file_or_path
+            self.external_file_handle = None
         self.driver = driver
         self.sort_indices = sort_indices
         if which_set not in self.available_splits:
@@ -267,6 +277,8 @@ class H5PYDataset(Dataset):
         return self._subsets
 
     def load(self):
+        if not hasattr(self, '_external_file_handle'):
+            self.external_file_handle = None
         if self.load_in_memory:
             self._out_of_memory_open()
             handle = self._file_handle
@@ -285,27 +297,33 @@ class H5PYDataset(Dataset):
         return None if self.load_in_memory else self._out_of_memory_open()
 
     def _out_of_memory_open(self):
-        if self.path not in self._file_handles:
-            handle = h5py.File(name=self.path, mode="r", driver=self.driver)
-            self._file_handles[self.path] = handle
-        self._ref_counts[self.path] += 1
+        if not self._external_file_handle:
+            if self.path not in self._file_handles:
+                handle = h5py.File(
+                    name=self.path, mode="r", driver=self.driver)
+                self._file_handles[self.path] = handle
+            self._ref_counts[self.path] += 1
 
     def close(self, state):
         if not self.load_in_memory:
             self._out_of_memory_close()
 
     def _out_of_memory_close(self):
-        self._ref_counts[self.path] -= 1
-        if not self._ref_counts[self.path]:
-            del self._ref_counts[self.path]
-            self._file_handles[self.path].close()
-            del self._file_handles[self.path]
+        if not self._external_file_handle:
+            self._ref_counts[self.path] -= 1
+            if not self._ref_counts[self.path]:
+                del self._ref_counts[self.path]
+                self._file_handles[self.path].close()
+                del self._file_handles[self.path]
 
     @property
     def _file_handle(self):
-        if self.path not in self._file_handles:
+        if self._external_file_handle:
+            return self._external_file_handle
+        elif self.path in self._file_handles:
+            return self._file_handles[self.path]
+        else:
             raise IOError('no open handle for file {}'.format(self.path))
-        return self._file_handles[self.path]
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:

@@ -146,7 +146,6 @@ class SingleMapping(Transformer):
             Input source.
 
         """
-        pass
 
     def get_data(self, request=None):
         if request is not None:

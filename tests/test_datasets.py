@@ -1,52 +1,121 @@
 from collections import OrderedDict
 
 import numpy
-from numpy.testing import assert_raises
+from numpy.testing import assert_raises, assert_equal
 from picklable_itertools import repeat
 from six.moves import zip, range
 
-from fuel.datasets import IterableDataset, IndexableDataset
+from fuel.datasets import Dataset, IterableDataset, IndexableDataset
 from fuel.streams import DataStream
 from fuel.schemes import BatchSizeScheme, ConstantScheme
 from fuel.transformers import Mapping
 
 
-def test_dataset():
-    data = [1, 2, 3]
-    # The default stream requests an example at a time
-    stream = DataStream(IterableDataset(data))
-    epoch = stream.get_epoch_iterator()
-    assert list(epoch) == list(zip(data))
+class TestDataset(object):
+    def setUp(self):
+        self.data = [1, 2, 3]
+        self.stream = DataStream(IterableDataset(self.data))
 
-    # Check if iterating over multiple epochs works
-    for i, epoch in zip(range(2), stream.iterate_epochs()):
-        assert list(epoch) == list(zip(data))
+    def test_one_example_at_a_time(self):
+        assert_equal(
+            list(self.stream.get_epoch_iterator()), list(zip(self.data)))
 
-    # Check whether the returning as a dictionary of sources works
-    assert next(stream.get_epoch_iterator(as_dict=True)) == {"data": 1}
+    def test_multiple_epochs(self):
+        for i, epoch in zip(range(2), self.stream.iterate_epochs()):
+            assert list(epoch) == list(zip(self.data))
+
+    def test_as_dict(self):
+        assert_equal(
+            next(self.stream.get_epoch_iterator(as_dict=True)), {"data": 1})
+
+    def test_value_error_on_no_provided_sources(self):
+        class FaultyDataset(Dataset):
+            def get_data(self, state=None, request=None):
+                pass
+        assert_raises(ValueError, FaultyDataset, self.data)
+
+    def test_value_error_on_nonexistent_sources(self):
+        def instantiate_dataset():
+            return IterableDataset(self.data, sources=('dummy',))
+        assert_raises(ValueError, instantiate_dataset)
+
+    def test_default_transformer(self):
+        class DoublingDataset(IterableDataset):
+            def apply_default_transformer(self, stream):
+                return Mapping(
+                    stream, lambda sources: tuple(2 * s for s in sources))
+        dataset = DoublingDataset(self.data)
+        stream = dataset.apply_default_transformer(DataStream(dataset))
+        assert_equal(list(stream.get_epoch_iterator()), [(2,), (4,), (6,)])
+
+    def test_no_axis_labels(self):
+        assert IterableDataset(self.data).axis_labels is None
+
+    def test_axis_labels(self):
+        axis_labels = {'data': ('batch',)}
+        dataset = IterableDataset(self.data, axis_labels=axis_labels)
+        assert dataset.axis_labels == axis_labels
+
+    def test_attribute_error_on_no_example_iteration_scheme(self):
+        class FaultyDataset(Dataset):
+            provides_sources = ('data',)
+
+            def get_data(self, state=None, request=None):
+                pass
+
+        def get_example_iteration_scheme():
+            return FaultyDataset().example_iteration_scheme
+
+        assert_raises(AttributeError, get_example_iteration_scheme)
+
+    def test_example_iteration_scheme(self):
+        scheme = ConstantScheme(2)
+
+        class MinimalDataset(Dataset):
+            provides_sources = ('data',)
+            _example_iteration_scheme = scheme
+
+            def get_data(self, state=None, request=None):
+                pass
+
+        assert MinimalDataset().example_iteration_scheme is scheme
+
+    def test_filter_sources(self):
+        dataset = IterableDataset(
+            OrderedDict([('1', [1, 2]), ('2', [3, 4])]), sources=('1',))
+        assert_equal(dataset.filter_sources(([1, 2], [3, 4])), ([1, 2],))
 
 
-def test_dataset_default_transformer():
-    class DoublingDataset(IterableDataset):
-        def apply_default_transformer(self, stream):
-            return Mapping(
-                stream, lambda sources: tuple(2 * s for s in sources))
+class TestIterableDataset(object):
+    def test_value_error_on_non_iterable_dict(self):
+        assert_raises(ValueError, IterableDataset, {'x': None, 'y': None})
 
-    dataset = DoublingDataset([1, 2, 3])
-    stream = dataset.apply_default_transformer(DataStream(dataset))
-    epoch = stream.get_epoch_iterator()
-    assert list(epoch) == [(2,), (4,), (6,)]
+    def test_value_error_on_non_iterable(self):
+        assert_raises(ValueError, IterableDataset, None)
+
+    def test_value_error_get_data_none_state(self):
+        assert_raises(
+            ValueError, IterableDataset([1, 2, 3]).get_data, None, None)
+
+    def test_value_error_get_data_request(self):
+        assert_raises(
+            ValueError, IterableDataset([1, 2, 3]).get_data, [1, 2, 3], True)
 
 
-def test_dataset_no_axis_labels():
-    dataset = IterableDataset(numpy.eye(2))
-    assert dataset.axis_labels is None
+class TestIndexableDataset(object):
+    def test_getattr(self):
+        assert_equal(getattr(IndexableDataset({'a': (1, 2)}), 'a'), (1, 2))
 
+    def test_value_error_on_non_iterable(self):
+        assert_raises(ValueError, IterableDataset, None)
 
-def test_dataset_axis_labels():
-    axis_labels = {'data': ('batch', 'features')}
-    dataset = IterableDataset(numpy.eye(2), axis_labels=axis_labels)
-    assert dataset.axis_labels == axis_labels
+    def test_value_error_get_data_state(self):
+        assert_raises(
+            ValueError, IndexableDataset([1, 2, 3]).get_data, True, [1, 2])
+
+    def test_value_error_get_data_none_request(self):
+        assert_raises(
+            ValueError, IndexableDataset([1, 2, 3]).get_data, None, None)
 
 
 def test_sources_selection():

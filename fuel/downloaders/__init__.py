@@ -6,8 +6,11 @@ Download functions accept two arguments:
 * `clear` : If `True`, clear the downloaded files. Defaults to `False`.
 
 """
-from fuel.downloaders.binarized_mnist import binarized_mnist
-from fuel.downloaders.cifar10 import cifar10
-from fuel.downloaders.mnist import mnist
+from fuel.downloaders import binarized_mnist
+from fuel.downloaders import cifar10
+from fuel.downloaders import mnist
 
-__all__ = ('binarized_mnist', 'cifar10', 'mnist')
+all_downloaders = (
+    ('binarized_mnist', binarized_mnist.fill_subparser),
+    ('cifar10', cifar10.fill_subparser),
+    ('mnist', mnist.fill_subparser))

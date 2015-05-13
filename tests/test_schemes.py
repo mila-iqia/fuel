@@ -86,6 +86,11 @@ def test_shuffled_example_scheme():
     assert list(get_request_iterator(7, rng=rng)) == indices
 
 
+def test_shuffled_example_scheme_no_rng():
+    scheme = ShuffledExampleScheme(7)
+    assert scheme.rng is not None
+
+
 def test_sequential_example_scheme():
     get_request_iterator = iterator_requester(SequentialExampleScheme)
     assert list(get_request_iterator(7)) == list(range(7))

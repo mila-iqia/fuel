@@ -34,7 +34,7 @@ class IterationScheme(object):
     """
     @abstractmethod
     def get_request_iterator(self):
-        raise NotImplementedError
+        """Returns an iterator type."""
 
 
 @add_metaclass(ABCMeta)
@@ -47,7 +47,6 @@ class BatchSizeScheme(IterationScheme):
     that only provide the number of examples that should be in a batch.
 
     """
-    pass
 
 
 @add_metaclass(ABCMeta)

@@ -49,22 +49,18 @@ class AbstractDataStream(object):
             A request fetched from the `request_iterator`.
 
         """
-        pass
 
     @abstractmethod
     def reset(self):
         """Reset the data stream."""
-        pass
 
     @abstractmethod
     def close(self):
         """Gracefully close the data stream, e.g. releasing file handles."""
-        pass
 
     @abstractmethod
     def next_epoch(self):
         """Switch the data stream to the next epoch."""
-        pass
 
     @abstractmethod
     def get_epoch_iterator(self, as_dict=False):
@@ -205,3 +201,4 @@ class ServerDataStream(AbstractDataStream):
         state = self.__dict__.copy()
         state['connected'] = False
         del state['socket']
+        return state

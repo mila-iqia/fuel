@@ -9,26 +9,27 @@ from six.moves import range, cPickle
 from fuel.converters.base import fill_hdf5_file
 
 
-def cifar10(input_directory, save_path):
+def convert_cifar10(directory, output_file):
     """Converts the CIFAR-10 dataset to HDF5.
 
     Converts the CIFAR-10 dataset to an HDF5 dataset compatible with
     :class:`fuel.datasets.CIFAR10`. The converted dataset is saved as
     'cifar10.hdf5'.
 
-    This method assumes the existence of the following file:
-    `cifar-10-python.tar.gz`
+    It assumes the existence of the following file:
+
+    * `cifar-10-python.tar.gz`
 
     Parameters
     ----------
-    input_directory : str
-        Directory in which the required input files reside.
-    save_path : str
+    directory : str
+        Directory in which input files reside.
+    output_file : str
         Where to save the converted dataset.
 
     """
-    h5file = h5py.File(save_path, mode="w")
-    input_file = os.path.join(input_directory, 'cifar-10-python.tar.gz')
+    h5file = h5py.File(output_file, mode='w')
+    input_file = os.path.join(directory, 'cifar-10-python.tar.gz')
     tar_file = tarfile.open(input_file, 'r:gz')
 
     train_batches = []
@@ -77,3 +78,15 @@ def cifar10(input_directory, save_path):
 
     h5file.flush()
     h5file.close()
+
+
+def fill_subparser(subparser):
+    """Sets up a subparser to convert the CIFAR10 dataset files.
+
+    Parameters
+    ----------
+    subparser : :class:`argparse.ArgumentParser`
+        Subparser handling the `cifar10` command.
+
+    """
+    subparser.set_defaults(func=convert_cifar10)

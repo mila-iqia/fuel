@@ -6,7 +6,7 @@ import numpy
 from fuel.converters.base import fill_hdf5_file
 
 
-def binarized_mnist(input_directory, save_path):
+def convert_binarized_mnist(directory, output_file):
     """Converts the binarized MNIST dataset to HDF5.
 
     Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN
@@ -27,21 +27,22 @@ def binarized_mnist(input_directory, save_path):
 
     Parameters
     ----------
-    input_directory : str
-        Directory in which the required input files reside.
-    save_path : str
+    directory : str
+        Directory in which input files reside.
+    output_file : str
         Where to save the converted dataset.
 
     """
-    h5file = h5py.File(save_path, mode="w")
+    h5file = h5py.File(output_file, mode='w')
+
     train_set = numpy.loadtxt(
-        os.path.join(input_directory, 'binarized_mnist_train.amat')).reshape(
+        os.path.join(directory, 'binarized_mnist_train.amat')).reshape(
             (-1, 1, 28, 28)).astype('uint8')
     valid_set = numpy.loadtxt(
-        os.path.join(input_directory, 'binarized_mnist_valid.amat')).reshape(
+        os.path.join(directory, 'binarized_mnist_valid.amat')).reshape(
             (-1, 1, 28, 28)).astype('uint8')
     test_set = numpy.loadtxt(
-        os.path.join(input_directory, 'binarized_mnist_test.amat')).reshape(
+        os.path.join(directory, 'binarized_mnist_test.amat')).reshape(
             (-1, 1, 28, 28)).astype('uint8')
     data = (('train', 'features', train_set),
             ('valid', 'features', valid_set),
@@ -52,3 +53,15 @@ def binarized_mnist(input_directory, save_path):
 
     h5file.flush()
     h5file.close()
+
+
+def fill_subparser(subparser):
+    """Sets up a subparser to convert the binarized MNIST dataset files.
+
+    Parameters
+    ----------
+    subparser : :class:`argparse.ArgumentParser`
+        Subparser handling the `binarized_mnist` command.
+
+    """
+    subparser.set_defaults(func=convert_binarized_mnist)

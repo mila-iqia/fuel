@@ -11,7 +11,7 @@ MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
 
-def mnist(input_directory, save_path, dtype=None):
+def convert_mnist(directory, output_file, dtype=None):
     """Converts the MNIST dataset to HDF5.
 
     Converts the MNIST dataset to an HDF5 dataset compatible with
@@ -22,29 +22,34 @@ def mnist(input_directory, save_path, dtype=None):
     `train-images-idx3-ubyte.gz`, `train-labels-idx1-ubyte.gz`
     `t10k-images-idx3-ubyte.gz`, `t10k-labels-idx1-ubyte.gz`
 
+    It assumes the existence of the following files:
+
+    * `train-images-idx3-ubyte.gz`
+    * `train-labels-idx1-ubyte.gz`
+    * `t10k-images-idx3-ubyte.gz`
+    * `t10k-labels-idx1-ubyte.gz`
+
     Parameters
     ----------
-    input_directory : str
-        Directory in which the required input files reside.
-    save_path : str
+    directory : str
+        Directory in which input files reside.
+    output_file : str
         Where to save the converted dataset.
-    dtype : 'float32', 'float64', or 'bool'
-        If unspecified, images will be returned in their original
+    dtype : str, optional
+        Either 'float32', 'float64', or 'bool'. Defaults to `None`,
+        in which case images will be returned in their original
         unsigned byte format.
 
     """
-    h5file = h5py.File(save_path, mode="w")
-    train_feat_path = os.path.join(input_directory,
-                                   'train-images-idx3-ubyte.gz')
+    h5file = h5py.File(output_file, mode='w')
+
+    train_feat_path = os.path.join(directory, 'train-images-idx3-ubyte.gz')
     train_features = read_mnist_images(train_feat_path, dtype)
-    train_lab_path = os.path.join(input_directory,
-                                  'train-labels-idx1-ubyte.gz')
+    train_lab_path = os.path.join(directory, 'train-labels-idx1-ubyte.gz')
     train_labels = read_mnist_labels(train_lab_path)
-    test_feat_path = os.path.join(input_directory,
-                                  't10k-images-idx3-ubyte.gz')
+    test_feat_path = os.path.join(directory, 't10k-images-idx3-ubyte.gz')
     test_features = read_mnist_images(test_feat_path, dtype)
-    test_lab_path = os.path.join(input_directory,
-                                 't10k-labels-idx1-ubyte.gz')
+    test_lab_path = os.path.join(directory, 't10k-labels-idx1-ubyte.gz')
     test_labels = read_mnist_labels(test_lab_path)
     data = (('train', 'features', train_features),
             ('train', 'targets', train_labels),
@@ -60,6 +65,22 @@ def mnist(input_directory, save_path, dtype=None):
 
     h5file.flush()
     h5file.close()
+
+
+def fill_subparser(subparser):
+    """Sets up a subparser to convert the MNIST dataset files.
+
+    Parameters
+    ----------
+    subparser : :class:`argparse.ArgumentParser`
+        Subparser handling the `mnist` command.
+
+    """
+    subparser.add_argument(
+        "--dtype", help="dtype to save to; by default, images will be " +
+        "returned in their original unsigned byte format",
+        choices=('float32', 'float64', 'bool'), type=str, default=None)
+    subparser.set_defaults(func=convert_mnist)
 
 
 def read_mnist_images(filename, dtype=None):
