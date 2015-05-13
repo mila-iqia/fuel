@@ -15,6 +15,11 @@ from six.moves import range, zip, cPickle
 from fuel.converters.base import fill_hdf5_file
 from fuel.converters import binarized_mnist, cifar10, mnist
 
+if six.PY3:
+    getbuffer = memoryview
+else:
+    getbuffer = numpy.getbuffer
+
 
 class TestFillHDF5File(object):
     def setUp(self):
