@@ -1,8 +1,10 @@
 import argparse
 import gzip
 import os
+import shutil
 import struct
 import tarfile
+import tempfile
 
 import h5py
 import numpy
@@ -88,54 +90,48 @@ class TestMNIST(object):
             0, 256, (10, 1, 28, 28)).astype('uint8')
         self.test_targets_mock = numpy.random.randint(
             0, 10, (10, 1)).astype('uint8')
-        with gzip.open('train-images-idx3-ubyte.gz', 'wb') as f:
+        self.tempdir = tempfile.mkdtemp()
+        self.train_images_path = os.path.join(
+            self.tempdir, 'train-images-idx3-ubyte.gz')
+        self.train_labels_path = os.path.join(
+            self.tempdir, 'train-labels-idx1-ubyte.gz')
+        self.test_images_path = os.path.join(
+            self.tempdir, 't10k-images-idx3-ubyte.gz')
+        self.test_labels_path = os.path.join(
+            self.tempdir, 't10k-labels-idx1-ubyte.gz')
+        self.wrong_images_path = os.path.join(self.tempdir, 'wrong_images.gz')
+        self.wrong_labels_path = os.path.join(self.tempdir, 'wrong_labels.gz')
+        with gzip.open(self.train_images_path, 'wb') as f:
             f.write(struct.pack('>iiii', *(MNIST_IMAGE_MAGIC, 10, 28, 28)))
-            if six.PY3:
-                f.write(memoryview(self.train_features_mock.flatten()))
-            else:
-                f.write(numpy.getbuffer(self.train_features_mock.flatten()))
-        with gzip.open('train-labels-idx1-ubyte.gz', 'wb') as f:
+            f.write(getbuffer(self.train_features_mock.flatten()))
+        with gzip.open(self.train_labels_path, 'wb') as f:
             f.write(struct.pack('>ii', *(MNIST_LABEL_MAGIC, 10)))
-            if six.PY3:
-                f.write(memoryview(self.train_targets_mock.flatten()))
-            else:
-                f.write(numpy.getbuffer(self.train_targets_mock.flatten()))
-        with gzip.open('t10k-images-idx3-ubyte.gz', 'wb') as f:
+            f.write(getbuffer(self.train_targets_mock.flatten()))
+        with gzip.open(self.test_images_path, 'wb') as f:
             f.write(struct.pack('>iiii', *(MNIST_IMAGE_MAGIC, 10, 28, 28)))
-            if six.PY3:
-                f.write(memoryview(self.test_features_mock.flatten()))
-            else:
-                f.write(numpy.getbuffer(self.test_features_mock.flatten()))
-        with gzip.open('t10k-labels-idx1-ubyte.gz', 'wb') as f:
+            f.write(getbuffer(self.test_features_mock.flatten()))
+        with gzip.open(self.test_labels_path, 'wb') as f:
             f.write(struct.pack('>ii', *(MNIST_LABEL_MAGIC, 10)))
-            if six.PY3:
-                f.write(memoryview(self.test_targets_mock.flatten()))
-            else:
-                f.write(numpy.getbuffer(self.test_targets_mock.flatten()))
-        with gzip.open('wrong_images.gz', 'wb') as f:
+            f.write(getbuffer(self.test_targets_mock.flatten()))
+        with gzip.open(self.wrong_images_path, 'wb') as f:
             f.write(struct.pack('>iiii', *(2000, 10, 28, 28)))
-        with gzip.open('wrong_labels.gz', 'wb') as f:
+        with gzip.open(self.wrong_labels_path, 'wb') as f:
             f.write(struct.pack('>ii', *(2000, 10)))
 
     def tearDown(self):
-        os.remove('train-images-idx3-ubyte.gz')
-        os.remove('train-labels-idx1-ubyte.gz')
-        os.remove('t10k-images-idx3-ubyte.gz')
-        os.remove('t10k-labels-idx1-ubyte.gz')
-        os.remove('wrong_images.gz')
-        os.remove('wrong_labels.gz')
-        if os.path.isfile('mock_mnist.hdf5'):
-            os.remove('mock_mnist.hdf5')
+        shutil.rmtree(self.tempdir)
 
     def test_converter(self):
+        filename = os.path.join(self.tempdir, 'mock_mnist.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('mnist')
-        subparser.set_defaults(directory='./', output_file='mock_mnist.hdf5')
+        subparser.set_defaults(
+            directory=self.tempdir, output_file=filename)
         mnist.fill_subparser(subparser)
         args = parser.parse_args(['mnist'])
         args.func(args)
-        h5file = h5py.File('mock_mnist.hdf5', mode='r')
+        h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
             numpy.vstack(
@@ -151,24 +147,25 @@ class TestMNIST(object):
                      ('batch', 'index'))
 
     def test_wrong_image_magic(self):
-        assert_raises(ValueError, mnist.read_mnist_images, 'wrong_images.gz')
+        assert_raises(
+            ValueError, mnist.read_mnist_images, self.wrong_images_path)
 
     def test_wrong_label_magic(self):
-        assert_raises(ValueError, mnist.read_mnist_labels, 'wrong_labels.gz')
+        assert_raises(
+            ValueError, mnist.read_mnist_labels, self.wrong_labels_path)
 
     def test_read_image_bool(self):
-        assert_equal(
-            mnist.read_mnist_images('train-images-idx3-ubyte.gz', 'bool'),
-            self.train_features_mock >= 128)
+        assert_equal(mnist.read_mnist_images(self.train_images_path, 'bool'),
+                     self.train_features_mock >= 128)
 
     def test_read_image_float(self):
-        rval = mnist.read_mnist_images('train-images-idx3-ubyte.gz', 'float32')
+        rval = mnist.read_mnist_images(self.train_images_path, 'float32')
         assert_equal(rval, self.train_features_mock.astype('float32') / 255.)
         assert_equal(str(rval.dtype), 'float32')
 
     def test_read_image_value_error(self):
         assert_raises(ValueError, mnist.read_mnist_images,
-                      'train-images-idx3-ubyte.gz', 'int32')
+                      self.train_images_path, 'int32')
 
 
 class TestBinarizedMNIST(object):
@@ -177,26 +174,30 @@ class TestBinarizedMNIST(object):
         self.train_mock = numpy.random.randint(0, 2, (5, 784))
         self.valid_mock = numpy.random.randint(0, 2, (5, 784))
         self.test_mock = numpy.random.randint(0, 2, (5, 784))
-        numpy.savetxt('binarized_mnist_train.amat', self.train_mock)
-        numpy.savetxt('binarized_mnist_valid.amat', self.valid_mock)
-        numpy.savetxt('binarized_mnist_test.amat', self.test_mock)
+        self.tempdir = tempfile.mkdtemp()
+        numpy.savetxt(
+            os.path.join(self.tempdir, 'binarized_mnist_train.amat'),
+            self.train_mock)
+        numpy.savetxt(
+            os.path.join(self.tempdir, 'binarized_mnist_valid.amat'),
+            self.valid_mock)
+        numpy.savetxt(
+            os.path.join(self.tempdir, 'binarized_mnist_test.amat'),
+            self.test_mock)
 
     def tearDown(self):
-        os.remove('binarized_mnist_train.amat')
-        os.remove('binarized_mnist_valid.amat')
-        os.remove('binarized_mnist_test.amat')
-        os.remove('mock_binarized_mnist.hdf5')
+        shutil.rmtree(self.tempdir)
 
     def test_converter(self):
+        filename = os.path.join(self.tempdir, 'mock_binarized_mnist.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('binarized_mnist')
-        subparser.set_defaults(
-            directory='./', output_file='mock_binarized_mnist.hdf5')
+        subparser.set_defaults(directory=self.tempdir, output_file=filename)
         binarized_mnist.fill_subparser(subparser)
         args = parser.parse_args(['binarized_mnist'])
         args.func(args)
-        h5file = h5py.File('mock_binarized_mnist.hdf5', mode='r')
+        h5file = h5py.File(filename, mode='r')
         assert_equal(h5file['features'][...],
                      numpy.vstack([self.train_mock, self.valid_mock,
                                    self.test_mock]).reshape((-1, 1, 28, 28)))
@@ -218,37 +219,38 @@ class TestCIFAR10(object):
             0, 256, (10, 3, 32, 32)).astype('uint8')
         self.test_targets_mock = numpy.random.randint(
             0, 10, (10,)).astype('uint8')
+        self.tempdir = tempfile.mkdtemp()
+        cwd = os.getcwd()
+        os.chdir(self.tempdir)
         os.mkdir('cifar-10-batches-py')
         for i, (x, y) in enumerate(zip(self.train_features_mock,
                                        self.train_targets_mock)):
-            filename = 'cifar-10-batches-py/data_batch_{}'.format(i + 1)
+            filename = os.path.join(
+                'cifar-10-batches-py', 'data_batch_{}'.format(i + 1))
             with open(filename, 'wb') as f:
                 cPickle.dump({'data': x, 'labels': y}, f)
-        with open('cifar-10-batches-py/test_batch', 'wb') as f:
+        filename = os.path.join('cifar-10-batches-py', 'test_batch')
+        with open(filename, 'wb') as f:
             cPickle.dump({'data': self.test_features_mock,
                           'labels': self.test_targets_mock},
                          f)
-        tar_file = tarfile.open('cifar-10-python.tar.gz', 'w:gz')
-        tar_file.add('cifar-10-batches-py')
-        tar_file.close()
+        with tarfile.open('cifar-10-python.tar.gz', 'w:gz') as tar_file:
+            tar_file.add('cifar-10-batches-py')
+        os.chdir(cwd)
 
     def tearDown(self):
-        for i in range(1, 6):
-            os.remove('cifar-10-batches-py/data_batch_{}'.format(i))
-        os.remove('cifar-10-batches-py/test_batch')
-        os.rmdir('cifar-10-batches-py')
-        os.remove('cifar-10-python.tar.gz')
-        os.remove('mock_cifar10.hdf5')
+        shutil.rmtree(self.tempdir)
 
     def test_converter(self):
+        filename = os.path.join(self.tempdir, 'mock_cifar10.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('cifar10')
-        subparser.set_defaults(directory='./', output_file='mock_cifar10.hdf5')
+        subparser.set_defaults(directory=self.tempdir, output_file=filename)
         cifar10.fill_subparser(subparser)
         args = parser.parse_args(['cifar10'])
         args.func(args)
-        h5file = h5py.File('mock_cifar10.hdf5', mode='r')
+        h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
             numpy.vstack(
