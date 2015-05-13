@@ -63,6 +63,7 @@ def test_ngram_stream():
 
 
 def test_ngram_stream_error_on_multiple_sources():
+    # Check that NGram accepts only data streams with one source
     sentences = [list(numpy.random.randint(10, size=sentence_length))
                  for sentence_length in [3, 5, 7]]
     stream = IterableDataset(sentences).get_example_stream()

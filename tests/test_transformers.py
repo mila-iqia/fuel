@@ -39,14 +39,18 @@ class TestTransformer(object):
         self.transformer = Transformer(self.data_stream)
 
     def test_close(self):
+        # Transformer.close should call its wrapped stream's close method
         self.transformer.close()
         assert self.data_stream.close_called
 
     def test_reset(self):
+        # Transformer.reset should call its wrapped stream's reset method
         self.transformer.reset()
         assert self.data_stream.reset_called
 
     def test_next_epoch(self):
+        # Transformer.next_epoch should call its wrapped stream's next_epoch
+        # method
         self.transformer.next_epoch()
         assert self.data_stream.next_epoch_called
 
