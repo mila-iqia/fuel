@@ -131,13 +131,11 @@ module (you'll have to create it):
     from fuel.converters.base import fill_hdf5_file
 
 
-    def convert_iris(args):
-        input_directory = args.directory
-        output_file = args.output_file
+    def convert_iris(directory, output_file):
         h5file = h5py.File(output_file, mode='w')
         classes = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2}
         data = numpy.loadtxt(
-            os.path.join(input_directory, 'iris.data'),
+            os.path.join(directory, 'iris.data'),
             converters={4: lambda x: classes[x]},
             delimiter=',')
         numpy.random.shuffle(data)
@@ -264,13 +262,11 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> import h5py
     >>> import numpy
     >>> from fuel.converters.base import fill_hdf5_file
-    >>> def iris_converter(args):
-    ...     input_directory = args.directory
-    ...     output_file = args.output_file
+    >>> def iris_converter(directory, output_file):
     ...     h5file = h5py.File(output_file, mode='w')
     ...     classes = {b'Iris-setosa': 0, b'Iris-versicolor': 1, b'Iris-virginica': 2}
     ...     data = numpy.loadtxt(
-    ...         os.path.join(input_directory, 'iris.data'),
+    ...         os.path.join(directory, 'iris.data'),
     ...         converters={4: lambda x: classes[x]},
     ...         delimiter=',')
     ...     numpy.random.shuffle(data)
@@ -301,7 +297,9 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> subparsers = parser.add_subparsers()
     >>> fill_converter_subparser(subparsers.add_parser('iris'))
     >>> args = parser.parse_args(['iris'])
-    >>> args.func(args)
+    >>> args_dict = vars(args)
+    >>> func = args_dict.pop('func')
+    >>> func(**args_dict)
     >>> os.remove('iris.data')
 
 .. doctest::
