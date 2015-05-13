@@ -23,4 +23,6 @@ if __name__ == "__main__":
             default=os.path.join(os.getcwd(), '{}.hdf5'.format(name)))
         subparser_fn(subparser)
     args = parser.parse_args()
-    args.func(args)
+    args_dict = vars(args)
+    func = args_dict.pop('func')
+    func(**args_dict)

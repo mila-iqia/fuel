@@ -11,7 +11,7 @@ MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
 
-def convert_mnist(args):
+def convert_mnist(directory, output_file, dtype=None):
     """Converts the MNIST dataset to HDF5.
 
     Converts the MNIST dataset to an HDF5 dataset compatible with
@@ -22,14 +22,6 @@ def convert_mnist(args):
     `train-images-idx3-ubyte.gz`, `train-labels-idx1-ubyte.gz`
     `t10k-images-idx3-ubyte.gz`, `t10k-labels-idx1-ubyte.gz`
 
-    This function takes an :class:`argparse.Namespace` instance as
-    argument and expects it to contain two attributes:
-
-    * `directory` : directory in which input files reside
-    * `output_file` : where to save the converted dataset
-    * `dtype` : 'float32', 'float64', or 'bool'. If unspecified, images
-       will be returned in their original unsigned byte format.
-
     It assumes the existence of the following files:
 
     * `train-images-idx3-ubyte.gz`
@@ -39,26 +31,25 @@ def convert_mnist(args):
 
     Parameters
     ----------
-    args : :class:`argparse.Namespace`
-        Parsed command line arguments
+    directory : str
+        Directory in which input files reside.
+    output_file : str
+        Where to save the converted dataset.
+    dtype : str, optional
+        Either 'float32', 'float64', or 'bool'. Defaults to `None`,
+        in which case images will be returned in their original
+        unsigned byte format.
 
     """
-    input_directory = args.directory
-    output_file = args.output_file
-    dtype = args.dtype
     h5file = h5py.File(output_file, mode='w')
 
-    train_feat_path = os.path.join(input_directory,
-                                   'train-images-idx3-ubyte.gz')
+    train_feat_path = os.path.join(directory, 'train-images-idx3-ubyte.gz')
     train_features = read_mnist_images(train_feat_path, dtype)
-    train_lab_path = os.path.join(input_directory,
-                                  'train-labels-idx1-ubyte.gz')
+    train_lab_path = os.path.join(directory, 'train-labels-idx1-ubyte.gz')
     train_labels = read_mnist_labels(train_lab_path)
-    test_feat_path = os.path.join(input_directory,
-                                  't10k-images-idx3-ubyte.gz')
+    test_feat_path = os.path.join(directory, 't10k-images-idx3-ubyte.gz')
     test_features = read_mnist_images(test_feat_path, dtype)
-    test_lab_path = os.path.join(input_directory,
-                                 't10k-labels-idx1-ubyte.gz')
+    test_lab_path = os.path.join(directory, 't10k-labels-idx1-ubyte.gz')
     test_labels = read_mnist_labels(test_lab_path)
     data = (('train', 'features', train_features),
             ('train', 'targets', train_labels),

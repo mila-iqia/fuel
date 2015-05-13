@@ -6,7 +6,7 @@ import numpy
 from fuel.converters.base import fill_hdf5_file
 
 
-def convert_binarized_mnist(args):
+def convert_binarized_mnist(directory, output_file):
     """Converts the binarized MNIST dataset to HDF5.
 
     Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN
@@ -25,30 +25,24 @@ def convert_binarized_mnist(args):
     .. [HUGO] http://www.cs.toronto.edu/~larocheh/public/datasets/
        binarized_mnist/binarized_mnist_{train,valid,test}.amat
 
-    This function takes an :class:`argparse.Namespace` instance as
-    argument and expects it to contain two attributes:
-
-    * `directory` : directory in which input files reside
-    * `output_file` : where to save the converted dataset
-
     Parameters
     ----------
-    args : :class:`argparse.Namespace`
-        Parsed command line arguments
+    directory : str
+        Directory in which input files reside.
+    output_file : str
+        Where to save the converted dataset.
 
     """
-    input_directory = args.directory
-    output_file = args.output_file
     h5file = h5py.File(output_file, mode='w')
 
     train_set = numpy.loadtxt(
-        os.path.join(input_directory, 'binarized_mnist_train.amat')).reshape(
+        os.path.join(directory, 'binarized_mnist_train.amat')).reshape(
             (-1, 1, 28, 28)).astype('uint8')
     valid_set = numpy.loadtxt(
-        os.path.join(input_directory, 'binarized_mnist_valid.amat')).reshape(
+        os.path.join(directory, 'binarized_mnist_valid.amat')).reshape(
             (-1, 1, 28, 28)).astype('uint8')
     test_set = numpy.loadtxt(
-        os.path.join(input_directory, 'binarized_mnist_test.amat')).reshape(
+        os.path.join(directory, 'binarized_mnist_test.amat')).reshape(
             (-1, 1, 28, 28)).astype('uint8')
     data = (('train', 'features', train_set),
             ('valid', 'features', valid_set),

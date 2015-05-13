@@ -9,18 +9,12 @@ from six.moves import range, cPickle
 from fuel.converters.base import fill_hdf5_file
 
 
-def convert_cifar10(args):
+def convert_cifar10(directory, output_file):
     """Converts the CIFAR-10 dataset to HDF5.
 
     Converts the CIFAR-10 dataset to an HDF5 dataset compatible with
     :class:`fuel.datasets.CIFAR10`. The converted dataset is saved as
     'cifar10.hdf5'.
-
-    This function takes an :class:`argparse.Namespace` instance as
-    argument and expects it to contain two attributes:
-
-    * `directory` : directory in which input files reside
-    * `output_file` : where to save the converted dataset
 
     It assumes the existence of the following file:
 
@@ -28,14 +22,14 @@ def convert_cifar10(args):
 
     Parameters
     ----------
-    args : :class:`argparse.Namespace`
-        Parsed command line arguments
+    directory : str
+        Directory in which input files reside.
+    output_file : str
+        Where to save the converted dataset.
 
     """
-    input_directory = args.directory
-    output_file = args.output_file
     h5file = h5py.File(output_file, mode='w')
-    input_file = os.path.join(input_directory, 'cifar-10-python.tar.gz')
+    input_file = os.path.join(directory, 'cifar-10-python.tar.gz')
     tar_file = tarfile.open(input_file, 'r:gz')
 
     train_batches = []

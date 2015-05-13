@@ -135,7 +135,9 @@ class TestMNIST(object):
             directory=self.tempdir, output_file=filename)
         mnist.fill_subparser(subparser)
         args = parser.parse_args(['mnist'])
-        args.func(args)
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
@@ -201,7 +203,9 @@ class TestBinarizedMNIST(object):
         subparser.set_defaults(directory=self.tempdir, output_file=filename)
         binarized_mnist.fill_subparser(subparser)
         args = parser.parse_args(['binarized_mnist'])
-        args.func(args)
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(h5file['features'][...],
                      numpy.vstack([self.train_mock, self.valid_mock,
@@ -254,7 +258,9 @@ class TestCIFAR10(object):
         subparser.set_defaults(directory=self.tempdir, output_file=filename)
         cifar10.fill_subparser(subparser)
         args = parser.parse_args(['cifar10'])
-        args.func(args)
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
