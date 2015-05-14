@@ -5,6 +5,7 @@ Welcome to Fuel's documentation!
    :hidden:
 
    overview
+   built_in_datasets
    h5py_dataset
    new_dataset
    api/index
