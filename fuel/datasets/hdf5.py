@@ -124,6 +124,7 @@ class H5PYDataset(Dataset):
         indices are ordered.
 
     """
+    interface_version = '0.1'
     _ref_counts = defaultdict(int)
     _file_handles = {}
 

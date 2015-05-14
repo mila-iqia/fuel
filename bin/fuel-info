@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+import argparse
+import os
+
+import h5py
+
+message_prefix = 'Metadata for {}'
+message_body = """
+
+    The command used to generate this file is
+
+        {}
+
+    Relevant versions are
+
+        H5PYDataset     {}
+        fuel.converters {}
+"""
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Extracts metadata from a Fuel-converted HDF5 file.')
+    parser.add_argument("filename", help="HDF5 file to analyze")
+    args = parser.parse_args()
+
+    with h5py.File(args.filename, 'r') as h5file:
+        interface_version = h5file.attrs.get('h5py_interface_version', 'N/A')
+        fuel_convert_version = h5file.attrs.get('fuel_convert_version', 'N/A')
+        fuel_convert_command = h5file.attrs.get('fuel_convert_command', 'N/A')
+
+    message_prefix = message_prefix.format(os.path.basename(args.filename))
+    message_body = message_body.format(
+        fuel_convert_command, interface_version, fuel_convert_version)
+    message = ''.join(['\n', message_prefix, '\n', '=' * len(message_prefix),
+                       message_body])
+    print(message)
