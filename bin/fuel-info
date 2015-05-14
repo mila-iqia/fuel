@@ -5,7 +5,7 @@ import os
 import h5py
 
 message_prefix = 'Metadata for {}'
-message = """
+message_body = """
 
     The command used to generate this file is
 
@@ -25,12 +25,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     with h5py.File(args.filename, 'r') as h5file:
-        interface_version = h5file.attrs['h5py_interface_version']
-        fuel_convert_version = h5file.attrs['fuel_convert_version']
-        fuel_convert_command = h5file.attrs['fuel_convert_command']
+        interface_version = h5file.attrs.get('h5py_interface_version', 'N/A')
+        fuel_convert_version = h5file.attrs.get('fuel_convert_version', 'N/A')
+        fuel_convert_command = h5file.attrs.get('fuel_convert_command', 'N/A')
 
     message_prefix = message_prefix.format(os.path.basename(args.filename))
-    message_body = message.format(
+    message_body = message_body.format(
         fuel_convert_command, interface_version, fuel_convert_version)
     message = ''.join(['\n', message_prefix, '\n', '=' * len(message_prefix),
                        message_body])
