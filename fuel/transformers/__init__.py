@@ -590,3 +590,31 @@ class MultiProcessing(Transformer):
         if data == StopIteration:
             raise StopIteration
         return data
+
+
+class RenameStream(Transformer):
+    """Renames the sources of the stream.
+
+    Parameters
+    ----------
+    data_stream : :class:`DataStream` or :class:`Transformer`
+        The data stream.
+    names : dict
+        A dictionnary mapping the old and new names of the sources to rename.
+
+    """
+    def __init__(self, data_stream, names):
+        super(RenameStream, self).__init__(data_stream)
+        sources = list(self.data_stream.sources)
+        for old, new in names.iteritems():
+            if old not in sources:
+                raise KeyError("%s not in the sources of the stream" % old)
+            else:
+                sources[sources.index(old)] = new
+        self.sources = tuple(sources)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
+        return data

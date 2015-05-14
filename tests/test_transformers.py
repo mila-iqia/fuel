@@ -12,7 +12,7 @@ from fuel.streams import DataStream
 from fuel.transformers import (
     Transformer, Mapping, SortMapping, ForceFloatX, Filter, Cache, Batch,
     Padding, MultiProcessing, Unpack, Merge, SingleMapping, Flatten,
-    ScaleAndShift, Cast)
+    ScaleAndShift, Cast, RenameStream)
 
 
 class FlagDataStream(DataStream):
@@ -405,3 +405,14 @@ class TestMultiprocessing(object):
     def test_value_error_on_request(self):
         background = MultiProcessing(self.transformer)
         assert_raises(ValueError, background.get_data, [0, 1])
+
+
+def test_rename_stream():
+    stream = DataStream(
+        IndexableDataset(
+            OrderedDict([('X', numpy.ones((4, 2, 2))),
+                         ('y', numpy.array([0, 1, 0, 1]))])),
+        iteration_scheme=SequentialScheme(4, 2))
+    transformer = RenameStream(stream, {'X': 'features', 'y': 'targets'})
+    assert_equal(transformer.sources, ('features', 'targets'))
+    assert_raises(KeyError, RenameStream, stream, {'Z': 'features'})
