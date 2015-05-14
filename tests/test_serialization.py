@@ -51,5 +51,4 @@ def test_unpack_picklable():
     epoch = wrapper.get_epoch_iterator()
     # Pickle the epoch
     with tempfile.NamedTemporaryFile(delete=False) as f:
-        filename = f.name
         cPickle.dump(epoch, f)
