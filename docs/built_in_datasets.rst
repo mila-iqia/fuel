@@ -87,6 +87,12 @@ Two arguments are always accepted:
 * ``-d DIRECTORY`` : where ``fuel-convert`` should look for the input files.
 * ``-o OUTPUT_FILE`` : where to save the converted dataset.
 
+Let's delete the raw input files, as we don't need them anymore:
+
+.. code-block:: bash
+
+    $ fuel-download mnist --clear
+
 Inspect Fuel-generated dataset files
 ------------------------------------
 
