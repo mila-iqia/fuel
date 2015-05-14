@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 import numpy
 from numpy.testing import assert_raises, assert_equal
-from six.moves import zip
+from six.moves import zip, cPickle
 
 from fuel import config
 from fuel.datasets import IterableDataset, IndexableDataset
@@ -272,15 +272,28 @@ class TestBatch(object):
         assert_raises(ValueError, transformer.get_data, None)
 
 
-def test_unpack():
-    data = range(10)
-    stream = Batch(
-        DataStream(IterableDataset(data)), iteration_scheme=ConstantScheme(2))
-    wrapper = Unpack(stream)
-    epoch = wrapper.get_epoch_iterator()
-    for i, v in enumerate(epoch):
-        assert numpy.shape(v)[0] == 1
-        assert v[0] == i
+class TestUnpack(object):
+    def setUp(self):
+        data = range(10)
+        self.stream = Batch(
+            DataStream(IterableDataset(data)),
+            iteration_scheme=ConstantScheme(2))
+        data_np = numpy.arange(10)
+        self.stream_np = Batch(
+            DataStream(IterableDataset(data_np)),
+            iteration_scheme=ConstantScheme(2))
+
+    def test_unpack(self):
+        wrapper = Unpack(self.stream)
+        epoch = wrapper.get_epoch_iterator()
+        for i, v in enumerate(epoch):
+            assert numpy.shape(v)[0] == 1
+            assert v[0] == i
+
+    def test_unpack_picklable(self):
+        wrapper = Unpack(self.stream_np)
+        epoch = wrapper.get_epoch_iterator()
+        cPickle.dumps(epoch)
 
 
 class TestPadding(object):
