@@ -5,10 +5,9 @@ import numpy
 from six.moves import cPickle
 
 from fuel.streams import DataStream
-from fuel.datasets import MNIST, IterableDataset
-from fuel.schemes import SequentialScheme, ConstantScheme
+from fuel.datasets import MNIST
+from fuel.schemes import SequentialScheme
 from tests import skip_if_not_available
-from fuel.transformers import Batch, Unpack
 
 
 def test_in_memory():
@@ -41,14 +40,3 @@ def test_in_memory():
     known_features, _ = mnist.get_data(handle, slice(512, 768))
     mnist.close(handle)
     assert numpy.all(features == known_features)
-
-
-def test_unpack_picklable():
-    data = numpy.arange(10)
-    stream = Batch(
-        DataStream(IterableDataset(data)), iteration_scheme=ConstantScheme(2))
-    wrapper = Unpack(stream)
-    epoch = wrapper.get_epoch_iterator()
-    # Pickle the epoch
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        cPickle.dump(epoch, f)
