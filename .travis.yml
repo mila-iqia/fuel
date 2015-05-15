@@ -24,32 +24,7 @@ install:
 script:
   - pip install . -r requirements.txt
   # Download and process binarized MNIST for tests if not loaded from cache
-  - |
-      if [ ! -f $FUEL_DATA_PATH/binarized_mnist.hdf5 ]; then
-        cd $FUEL_DATA_PATH
-        fuel-download binarized_mnist
-        fuel-convert binarized_mnist
-        fuel-download --clear binarized_mnist
-        cd -
-      fi
-  # Download and process MNIST for tests if not loaded from cache
-  - |
-      if [ ! -f $FUEL_DATA_PATH/mnist.hdf5 ]; then
-        cd $FUEL_DATA_PATH
-        fuel-download mnist
-        fuel-convert mnist
-        fuel-download --clear mnist
-        cd -
-      fi
-  # Download and process CIFAR10 for tests if not loaded from cache
-  - |
-      if [ ! -f $FUEL_DATA_PATH/cifar10.hdf5 ]; then
-        cd $FUEL_DATA_PATH
-        fuel-download cifar10
-        fuel-convert cifar10
-        fuel-download --clear cifar10
-        cd -
-      fi
+  - ./.travis-data.sh mnist binarized_mnist cifar10
   # With Fuel installed we can install Blocks
   - pip install -e git+git://github.com/bartvm/blocks.git#egg=blocks[test,plot] --src=$HOME -r https://raw.githubusercontent.com/bartvm/blocks/master/requirements.txt
   # Run the Blocks test to make sure we didn't break anything
