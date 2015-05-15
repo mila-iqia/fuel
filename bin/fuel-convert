@@ -28,7 +28,11 @@ if __name__ == "__main__":
         subparser_fn(subparser)
     args = parser.parse_args()
     args_dict = vars(args)
-    func = args_dict.pop('func')
+    try:
+        func = args_dict.pop('func')
+    except KeyError:
+        parser.print_usage()
+        parser.exit()
     func(**args_dict)
 
     # Tag the newly-created file with H5PYDataset version and command-line
