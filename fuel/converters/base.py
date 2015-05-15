@@ -1,6 +1,60 @@
+from functools import wraps
+import os
+
 import numpy
 
 from fuel.datasets import H5PYDataset
+
+
+class MissingInputFiles(Exception):
+    """Exception raised by a converter when input files are not found.
+
+    Parameters
+    ----------
+    filenames : list
+        A list of filenames that were not found.
+
+    """
+    def __init__(self, message, filenames):
+        self.filenames = filenames
+        super(MissingInputFiles, self).__init__(message, filenames)
+
+
+def check_exists(required_files):
+    """Decorator that checks if required files exist before running.
+
+    Parameters
+    ----------
+    required_files : list of str
+        A list of strings indicating the filenames of regular files
+        (not directories) that should be found in the input directory
+        (which is the first argument to the wrapped function).
+
+    Returns
+    -------
+    wrapper : function
+        A function that takes a function and returns a wrapped function.
+        The function returned by `wrapper` will include input file
+        existence verification.
+
+    Notes
+    -----
+    Assumes that the directory in which to find the input files is
+    provided as the first argument, with the argument name `directory`.
+
+    """
+    def function_wrapper(f):
+        @wraps(f)
+        def wrapped(directory, *args, **kwargs):
+            missing = []
+            for filename in required_files:
+                if not os.path.isfile(os.path.join(directory, filename)):
+                    missing.append(filename)
+            if len(missing) > 0:
+                raise MissingInputFiles('Required files missing', missing)
+            return f(directory, *args, **kwargs)
+        return wrapped
+    return function_wrapper
 
 
 def fill_hdf5_file(h5file, data):

@@ -6,6 +6,7 @@ import sys
 import h5py
 
 from fuel import converters
+from fuel.converters.base import MissingInputFiles
 from fuel.datasets import H5PYDataset
 
 
@@ -33,7 +34,13 @@ if __name__ == "__main__":
     except KeyError:
         parser.print_usage()
         parser.exit()
-    func(**args_dict)
+    try:
+        func(**args_dict)
+    except MissingInputFiles as e:
+        intro = "The following required files were not found:\n"
+        message = "\n".join([intro] + ["   * " + f for f in e.filenames])
+        message += "\n\nDid you forget to run fuel-download?"
+        parser.error(message)
 
     # Tag the newly-created file with H5PYDataset version and command-line
     # options
