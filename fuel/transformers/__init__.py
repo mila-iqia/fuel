@@ -4,7 +4,7 @@ from multiprocessing import Process, Queue
 import numpy
 from picklable_itertools import chain, ifilter, izip, imap, repeat, starmap
 from picklable_itertools.extras import partition
-from six import add_metaclass
+from six import add_metaclass, iteritems
 
 from fuel import config
 from fuel.streams import AbstractDataStream
@@ -592,21 +592,22 @@ class MultiProcessing(Transformer):
         return data
 
 
-class RenameStream(Transformer):
+class Rename(Transformer):
     """Renames the sources of the stream.
 
     Parameters
     ----------
-    data_stream : :class:`DataStream` or :class:`Transformer`
+    data_stream : :class:`DataStream` or :class:`Transformer`.
         The data stream.
     names : dict
-        A dictionnary mapping the old and new names of the sources to rename.
+        A dictionnary mapping the old and new names of the sources
+        to rename.
 
     """
     def __init__(self, data_stream, names):
-        super(RenameStream, self).__init__(data_stream)
+        super(Rename, self).__init__(data_stream)
         sources = list(self.data_stream.sources)
-        for old, new in names.iteritems():
+        for old, new in iteritems(names):
             if old not in sources:
                 raise KeyError("%s not in the sources of the stream" % old)
             else:
