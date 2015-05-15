@@ -419,4 +419,5 @@ def test_rename():
         list(transformer.get_epoch_iterator()),
         [(numpy.ones((2, 2, 2)), numpy.array([0, 1])),
          (numpy.ones((2, 2, 2)), numpy.array([0, 1]))])
+    assert_raises(ValueError, transformer.get_data, [0, 1])
     assert_raises(KeyError, Rename, stream, {'Z': 'features'})
