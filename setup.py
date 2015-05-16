@@ -12,7 +12,7 @@ setup(
     version='0.1a1',  # PEP 440 compliant
     description='Data pipeline framework for machine learning',
     long_description=LONG_DESCRIPTION,
-    url='https://github.com/bartvm/fuel.git',
+    url='https://github.com/mila-udem/fuel.git',
     author='Universite de Montreal',
     license='MIT',
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers

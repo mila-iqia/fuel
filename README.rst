@@ -1,17 +1,17 @@
-.. image:: https://img.shields.io/coveralls/bartvm/fuel.svg
-   :target: https://coveralls.io/r/bartvm/fuel
+.. image:: https://img.shields.io/coveralls/mila-udem/fuel.svg
+   :target: https://coveralls.io/r/mila-udem/fuel
 
-.. image:: https://travis-ci.org/bartvm/fuel.svg?branch=master
-   :target: https://travis-ci.org/bartvm/fuel
+.. image:: https://travis-ci.org/mila-udem/fuel.svg?branch=master
+   :target: https://travis-ci.org/mila-udem/fuel
 
 .. image:: https://readthedocs.org/projects/fuel/badge/?version=latest
    :target: https://fuel.readthedocs.org/
 
-.. image:: https://img.shields.io/scrutinizer/g/bartvm/fuel.svg
-   :target: https://scrutinizer-ci.com/g/bartvm/fuel/
+.. image:: https://img.shields.io/scrutinizer/g/mila-udem/fuel.svg
+   :target: https://scrutinizer-ci.com/g/mila-udem/fuel/
 
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
-   :target: https://github.com/bartvm/fuel/blob/master/LICENSE
+   :target: https://github.com/mila-udem/fuel/blob/master/LICENSE
 
 Fuel
 ====
@@ -28,5 +28,5 @@ Fuel is developed primarily for use by Blocks_, a Theano toolkit that helps you 
 If you have questions, don't hesitate to write to the `mailing list`_.
 
 .. _picklable_itertools: http://github.com/dwf/picklable_itertools
-.. _Blocks: http://github.com/bartvm/blocks
+.. _Blocks: http://github.com/mila-udem/blocks
 .. _mailing list: https://groups.google.com/d/forum/fuel-users
