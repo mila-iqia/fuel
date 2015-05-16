@@ -6,6 +6,11 @@ import urllib3
 from urllib3.util.url import parse_url
 
 
+class NeedURLPrefix(Exception):
+    """Raised when a URL is not provided for a file."""
+    pass
+
+
 def filename_from_url(url, path=None):
     """Parses a URL to determine a file name.
 
@@ -44,7 +49,8 @@ def download(url, file_handle):
         shutil.copyfileobj(response, file_handle)
 
 
-def default_downloader(directory, urls, filenames, clear=False):
+def default_downloader(directory, urls, filenames, url_prefix=None,
+                       clear=False):
     """Downloads or clears files from URLs and filenames.
 
     Parameters
@@ -55,6 +61,9 @@ def default_downloader(directory, urls, filenames, clear=False):
         A list of URLs to download.
     filenames : list
         A list of file names for the corresponding URLs.
+    url_prefix : str, optional
+        If provided, this is prepended to filenames that
+        lack a corresponding URL.
     clear : bool, optional
         If `True`, delete the given filenames from the given
         directory rather than download them.
@@ -76,5 +85,9 @@ def default_downloader(directory, urls, filenames, clear=False):
                 os.remove(f)
     else:
         for url, f in zip(urls, files):
+            if not url:
+                if url_prefix is None:
+                    raise NeedURLPrefix
+                url = url_prefix + filename
             with open(f, 'wb') as file_handle:
                 download(url, file_handle)

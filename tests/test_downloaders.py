@@ -93,6 +93,20 @@ class TestDefaultDownloader(object):
                 f.read().encode('utf-8')).hexdigest() == iris_hash
         os.remove(iris_path)
 
+    def test_default_downloader_save_no_url_url_prefix(self):
+        iris_path = os.path.join(self.tempdir, 'iris.data')
+        args = dict(directory=self.tempdir, clear=False, urls=[None],
+                    filenames=['iris.data'], url_prefix=iris_url[:-9])
+        default_downloader(**args)
+        with open(iris_path, 'r') as f:
+            assert hashlib.md5(
+                f.read().encode('utf-8')).hexdigest() == iris_hash
+
+    def test_default_downloader_save_no_url_no_url_prefix(self):
+        args = dict(directory=self.tempdir, clear=False, urls=[None],
+                    filenames=['iris.data'])
+        assert_raises(NeedURLPrefix, default_downloader, **args)
+
     def test_default_downloader_clear(self):
         file_path = os.path.join(self.tempdir, 'tmp.data')
         open(file_path, 'a').close()
