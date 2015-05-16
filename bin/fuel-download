@@ -21,4 +21,10 @@ if __name__ == "__main__":
             name, parents=[parent_parser],
             help='Download the {} dataset'.format(name)))
     args = parser.parse_args()
-    args.func(args)
+    args_dict = vars(args)
+    try:
+        func = args_dict.pop('func')
+    except KeyError:
+        parser.print_usage()
+        parser.exit()
+    func(**args_dict)
