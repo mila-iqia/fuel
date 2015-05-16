@@ -36,7 +36,7 @@ def filename_from_url(url, path=None):
     r = requests.get(url, stream=True)
     if 'Content-Disposition' in r.headers:
         filename = r.headers[
-            'Content-Disposition'].split('filename=')[1].trim('"')
+            'Content-Disposition'].split('filename=')[1].strip('"')
     else:
         filename = os.path.basename(urllib.parse.urlparse(url).path)
     return filename

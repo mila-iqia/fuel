@@ -15,16 +15,21 @@ iris_url = ('https://archive.ics.uci.edu/ml/machine-learning-databases/' +
 iris_hash = "42615765a885ddf54427f12c34a0a070"
 
 
-def test_filename_from_url():
-    assert filename_from_url(iris_url) == 'iris.data'
+class TestFilenameFromURL(object):
+    def test_no_content_disposition(self):
+        assert_equal(filename_from_url(iris_url), 'iris.data')
+
+    def test_content_disposition(self):
+        fuel_url = 'https://github.com/bartvm/fuel/archive/master.zip'
+        assert_equal(filename_from_url(fuel_url), 'fuel-master.zip')
 
 
-def test_download():
-    f = tempfile.SpooledTemporaryFile()
-    download(iris_url, f)
-    f.seek(0)
-    assert hashlib.md5(f.read()).hexdigest() == iris_hash
-    f.close()
+class TestDownload(object):
+    def test_download_content(self):
+        with tempfile.SpooledTemporaryFile() as f:
+            download(iris_url, f)
+            f.seek(0)
+            assert_equal(hashlib.md5(f.read()).hexdigest(), iris_hash)
 
 
 def test_mnist():
