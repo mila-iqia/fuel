@@ -81,7 +81,6 @@ class TestDefaultDownloader(object):
         with open(iris_path, 'r') as f:
             assert hashlib.md5(
                 f.read().encode('utf-8')).hexdigest() == iris_hash
-        os.remove(iris_path)
 
     def test_default_downloader_save_no_filename(self):
         iris_path = os.path.join(self.tempdir, 'iris.data')
@@ -91,7 +90,6 @@ class TestDefaultDownloader(object):
         with open(iris_path, 'r') as f:
             assert hashlib.md5(
                 f.read().encode('utf-8')).hexdigest() == iris_hash
-        os.remove(iris_path)
 
     def test_default_downloader_save_no_url_url_prefix(self):
         iris_path = os.path.join(self.tempdir, 'iris.data')
