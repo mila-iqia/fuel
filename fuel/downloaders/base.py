@@ -101,7 +101,7 @@ def default_downloader(directory, urls, filenames, url_prefix=None,
             if os.path.isfile(f):
                 os.remove(f)
     else:
-        print('Downloading', ', '.join(filenames), '\n')
+        print('Downloading ' + ', '.join(filenames) + '\n')
         for url, f, n in zip(urls, files, filenames):
             if not url:
                 if url_prefix is None:
