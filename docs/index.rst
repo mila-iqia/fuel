@@ -40,8 +40,8 @@ Pylearn2_ neural network libraries.
    to file bug reports and feature requests by `making a GitHub issue`_.
 
 .. _mailing list: https://groups.google.com/d/forum/fuel-users
-.. _making a GitHub issue: https://github.com/bartvm/fuel/issues/new
-.. _Blocks: https://github.com/bartvm/blocks
+.. _making a GitHub issue: https://github.com/mila-udem/fuel/issues/new
+.. _Blocks: https://github.com/mila-udem/blocks
 .. _Pylearn2: https://github.com/lisa-lab/pylearb2
 
 Motivation
