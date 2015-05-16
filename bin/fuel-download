@@ -3,7 +3,14 @@ import argparse
 import os
 
 from fuel import downloaders
+from fuel.downloaders.base import NeedURLPrefix
 
+url_prefix_message = """
+Some files for this dataset do not have a download URL.
+
+Provide a URL prefix with --url-prefix to prepend to the filenames,
+e.g. http://path.to/files/
+""".strip()
 
 if __name__ == "__main__":
     built_in_datasets = dict(downloaders.all_downloaders)
@@ -21,4 +28,13 @@ if __name__ == "__main__":
             name, parents=[parent_parser],
             help='Download the {} dataset'.format(name)))
     args = parser.parse_args()
-    args.func(args)
+    args_dict = vars(args)
+    try:
+        func = args_dict.pop('func')
+    except KeyError:
+        parser.print_usage()
+        parser.exit()
+    try:
+        func(**args_dict)
+    except NeedURLPrefix:
+        parser.error(url_prefix_message)
