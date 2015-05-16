@@ -1,14 +1,31 @@
 import os
-import shutil
+from contextlib import contextmanager
 
-import certifi
-import urllib3
-from urllib3.util.url import parse_url
+import requests
+from progressbar import (ProgressBar, Percentage, Bar, ETA, FileTransferSpeed,
+                         Timer, UnknownLength)
+from six.moves import zip, urllib
 
 
 class NeedURLPrefix(Exception):
     """Raised when a URL is not provided for a file."""
     pass
+
+
+@contextmanager
+def progress_bar(name, maxval):
+    if maxval is not UnknownLength:
+        widgets = ['{}: '.format(name), Percentage(), ' ',
+                   Bar(marker='=', left='[', right=']'), ' ', ETA(), ' ',
+                   FileTransferSpeed()]
+    else:
+        widgets = ['{}: '.format(name), ' ', Timer(), ' ', FileTransferSpeed()]
+    bar = ProgressBar(widgets=widgets, maxval=maxval).start()
+    try:
+        yield bar
+    finally:
+        bar.update(maxval)
+        bar.finish()
 
 
 def filename_from_url(url, path=None):
@@ -20,19 +37,16 @@ def filename_from_url(url, path=None):
         URL to parse.
 
     """
-    http = urllib3.PoolManager(
-        cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-    with http.request('GET', url, preload_content=False) as response:
-        headers = response.getheaders()
-        if 'Content-Disposition' in headers:
-            filename = headers[
-                'Content-Disposition'].split('filename=')[1].trim('"')
-        else:
-            filename = os.path.basename(parse_url(url).path)
+    r = requests.get(url, stream=True)
+    if 'Content-Disposition' in r.headers:
+        filename = r.headers[
+            'Content-Disposition'].split('filename=')[1].strip('"')
+    else:
+        filename = os.path.basename(urllib.parse.urlparse(url).path)
     return filename
 
 
-def download(url, file_handle):
+def download(url, file_handle, chunk_size=1024):
     """Downloads a given URL to a specific file.
 
     Parameters
@@ -43,10 +57,17 @@ def download(url, file_handle):
         Where to save the downloaded URL.
 
     """
-    http = urllib3.PoolManager(
-        cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
-    with http.request('GET', url, preload_content=False) as response:
-        shutil.copyfileobj(response, file_handle)
+    r = requests.get(url, stream=True)
+    total_length = r.headers.get('content-length')
+    if total_length is None:
+        maxval = UnknownLength
+    else:
+        maxval = int(total_length)
+    name = filename_from_url(url)
+    with progress_bar(name=name, maxval=maxval) as bar:
+        for i, chunk in enumerate(r.iter_content(chunk_size)):
+            bar.update(i * chunk_size)
+            file_handle.write(chunk)
 
 
 def default_downloader(directory, urls, filenames, url_prefix=None,
@@ -84,10 +105,11 @@ def default_downloader(directory, urls, filenames, url_prefix=None,
             if os.path.isfile(f):
                 os.remove(f)
     else:
-        for url, f in zip(urls, files):
+        print('Downloading ' + ', '.join(filenames) + '\n')
+        for url, f, n in zip(urls, files, filenames):
             if not url:
                 if url_prefix is None:
                     raise NeedURLPrefix
-                url = url_prefix + filename
+                url = url_prefix + n
             with open(f, 'wb') as file_handle:
                 download(url, file_handle)
