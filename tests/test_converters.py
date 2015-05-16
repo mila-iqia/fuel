@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 import gzip
 import os
@@ -12,7 +13,8 @@ import six
 from numpy.testing import assert_equal, assert_raises
 from six.moves import range, zip, cPickle
 
-from fuel.converters.base import fill_hdf5_file
+from fuel.converters.base import (fill_hdf5_file, check_exists,
+                                  MissingInputFiles)
 from fuel.converters import binarized_mnist, cifar10, mnist
 
 if six.PY3:
@@ -274,3 +276,49 @@ class TestCIFAR10(object):
         assert_equal(tuple(dim.label for dim in h5file['features'].dims),
                      ('batch', 'channel', 'height', 'width'))
         assert_equal(h5file['targets'].dims[0].label, 'batch')
+
+
+def test_check_exists():
+    try:
+        directory = tempfile.mkdtemp()
+        with open(os.path.join(directory, 'abcdef.txt'), 'w') as f:
+            print('\n', file=f)
+
+        @check_exists(required_files=['abcdef.txt'])
+        def foo(directory, a=None, b=None):
+            pass
+        try:
+            foo(directory)
+        except MissingInputFiles:
+            assert False, "MissingInputFiles raised when files present"
+
+        @check_exists(required_files=['ghijkl.txt'])
+        def bar(directory, c=None, d=None):
+            pass
+
+        assert_raises(MissingInputFiles, bar, directory)
+
+        @check_exists(required_files=['abcdef.txt', 'ghijkl.txt'])
+        def baz(directory, x, y=None):
+            pass
+
+        assert_raises(MissingInputFiles, baz, directory, 9)
+
+        try:
+            baz(directory, 9)
+        except MissingInputFiles as e:
+            assert e.filenames == ['ghijkl.txt']
+
+        with open(os.path.join(directory, 'ghijkl.txt'), 'w') as f:
+            print('\n\n', file=f)
+
+        try:
+            bar(directory)
+            baz(directory, 44)
+        except MissingInputFiles:
+            assert False, "MissingInputFiles raised when files present"
+
+    finally:
+        os.remove(os.path.join(directory, 'abcdef.txt'))
+        os.remove(os.path.join(directory, 'ghijkl.txt'))
+        os.rmdir(directory)

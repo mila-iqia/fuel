@@ -6,9 +6,12 @@ import numpy
 import six
 from six.moves import range, cPickle
 
-from fuel.converters.base import fill_hdf5_file
+from fuel.converters.base import fill_hdf5_file, check_exists
+
+DISTRIBUTION_FILE = 'cifar-10-python.tar.gz'
 
 
+@check_exists(required_files=[DISTRIBUTION_FILE])
 def convert_cifar10(directory, output_file):
     """Converts the CIFAR-10 dataset to HDF5.
 
@@ -29,7 +32,7 @@ def convert_cifar10(directory, output_file):
 
     """
     h5file = h5py.File(output_file, mode='w')
-    input_file = os.path.join(directory, 'cifar-10-python.tar.gz')
+    input_file = os.path.join(directory, DISTRIBUTION_FILE)
     tar_file = tarfile.open(input_file, 'r:gz')
 
     train_batches = []

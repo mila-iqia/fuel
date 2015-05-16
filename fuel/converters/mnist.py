@@ -5,12 +5,20 @@ import struct
 import h5py
 import numpy
 
-from fuel.converters.base import fill_hdf5_file
+from fuel.converters.base import fill_hdf5_file, check_exists
 
 MNIST_IMAGE_MAGIC = 2051
 MNIST_LABEL_MAGIC = 2049
 
+TRAIN_IMAGES = 'train-images-idx3-ubyte.gz'
+TRAIN_LABELS = 'train-labels-idx1-ubyte.gz'
+TEST_IMAGES = 't10k-images-idx3-ubyte.gz'
+TEST_LABELS = 't10k-labels-idx1-ubyte.gz'
 
+ALL_FILES = [TRAIN_IMAGES, TRAIN_LABELS, TEST_IMAGES, TEST_LABELS]
+
+
+@check_exists(required_files=ALL_FILES)
 def convert_mnist(directory, output_file, dtype=None):
     """Converts the MNIST dataset to HDF5.
 
@@ -43,13 +51,13 @@ def convert_mnist(directory, output_file, dtype=None):
     """
     h5file = h5py.File(output_file, mode='w')
 
-    train_feat_path = os.path.join(directory, 'train-images-idx3-ubyte.gz')
+    train_feat_path = os.path.join(directory, TRAIN_IMAGES)
     train_features = read_mnist_images(train_feat_path, dtype)
-    train_lab_path = os.path.join(directory, 'train-labels-idx1-ubyte.gz')
+    train_lab_path = os.path.join(directory, TRAIN_LABELS)
     train_labels = read_mnist_labels(train_lab_path)
-    test_feat_path = os.path.join(directory, 't10k-images-idx3-ubyte.gz')
+    test_feat_path = os.path.join(directory, TEST_IMAGES)
     test_features = read_mnist_images(test_feat_path, dtype)
-    test_lab_path = os.path.join(directory, 't10k-labels-idx1-ubyte.gz')
+    test_lab_path = os.path.join(directory, TEST_LABELS)
     test_labels = read_mnist_labels(test_lab_path)
     data = (('train', 'features', train_features),
             ('train', 'targets', train_labels),

@@ -3,9 +3,17 @@ import os
 import h5py
 import numpy
 
-from fuel.converters.base import fill_hdf5_file
+from fuel.converters.base import fill_hdf5_file, check_exists
 
 
+TRAIN_FILE = 'binarized_mnist_train.amat'
+VALID_FILE = 'binarized_mnist_valid.amat'
+TEST_FILE = 'binarized_mnist_test.amat'
+
+ALL_FILES = [TRAIN_FILE, VALID_FILE, TEST_FILE]
+
+
+@check_exists(required_files=ALL_FILES)
 def convert_binarized_mnist(directory, output_file):
     """Converts the binarized MNIST dataset to HDF5.
 
@@ -36,13 +44,13 @@ def convert_binarized_mnist(directory, output_file):
     h5file = h5py.File(output_file, mode='w')
 
     train_set = numpy.loadtxt(
-        os.path.join(directory, 'binarized_mnist_train.amat')).reshape(
+        os.path.join(directory, TRAIN_FILE)).reshape(
             (-1, 1, 28, 28)).astype('uint8')
     valid_set = numpy.loadtxt(
-        os.path.join(directory, 'binarized_mnist_valid.amat')).reshape(
+        os.path.join(directory, VALID_FILE)).reshape(
             (-1, 1, 28, 28)).astype('uint8')
     test_set = numpy.loadtxt(
-        os.path.join(directory, 'binarized_mnist_test.amat')).reshape(
+        os.path.join(directory, TEST_FILE)).reshape(
             (-1, 1, 28, 28)).astype('uint8')
     data = (('train', 'features', train_set),
             ('valid', 'features', valid_set),
