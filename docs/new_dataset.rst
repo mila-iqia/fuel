@@ -255,7 +255,9 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> subparsers = parser.add_subparsers()
     >>> fill_downloader_subparser(subparsers.add_parser('iris'))
     >>> args = parser.parse_args(['iris'])
-    >>> args.func(args)
+    >>> args_dict = vars(args)
+    >>> func = args_dict.pop('func')
+    >>> func(**args_dict)
 
 .. doctest::
     :hide:
