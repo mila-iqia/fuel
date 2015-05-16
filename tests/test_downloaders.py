@@ -1,8 +1,9 @@
 import argparse
-import hashlib
 import os
 import shutil
 import tempfile
+
+from httmock import all_requests, response, HTTMock
 
 from numpy.testing import assert_equal, assert_raises
 
@@ -10,26 +11,40 @@ from fuel.downloaders import mnist, binarized_mnist, cifar10
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix)
 
-iris_url = ('https://archive.ics.uci.edu/ml/machine-learning-databases/' +
-            'iris/iris.data')
-iris_hash = "42615765a885ddf54427f12c34a0a070"
+mock_url = 'http://mock.com/mock.data'
+mock_filename = 'mock.data'
+mock_content = b'mock'
+
+
+@all_requests
+def response_content(url, request):
+    """Mocks an HTTP response."""
+    return {'status_code': 200, 'content': b'mock'}
+
+@all_requests
+def response_content_disposition(url, request):
+    """Mocks an HTTP response with a content-disposition header."""
+    headers = {
+        'content-disposition': 'attachment; filename={}'.format(mock_filename)}
+    return response(status_code=200, content=mock_content, headers=headers)
 
 
 class TestFilenameFromURL(object):
     def test_no_content_disposition(self):
-        assert_equal(filename_from_url(iris_url), 'iris.data')
+        with HTTMock(response_content):
+            assert_equal(filename_from_url(mock_url), mock_filename)
 
     def test_content_disposition(self):
-        fuel_url = 'https://github.com/bartvm/fuel/archive/master.zip'
-        assert_equal(filename_from_url(fuel_url), 'fuel-master.zip')
+        with HTTMock(response_content_disposition):
+            assert_equal(filename_from_url(mock_url), mock_filename)
 
 
 class TestDownload(object):
     def test_download_content(self):
-        with tempfile.SpooledTemporaryFile() as f:
-            download(iris_url, f)
+        with HTTMock(response_content), tempfile.SpooledTemporaryFile() as f:
+            download(mock_url, f)
             f.seek(0)
-            assert_equal(hashlib.md5(f.read()).hexdigest(), iris_hash)
+            assert_equal(f.read(), mock_content)
 
 
 def test_mnist():
@@ -74,46 +89,51 @@ def test_cifar10():
 class TestDefaultDownloader(object):
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()
+        self.filepath = os.path.join(self.tempdir, mock_filename)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
     def test_default_downloader_save_with_filename(self):
-        iris_path = os.path.join(self.tempdir, 'iris.data')
-        args = dict(directory=self.tempdir, clear=False, urls=[iris_url],
-                    filenames=['iris.data'])
-        default_downloader(**args)
-        with open(iris_path, 'r') as f:
-            assert hashlib.md5(
-                f.read().encode('utf-8')).hexdigest() == iris_hash
+        args = dict(directory=self.tempdir, clear=False, urls=[mock_url],
+                    filenames=[mock_filename])
+        with HTTMock(response_content):
+            default_downloader(**args)
+        with open(self.filepath, 'rb') as f:
+            assert_equal(f.read(), mock_content)
 
     def test_default_downloader_save_no_filename(self):
-        iris_path = os.path.join(self.tempdir, 'iris.data')
-        args = dict(directory=self.tempdir, clear=False, urls=[iris_url],
+        args = dict(directory=self.tempdir, clear=False, urls=[mock_url],
                     filenames=[None])
-        default_downloader(**args)
-        with open(iris_path, 'r') as f:
-            assert hashlib.md5(
-                f.read().encode('utf-8')).hexdigest() == iris_hash
+        with HTTMock(response_content):
+            default_downloader(**args)
+        with open(self.filepath, 'rb') as f:
+            assert_equal(f.read(), mock_content)
 
     def test_default_downloader_save_no_url_url_prefix(self):
-        iris_path = os.path.join(self.tempdir, 'iris.data')
         args = dict(directory=self.tempdir, clear=False, urls=[None],
-                    filenames=['iris.data'], url_prefix=iris_url[:-9])
-        default_downloader(**args)
-        with open(iris_path, 'r') as f:
-            assert hashlib.md5(
-                f.read().encode('utf-8')).hexdigest() == iris_hash
+                    filenames=[mock_filename], url_prefix=mock_url[:-9])
+        with HTTMock(response_content):
+            default_downloader(**args)
+        with open(self.filepath, 'rb') as f:
+            assert_equal(f.read(), mock_content)
 
     def test_default_downloader_save_no_url_no_url_prefix(self):
         args = dict(directory=self.tempdir, clear=False, urls=[None],
-                    filenames=['iris.data'])
+                    filenames=[mock_filename])
         assert_raises(NeedURLPrefix, default_downloader, **args)
+
+    def test_default_downloader_save_no_filename_for_url(self):
+        args = dict(directory=self.tempdir, clear=False, urls=[mock_url[:-9]],
+                    filenames=[None])
+        with HTTMock(response_content):
+            assert_raises(ValueError, default_downloader, **args)
 
     def test_default_downloader_clear(self):
         file_path = os.path.join(self.tempdir, 'tmp.data')
         open(file_path, 'a').close()
         args = dict(directory=self.tempdir, clear=True, urls=[None],
                     filenames=['tmp.data'])
-        default_downloader(**args)
+        with HTTMock(response_content):
+            default_downloader(**args)
         assert not os.path.isfile(file_path)
