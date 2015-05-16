@@ -2,7 +2,8 @@ import os
 from contextlib import contextmanager
 
 import requests
-from progressbar import ProgressBar, Percentage, Bar, ETA, FileTransferSpeed
+from progressbar import (ProgressBar, Percentage, Bar, ETA, FileTransferSpeed,
+                         Timer, UnknownLength)
 from six.moves import zip, urllib
 
 
@@ -13,9 +14,12 @@ class NeedURLPrefix(Exception):
 
 @contextmanager
 def progress_bar(name, maxval):
-    widgets = ['{}: '.format(name), Percentage(), ' ',
-               Bar(marker='=', left='[', right=']'), ' ', ETA(), ' ',
-               FileTransferSpeed()]
+    if maxval is not UnknownLength:
+        widgets = ['{}: '.format(name), Percentage(), ' ',
+                   Bar(marker='=', left='[', right=']'), ' ', ETA(), ' ',
+                   FileTransferSpeed()]
+    else:
+        widgets = ['{}: '.format(name), ' ', Timer(), ' ', FileTransferSpeed()]
     bar = ProgressBar(widgets=widgets, maxval=maxval).start()
     try:
         yield bar
@@ -42,7 +46,7 @@ def filename_from_url(url, path=None):
     return filename
 
 
-def download(url, file_handle):
+def download(url, file_handle, chunk_size=1024):
     """Downloads a given URL to a specific file.
 
     Parameters
@@ -56,14 +60,14 @@ def download(url, file_handle):
     r = requests.get(url, stream=True)
     total_length = r.headers.get('content-length')
     if total_length is None:
-        file_handle.write(r.content)
+        maxval = UnknownLength
     else:
         maxval = int(total_length)
-        name = filename_from_url(url)
-        with progress_bar(name=name, maxval=maxval) as bar:
-            for i, chunk in enumerate(r.iter_content(1024)):
-                bar.update(i * 1024)
-                file_handle.write(chunk)
+    name = filename_from_url(url)
+    with progress_bar(name=name, maxval=maxval) as bar:
+        for i, chunk in enumerate(r.iter_content(chunk_size)):
+            bar.update(i * chunk_size)
+            file_handle.write(chunk)
 
 
 def default_downloader(directory, urls, filenames, url_prefix=None,
