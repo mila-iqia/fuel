@@ -60,7 +60,7 @@ def download(url, file_handle):
     else:
         maxval = int(total_length)
         name = filename_from_url(url)
-        with progress_bar(name=filename, maxval=maxval) as bar:
+        with progress_bar(name=name, maxval=maxval) as bar:
             for i, chunk in enumerate(r.iter_content(1024)):
                 bar.update(i * 1024)
                 file_handle.write(chunk)
