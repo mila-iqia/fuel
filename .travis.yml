@@ -25,10 +25,10 @@ install:
   # Install all Python dependencies
   - |
       if [[ $TESTS == 'blocks' ]]; then
-        curl -O https://raw.githubusercontent.com/mila-udem/blocks/master/req-travis-conda.txt
+        curl -O https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-conda.txt
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl --file req-travis-conda.txt
-        pip install -r https://raw.githubusercontent.com/mila-udem/blocks/master/req-travis-pip.txt
-        pip install -e git+git://github.com/mila-udem/blocks.git#egg=blocks --src=$HOME -r https://raw.githubusercontent.com/mila-udem/blocks/master/requirements.txt
+        pip install -r https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-pip.txt
+        pip install -e git+git://github.com/mila-udem/blocks.git@$TRAVIS_BRANCH#egg=blocks --src=$HOME -r https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/requirements.txt
       fi
   - |
       if [[ $TESTS == 'fuel' ]]; then
