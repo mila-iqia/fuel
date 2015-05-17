@@ -10,6 +10,9 @@
 .. image:: https://img.shields.io/scrutinizer/g/mila-udem/fuel.svg
    :target: https://scrutinizer-ci.com/g/mila-udem/fuel/
 
+.. image:: https://requires.io/github/mila-udem/fuel/requirements.svg?branch=master
+   :target: https://requires.io/github/mila-udem/fuel/requirements/?branch=master
+
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: https://github.com/mila-udem/fuel/blob/master/LICENSE
 
