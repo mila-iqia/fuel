@@ -240,6 +240,17 @@ You can now use the Iris dataset like you would use any other built-in dataset:
 
 .. doctest::
     :hide:
+    >>> from httmock import all_requests, HTTMock
+    >>> content = b''
+    >>> for i in range(50):
+    ...    content += b'0.0,0.0,0.0,0.0,Iris-setosa\n'
+    >>> for i in range(50):
+    ...    content += b'0.0,0.0,0.0,0.0,Iris-versicolor\n'
+    >>> for i in range(50):
+    ...    content += b'0.0,0.0,0.0,0.0,Iris-virginica\n'
+    >>> @all_requests
+    ... def response_content(url, request):
+    ...     return {'status_code': 200, 'content': content}
     >>> import os
     >>> from fuel.downloaders.base import default_downloader
     >>> def fill_downloader_subparser(subparser):
@@ -257,7 +268,8 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> args = parser.parse_args(['iris'])
     >>> args_dict = vars(args)
     >>> func = args_dict.pop('func')
-    >>> func(**args_dict) # doctest: +ELLIPSIS
+    >>> with HTTMock(response_content):
+    ...     func(**args_dict) # doctest: +ELLIPSIS
     Downloading ...
 
 .. doctest::
