@@ -19,7 +19,7 @@ mock_content = b'mock'
 @all_requests
 def response_content(url, request):
     """Mocks an HTTP response."""
-    return {'status_code': 200, 'content': b'mock'}
+    return {'status_code': 200, 'content': mock_content}
 
 @all_requests
 def response_content_disposition(url, request):
