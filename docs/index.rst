@@ -31,7 +31,8 @@ Pylearn2_ neural network libraries.
 
 .. warning::
    Fuel is a new project which is still under development. As such, certain
-   (all) parts of the framework are subject to change.
+   (all) parts of the framework are subject to change. The last stable (but
+   possibly outdated) release can be found in the ``stable`` branch.
 
 .. tip::
 
