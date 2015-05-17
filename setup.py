@@ -9,7 +9,7 @@ with open(path.join(HERE, 'README.rst')) as f:
 
 setup(
     name='fuel',
-    version='0.1a1',  # PEP 440 compliant
+    version='0.0.1',  # PEP 440 compliant
     description='Data pipeline framework for machine learning',
     long_description=LONG_DESCRIPTION,
     url='https://github.com/mila-udem/fuel.git',
