@@ -25,7 +25,7 @@ def mock_requests(content_disposition=False, content_length=True):
                 length = len(mock_content)
                 mock_response = mock.Mock()
                 mock_response.iter_content = mock.Mock(
-                    side_effect = lambda s: chain(
+                    side_effect=lambda s: chain(
                         (mock_content[s * i: s * (i + 1)]
                          for i in range(length // s)),
                         (mock_content[(length // s) * s:],)))
