@@ -32,7 +32,7 @@ setup(
     install_requires=['six', 'picklable_itertools', 'pyyaml', 'h5py',
                       'tables', 'progressbar2', 'pyzmq'],
     extras_require={
-        'test': ['nose', 'nose2', 'httmock']
+        'test': ['nose', 'nose2', 'mock']
     },
     scripts=['bin/fuel-convert', 'bin/fuel-download', 'bin/fuel-info']
 )

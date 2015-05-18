@@ -1,49 +1,58 @@
 import argparse
+import mock
 import os
 import shutil
+import sys
 import tempfile
-
-from httmock import all_requests, response, HTTMock
 
 from numpy.testing import assert_equal, assert_raises
 
 from fuel.downloaders import mnist, binarized_mnist, cifar10
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix)
+from picklable_itertools import chain
+from six.moves import range
 
 mock_url = 'http://mock.com/mock.data'
 mock_filename = 'mock.data'
 mock_content = b'mock'
 
 
-@all_requests
-def response_content(url, request):
-    """Mocks an HTTP response."""
-    return {'status_code': 200, 'content': mock_content}
-
-
-@all_requests
-def response_content_disposition(url, request):
-    """Mocks an HTTP response with a content-disposition header."""
-    headers = {
-        'content-disposition': 'attachment; filename={}'.format(mock_filename)}
-    return response(status_code=200, content=mock_content, headers=headers)
+def setup_mock_requests(mock_requests, content_disposition=False,
+                        content_length=True):
+    length = len(mock_content)
+    mock_response = mock.Mock()
+    mock_response.iter_content = mock.Mock(
+        side_effect = lambda s: chain(
+            (mock_content[s * i: s * (i + 1)] for i in range(length // s)),
+            (mock_content[(length // s) * s:],)))
+    mock_response.headers = {}
+    if content_length:
+        mock_response.headers['content-length'] = length
+    if content_disposition:
+        content_disposition = 'attachment; filename={}'.format(mock_filename)
+        mock_response.headers['content-disposition'] = content_disposition
+    mock_requests.get.return_value = mock_response
 
 
 class TestFilenameFromURL(object):
-    def test_no_content_disposition(self):
-        with HTTMock(response_content):
-            assert_equal(filename_from_url(mock_url), mock_filename)
+    @mock.patch('fuel.downloaders.base.requests')
+    def test_no_content_disposition(self, mock_requests):
+        setup_mock_requests(mock_requests)
+        assert_equal(filename_from_url(mock_url), mock_filename)
 
-    def test_content_disposition(self):
-        with HTTMock(response_content_disposition):
-            assert_equal(filename_from_url(mock_url), mock_filename)
+    @mock.patch('fuel.downloaders.base.requests')
+    def test_content_disposition(self, mock_requests):
+        setup_mock_requests(mock_requests, content_disposition=True)
+        assert_equal(filename_from_url(mock_url), mock_filename)
 
 
 class TestDownload(object):
-    def test_download_content(self):
-        with HTTMock(response_content), tempfile.SpooledTemporaryFile() as f:
-            download(mock_url, f)
+    @mock.patch('fuel.downloaders.base.requests')
+    def test_download_content(self, mock_requests):
+        setup_mock_requests(mock_requests)
+        with tempfile.SpooledTemporaryFile() as f:
+            download(mock_url, f, fd=sys.stdout)
             f.seek(0)
             assert_equal(f.read(), mock_content)
 
@@ -95,46 +104,54 @@ class TestDefaultDownloader(object):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
-    def test_default_downloader_save_with_filename(self):
+    @mock.patch('fuel.downloaders.base.requests')
+    def test_default_downloader_save_with_filename(self, mock_requests):
+        setup_mock_requests(mock_requests)
         args = dict(directory=self.tempdir, clear=False, urls=[mock_url],
-                    filenames=[mock_filename])
-        with HTTMock(response_content):
-            default_downloader(**args)
+                    filenames=[mock_filename], fd=sys.stdout)
+        default_downloader(**args)
         with open(self.filepath, 'rb') as f:
             assert_equal(f.read(), mock_content)
 
-    def test_default_downloader_save_no_filename(self):
+    @mock.patch('fuel.downloaders.base.requests')
+    def test_default_downloader_save_no_filename(self, mock_requests):
+        setup_mock_requests(mock_requests)
         args = dict(directory=self.tempdir, clear=False, urls=[mock_url],
-                    filenames=[None])
-        with HTTMock(response_content):
-            default_downloader(**args)
+                    filenames=[None], fd=sys.stdout)
+        default_downloader(**args)
         with open(self.filepath, 'rb') as f:
             assert_equal(f.read(), mock_content)
 
-    def test_default_downloader_save_no_url_url_prefix(self):
+    @mock.patch('fuel.downloaders.base.requests')
+    def test_default_downloader_save_no_url_url_prefix(self, mock_requests):
+        setup_mock_requests(mock_requests)
         args = dict(directory=self.tempdir, clear=False, urls=[None],
-                    filenames=[mock_filename], url_prefix=mock_url[:-9])
-        with HTTMock(response_content):
-            default_downloader(**args)
+                    filenames=[mock_filename], url_prefix=mock_url[:-9],
+                    fd=sys.stdout)
+        default_downloader(**args)
         with open(self.filepath, 'rb') as f:
             assert_equal(f.read(), mock_content)
 
-    def test_default_downloader_save_no_url_no_url_prefix(self):
+    @mock.patch('fuel.downloaders.base.requests')
+    def test_default_downloader_save_no_url_no_url_prefix(self, mock_requests):
+        setup_mock_requests(mock_requests)
         args = dict(directory=self.tempdir, clear=False, urls=[None],
-                    filenames=[mock_filename])
+                    filenames=[mock_filename], fd=sys.stdout)
         assert_raises(NeedURLPrefix, default_downloader, **args)
 
-    def test_default_downloader_save_no_filename_for_url(self):
+    @mock.patch('fuel.downloaders.base.requests')
+    def test_default_downloader_save_no_filename_for_url(self, mock_requests):
+        setup_mock_requests(mock_requests)
         args = dict(directory=self.tempdir, clear=False, urls=[mock_url[:-9]],
-                    filenames=[None])
-        with HTTMock(response_content):
-            assert_raises(ValueError, default_downloader, **args)
+                    filenames=[None], fd=sys.stdout)
+        assert_raises(ValueError, default_downloader, **args)
 
-    def test_default_downloader_clear(self):
+    @mock.patch('fuel.downloaders.base.requests')
+    def test_default_downloader_clear(self, mock_requests):
+        setup_mock_requests(mock_requests)
         file_path = os.path.join(self.tempdir, 'tmp.data')
         open(file_path, 'a').close()
         args = dict(directory=self.tempdir, clear=True, urls=[None],
-                    filenames=['tmp.data'])
-        with HTTMock(response_content):
-            default_downloader(**args)
+                    filenames=['tmp.data'], fd=sys.stdout)
+        default_downloader(**args)
         assert not os.path.isfile(file_path)

@@ -5,3 +5,4 @@ pandas==0.16.1
 pytables=3.1.1
 six==1.9.0
 pyzmq==14.6.0
+mock==1.0.1
