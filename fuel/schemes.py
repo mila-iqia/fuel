@@ -83,6 +83,26 @@ class BatchScheme(IterationScheme):
         self.batch_size = batch_size
 
 
+class ConcatenatedScheme(IterationScheme):
+    """Build an iterator by concatenating several schemes' iterators.
+
+    Useful for iterating through different subsets of data in a specific
+    order.
+
+    Parameters
+    ----------
+    schemes : list
+        A list of :class:`IterationSchemes`, whose request iterators
+        are to be concatenated in the order given.
+
+    """
+    def __init__(self, schemes):
+        self.schemes = schemes
+
+    def get_request_iterator(self):
+        return chain(*[sch.get_request_iterator() for sch in self.schemes])
+
+
 @add_metaclass(ABCMeta)
 class IndexScheme(IterationScheme):
     """Iteration schemes that return single indices.
