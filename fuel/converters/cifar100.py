@@ -91,3 +91,4 @@ def fill_subparser(subparser):
         Subparser handling the `cifar100` command.
     """
     subparser.set_defaults(func=convert_cifar100)
+
