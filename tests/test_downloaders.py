@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 import tempfile
+from functools import wraps
 
 from numpy.testing import assert_equal, assert_raises
 
@@ -20,29 +21,32 @@ mock_content = b'mock'
 
 def mock_requests(content_disposition=False, content_length=True):
     def mock_decorator(func):
-        with mock.patch('fuel.downloaders.base.requests') as mock_requests:
-            def wrapper_func(*args, **kwargs):
-                length = len(mock_content)
-                mock_response = mock.Mock()
-                mock_response.iter_content = mock.Mock(
-                    side_effect=lambda s: chain(
-                        (mock_content[s * i: s * (i + 1)]
-                         for i in range(length // s)),
-                        (mock_content[(length // s) * s:],)))
-                mock_response.headers = {}
-                if content_length:
-                    mock_response.headers['content-length'] = length
-                if content_disposition:
-                    cd = 'attachment; filename={}'.format(mock_filename)
-                    mock_response.headers['content-disposition'] = cd
-                mock_requests.get.return_value = mock_response
-                return func(*args, **kwargs)
+        @wraps(func)
+        @mock.patch('fuel.downloaders.base.requests')
+        def wrapper_func(*args, **kwargs):
+            mock_requests = args[-1]
+            args = args[:-1]
+            length = len(mock_content)
+            mock_response = mock.Mock()
+            mock_response.iter_content = mock.Mock(
+                side_effect=lambda s: chain(
+                    (mock_content[s * i: s * (i + 1)]
+                     for i in range(length // s)),
+                    (mock_content[(length // s) * s:],)))
+            mock_response.headers = {}
+            if content_length:
+                mock_response.headers['content-length'] = length
+            if content_disposition:
+                cd = 'attachment; filename={}'.format(mock_filename)
+                mock_response.headers['Content-Disposition'] = cd
+            mock_requests.get.return_value = mock_response
+            return func(*args, **kwargs)
         return wrapper_func
     return mock_decorator
 
 
 class TestFilenameFromURL(object):
-    @mock_requests
+    @mock_requests()
     def test_no_content_disposition(self):
         assert_equal(filename_from_url(mock_url), mock_filename)
 
@@ -52,8 +56,15 @@ class TestFilenameFromURL(object):
 
 
 class TestDownload(object):
-    @mock_requests
+    @mock_requests()
     def test_download_content(self):
+        with tempfile.SpooledTemporaryFile() as f:
+            download(mock_url, f, fd=sys.stdout)
+            f.seek(0)
+            assert_equal(f.read(), mock_content)
+
+    @mock_requests(content_length=False)
+    def test_download_content_no_length(self):
         with tempfile.SpooledTemporaryFile() as f:
             download(mock_url, f, fd=sys.stdout)
             f.seek(0)
@@ -107,7 +118,7 @@ class TestDefaultDownloader(object):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
-    @mock_requests
+    @mock_requests()
     def test_default_downloader_save_with_filename(self):
         args = dict(directory=self.tempdir, clear=False, urls=[mock_url],
                     filenames=[mock_filename], fd=sys.stdout)
@@ -115,7 +126,7 @@ class TestDefaultDownloader(object):
         with open(self.filepath, 'rb') as f:
             assert_equal(f.read(), mock_content)
 
-    @mock_requests
+    @mock_requests()
     def test_default_downloader_save_no_filename(self):
         args = dict(directory=self.tempdir, clear=False, urls=[mock_url],
                     filenames=[None], fd=sys.stdout)
@@ -123,7 +134,7 @@ class TestDefaultDownloader(object):
         with open(self.filepath, 'rb') as f:
             assert_equal(f.read(), mock_content)
 
-    @mock_requests
+    @mock_requests()
     def test_default_downloader_save_no_url_url_prefix(self):
         args = dict(directory=self.tempdir, clear=False, urls=[None],
                     filenames=[mock_filename], url_prefix=mock_url[:-9],
@@ -132,19 +143,19 @@ class TestDefaultDownloader(object):
         with open(self.filepath, 'rb') as f:
             assert_equal(f.read(), mock_content)
 
-    @mock_requests
+    @mock_requests()
     def test_default_downloader_save_no_url_no_url_prefix(self):
         args = dict(directory=self.tempdir, clear=False, urls=[None],
                     filenames=[mock_filename], fd=sys.stdout)
         assert_raises(NeedURLPrefix, default_downloader, **args)
 
-    @mock_requests
+    @mock_requests()
     def test_default_downloader_save_no_filename_for_url(self):
         args = dict(directory=self.tempdir, clear=False, urls=[mock_url[:-9]],
                     filenames=[None], fd=sys.stdout)
         assert_raises(ValueError, default_downloader, **args)
 
-    @mock_requests
+    @mock_requests()
     def test_default_downloader_clear(self):
         file_path = os.path.join(self.tempdir, 'tmp.data')
         open(file_path, 'a').close()
