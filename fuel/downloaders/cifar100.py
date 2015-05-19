@@ -17,6 +17,5 @@ def cifar100(subparser):
     """
     url = 'http://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz'
     filename = 'cifar-100-python.tar.gz'
-    subparser.set_defaults(
-        func=default_downloader, urls=[url], filenames=[filename])
-    
+    subparser.set_defaults(func=default_downloader, urls=[url],
+                           filenames=[filename])

@@ -15,4 +15,9 @@ from fuel.converters.cifar10 import cifar10
 from fuel.converters.cifar100 import cifar100
 from fuel.converters.mnist import mnist
 
-__all__ = ('binarized_mnist', 'cifar10', 'cifar100', 'mnist')
+__version__ = '0.1'
+all_converters = (
+    ('binarized_mnist', binarized_mnist.fill_subparser),
+    ('cifar10', cifar10.fill_subparser),
+    ('cifar100', cifar100.fill_subparser),
+    ('mnist', mnist.fill_subparser))

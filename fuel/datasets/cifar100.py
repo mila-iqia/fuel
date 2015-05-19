@@ -10,10 +10,10 @@ class CIFAR100(H5PYDataset):
 
     This dataset is a labeled subset of the ``80 million tiny images''
     dataset [TINY]. It consists of 60,000 32 x 32 colour images labelled
-    into 100 fine-grained classes and 20 super-classes. There are 
+    into 100 fine-grained classes and 20 super-classes. There are
     600 images per fine-grained class. There are 50,000 training
     images and 10,000 test images [CIFAR100].
-    
+
     The dataset contains three sources:
     - features: the images themselves,
     - coarse_labels: the superclasses 1-20,

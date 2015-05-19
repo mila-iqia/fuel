@@ -11,4 +11,8 @@ from fuel.downloaders.cifar10 import cifar10
 from fuel.downloaders.cifar100 import cifar100
 from fuel.downloaders.mnist import mnist
 
-__all__ = ('binarized_mnist', 'cifar10', 'cifar100', 'mnist')
+all_downloaders = (
+    ('binarized_mnist', binarized_mnist.fill_subparser),
+    ('cifar10', cifar10.fill_subparser),
+    ('cifar100', cifar100.fill_subparser),
+    ('mnist', mnist.fill_subparser))

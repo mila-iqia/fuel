@@ -6,10 +6,13 @@ import numpy
 import six
 from six.moves import range, cPickle
 
-from fuel.converters.base import fill_hdf5_file
+from fuel.converters.base import fill_hdf5_file, check_exists
+
+DISTRIBUTION_FILE = 'cifar-100-python.tar.gz'
 
 
-def cifar100(input_directory, save_path):
+@check_exists(required_files=[DISTRIBUTION_FILE])
+def cifar100(directory, output_file):
     """Converts the CIFAR-100 dataset to HDF5.
 
     Converts the CIFAR-100 dataset to an HDF5 dataset compatible with
@@ -21,14 +24,14 @@ def cifar100(input_directory, save_path):
 
     Parameters
     ----------
-    input_directory : str
+    directory : str
         Directory in which the required input files reside.
-    save_path : str
+    output_file : str
         Where to save the converted dataset.
 
     """
-    h5file = h5py.File(save_path, mode="w")
-    input_file = os.path.join(input_directory, 'cifar-100-python.tar.gz')
+    h5file = h5py.File(output_file, mode="w")
+    input_file = os.path.join(directory, 'cifar-100-python.tar.gz')
     tar_file = tarfile.open(input_file, 'r:gz')
 
     file = tar_file.extractfile('cifar-100-python/train')
@@ -41,9 +44,11 @@ def cifar100(input_directory, save_path):
         file.close()
 
     train_features = train['data'].reshape(train['data'].shape[0],
-                                         3, 32, 32)
-    train_coarse_labels = numpy.array(train['coarse_labels'], dtype=numpy.uint8)
-    train_fine_labels = numpy.array(train['fine_labels'], dtype=numpy.uint8)
+                                           3, 32, 32)
+    train_coarse_labels = numpy.array(train['coarse_labels'],
+                                      dtype=numpy.uint8)
+    train_fine_labels = numpy.array(train['fine_labels'],
+                                    dtype=numpy.uint8)
 
     file = tar_file.extractfile('cifar-100-python/test')
     try:
@@ -55,7 +60,7 @@ def cifar100(input_directory, save_path):
         file.close()
 
     test_features = test['data'].reshape(test['data'].shape[0],
-                                         3, 32, 32)                                         
+                                         3, 32, 32)
     test_coarse_labels = numpy.array(test['coarse_labels'], dtype=numpy.uint8)
     test_fine_labels = numpy.array(test['fine_labels'], dtype=numpy.uint8)
 
@@ -75,3 +80,13 @@ def cifar100(input_directory, save_path):
 
     h5file.flush()
     h5file.close()
+
+
+def fill_subparser(subparser):
+    """Sets up a subparser to convert the CIFAR100 dataset files.
+    Parameters
+    ----------
+    subparser : :class:`argparse.ArgumentParser`
+        Subparser handling the `cifar100` command.
+    """
+    subparser.set_defaults(func=convert_cifar100)
