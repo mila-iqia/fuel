@@ -3,7 +3,7 @@ from numpy.testing import assert_raises
 
 from fuel.schemes import (ConstantScheme, SequentialExampleScheme,
                           SequentialScheme, ShuffledExampleScheme,
-                          ShuffledScheme)
+                          ShuffledScheme, ConcatenatedScheme)
 
 
 def iterator_requester(scheme):
@@ -95,3 +95,11 @@ def test_sequential_example_scheme():
     get_request_iterator = iterator_requester(SequentialExampleScheme)
     assert list(get_request_iterator(7)) == list(range(7))
     assert list(get_request_iterator(range(7)[::-1])) == list(range(7)[::-1])
+
+
+def test_concatenated_scheme():
+    sch = ConcatenatedScheme(schemes=[ConstantScheme(batch_size=10, times=5),
+                                      ConstantScheme(batch_size=20, times=3),
+                                      ConstantScheme(batch_size=30, times=1)])
+    assert (list(sch.get_request_iterator()) ==
+            ([10] * 5) + ([20] * 3) + [30])
