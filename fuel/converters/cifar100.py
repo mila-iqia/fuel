@@ -4,7 +4,7 @@ import tarfile
 import h5py
 import numpy
 import six
-from six.moves import range, cPickle
+from six.moves import cPickle
 
 from fuel.converters.base import fill_hdf5_file, check_exists
 
@@ -84,6 +84,7 @@ def convert_cifar100(directory, output_file):
 
 def fill_subparser(subparser):
     """Sets up a subparser to convert the CIFAR100 dataset files.
+
     Parameters
     ----------
     subparser : :class:`argparse.ArgumentParser`
