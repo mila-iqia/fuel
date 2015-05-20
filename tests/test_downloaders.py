@@ -2,7 +2,6 @@ import argparse
 import mock
 import os
 import shutil
-import sys
 import tempfile
 from functools import wraps
 
