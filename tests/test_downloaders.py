@@ -59,14 +59,14 @@ class TestDownload(object):
     @mock_requests()
     def test_download_content(self):
         with tempfile.SpooledTemporaryFile() as f:
-            download(mock_url, f, fd=sys.stdout)
+            download(mock_url, f)
             f.seek(0)
             assert_equal(f.read(), mock_content)
 
     @mock_requests(content_length=False)
     def test_download_content_no_length(self):
         with tempfile.SpooledTemporaryFile() as f:
-            download(mock_url, f, fd=sys.stdout)
+            download(mock_url, f)
             f.seek(0)
             assert_equal(f.read(), mock_content)
 
@@ -121,7 +121,7 @@ class TestDefaultDownloader(object):
     @mock_requests()
     def test_default_downloader_save_with_filename(self):
         args = dict(directory=self.tempdir, clear=False, urls=[mock_url],
-                    filenames=[mock_filename], fd=sys.stdout)
+                    filenames=[mock_filename])
         default_downloader(**args)
         with open(self.filepath, 'rb') as f:
             assert_equal(f.read(), mock_content)
@@ -129,7 +129,7 @@ class TestDefaultDownloader(object):
     @mock_requests()
     def test_default_downloader_save_no_filename(self):
         args = dict(directory=self.tempdir, clear=False, urls=[mock_url],
-                    filenames=[None], fd=sys.stdout)
+                    filenames=[None])
         default_downloader(**args)
         with open(self.filepath, 'rb') as f:
             assert_equal(f.read(), mock_content)
@@ -137,8 +137,7 @@ class TestDefaultDownloader(object):
     @mock_requests()
     def test_default_downloader_save_no_url_url_prefix(self):
         args = dict(directory=self.tempdir, clear=False, urls=[None],
-                    filenames=[mock_filename], url_prefix=mock_url[:-9],
-                    fd=sys.stdout)
+                    filenames=[mock_filename], url_prefix=mock_url[:-9])
         default_downloader(**args)
         with open(self.filepath, 'rb') as f:
             assert_equal(f.read(), mock_content)
@@ -146,13 +145,13 @@ class TestDefaultDownloader(object):
     @mock_requests()
     def test_default_downloader_save_no_url_no_url_prefix(self):
         args = dict(directory=self.tempdir, clear=False, urls=[None],
-                    filenames=[mock_filename], fd=sys.stdout)
+                    filenames=[mock_filename])
         assert_raises(NeedURLPrefix, default_downloader, **args)
 
     @mock_requests()
     def test_default_downloader_save_no_filename_for_url(self):
         args = dict(directory=self.tempdir, clear=False, urls=[mock_url[:-9]],
-                    filenames=[None], fd=sys.stdout)
+                    filenames=[None])
         assert_raises(ValueError, default_downloader, **args)
 
     @mock_requests()
@@ -160,6 +159,6 @@ class TestDefaultDownloader(object):
         file_path = os.path.join(self.tempdir, 'tmp.data')
         open(file_path, 'a').close()
         args = dict(directory=self.tempdir, clear=True, urls=[None],
-                    filenames=['tmp.data'], fd=sys.stdout)
+                    filenames=['tmp.data'])
         default_downloader(**args)
         assert not os.path.isfile(file_path)

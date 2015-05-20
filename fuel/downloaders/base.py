@@ -14,7 +14,7 @@ class NeedURLPrefix(Exception):
 
 
 @contextmanager
-def progress_bar(name, maxval, fd=sys.stderr):
+def progress_bar(name, maxval):
     """Manages a progress bar for a download.
 
     Parameters
@@ -23,9 +23,6 @@ def progress_bar(name, maxval, fd=sys.stderr):
         Name of the downloaded file.
     maxval : int
         Total size of the download, in bytes.
-    fd : open file handle, optional
-        Where to output the progress bar. Defaults to the standard
-        error output.
 
     """
     if maxval is not UnknownLength:
@@ -34,7 +31,7 @@ def progress_bar(name, maxval, fd=sys.stderr):
                    FileTransferSpeed()]
     else:
         widgets = ['{}: '.format(name), ' ', Timer(), ' ', FileTransferSpeed()]
-    bar = ProgressBar(widgets=widgets, maxval=maxval, fd=fd).start()
+    bar = ProgressBar(widgets=widgets, maxval=maxval, fd=sys.stdout).start()
     try:
         yield bar
     finally:
@@ -60,7 +57,7 @@ def filename_from_url(url, path=None):
     return filename
 
 
-def download(url, file_handle, chunk_size=1024, fd=sys.stderr):
+def download(url, file_handle, chunk_size=1024):
     """Downloads a given URL to a specific file.
 
     Parameters
@@ -69,9 +66,6 @@ def download(url, file_handle, chunk_size=1024, fd=sys.stderr):
         URL to download.
     file_handle : file
         Where to save the downloaded URL.
-    fd : open file handle, optional
-        Where to output information about the download's progress.
-        Defaults to the standard error output.
 
     """
     r = requests.get(url, stream=True)
@@ -81,14 +75,14 @@ def download(url, file_handle, chunk_size=1024, fd=sys.stderr):
     else:
         maxval = int(total_length)
     name = filename_from_url(url)
-    with progress_bar(name=name, maxval=maxval, fd=fd) as bar:
+    with progress_bar(name=name, maxval=maxval) as bar:
         for i, chunk in enumerate(r.iter_content(chunk_size)):
             bar.update(i * chunk_size)
             file_handle.write(chunk)
 
 
 def default_downloader(directory, urls, filenames, url_prefix=None,
-                       clear=False, fd=sys.stderr):
+                       clear=False):
     """Downloads or clears files from URLs and filenames.
 
     Parameters
@@ -105,9 +99,6 @@ def default_downloader(directory, urls, filenames, url_prefix=None,
     clear : bool, optional
         If `True`, delete the given filenames from the given
         directory rather than download them.
-    fd : open file handle, optional
-        Where to output information about the download's progress.
-        Defaults to the standard error output.
 
     """
     # Parse file names from URL if not provided
@@ -125,11 +116,11 @@ def default_downloader(directory, urls, filenames, url_prefix=None,
             if os.path.isfile(f):
                 os.remove(f)
     else:
-        fd.write('Downloading ' + ', '.join(filenames) + '\n')
+        print('Downloading ' + ', '.join(filenames) + '\n')
         for url, f, n in zip(urls, files, filenames):
             if not url:
                 if url_prefix is None:
                     raise NeedURLPrefix
                 url = url_prefix + n
             with open(f, 'wb') as file_handle:
-                download(url, file_handle, fd=fd)
+                download(url, file_handle)

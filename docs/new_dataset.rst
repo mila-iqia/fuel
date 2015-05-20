@@ -242,7 +242,6 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     :hide:
     >>> import mock
     >>> import os
-    >>> import sys
     >>> from picklable_itertools import chain
     >>> from six.moves import range
     >>> from fuel.downloaders.base import default_downloader
@@ -260,7 +259,6 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> fill_downloader_subparser(subparsers.add_parser('iris'))
     >>> args = parser.parse_args(['iris'])
     >>> args_dict = vars(args)
-    >>> args_dict['fd'] = sys.stdout
     >>> func = args_dict.pop('func')
     >>> content = b''
     >>> for i in range(50):
