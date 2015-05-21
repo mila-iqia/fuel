@@ -240,7 +240,10 @@ You can now use the Iris dataset like you would use any other built-in dataset:
 
 .. doctest::
     :hide:
+    >>> import mock
     >>> import os
+    >>> from picklable_itertools import chain
+    >>> from six.moves import range
     >>> from fuel.downloaders.base import default_downloader
     >>> def fill_downloader_subparser(subparser):
     ...     subparser.set_defaults(
@@ -257,7 +260,25 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> args = parser.parse_args(['iris'])
     >>> args_dict = vars(args)
     >>> func = args_dict.pop('func')
-    >>> func(**args_dict) # doctest: +ELLIPSIS
+    >>> content = b''
+    >>> for i in range(50):
+    ...    content += b'0.0,0.0,0.0,0.0,Iris-setosa\n'
+    >>> for i in range(50):
+    ...    content += b'0.0,0.0,0.0,0.0,Iris-versicolor\n'
+    >>> for i in range(50):
+    ...    content += b'0.0,0.0,0.0,0.0,Iris-virginica\n'
+    >>> length = len(content)
+    >>> @mock.patch('fuel.downloaders.base.requests')
+    ... def call_download(func, args_dict, mock_requests):
+    ...     mock_response = mock.Mock()
+    ...     mock_response.iter_content = mock.Mock(
+    ...         side_effect = lambda s: chain(
+    ...             (content[s * i: s * (i + 1)] for i in range(length // s)),
+    ...             (content[(length // s) * s:],)))
+    ...     mock_response.headers = {'content-length': length}
+    ...     mock_requests.get.return_value = mock_response
+    ...     func(**args_dict)
+    >>> call_download(func, args_dict) # doctest: +ELLIPSIS
     Downloading ...
 
 .. doctest::
