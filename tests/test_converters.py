@@ -376,11 +376,11 @@ class TestSVHN(object):
                                    'y': self.f1_test_targets_mock})
         savemat('extra_32x32.mat', {'X': self.f1_extra_features_mock,
                                     'y': self.f1_extra_targets_mock})
-        with tarfile.open('train.tar.gz', 'w:gz') as tar_file:
+        with tarfile.open('train.tar.gz', 'w:gz'):
             pass
-        with tarfile.open('test.tar.gz', 'w:gz') as tar_file:
+        with tarfile.open('test.tar.gz', 'w:gz'):
             pass
-        with tarfile.open('extra.tar.gz', 'w:gz') as tar_file:
+        with tarfile.open('extra.tar.gz', 'w:gz'):
             pass
         os.chdir(cwd)
 
