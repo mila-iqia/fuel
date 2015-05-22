@@ -27,7 +27,7 @@ class CIFAR10(H5PYDataset):
         Whether to load the training set (50,000 samples) or the test set
         (10,000 samples). Note that CIFAR10 does not have a validation
         set; usually you will create your own training/validation split
-        using the start and stop arguments.
+        using the `subset` argument.
 
     """
     filename = 'cifar10.hdf5'
