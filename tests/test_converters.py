@@ -1,6 +1,7 @@
 from __future__ import print_function
 import argparse
 import gzip
+import mock
 import os
 import shutil
 import struct
@@ -11,11 +12,12 @@ import h5py
 import numpy
 import six
 from numpy.testing import assert_equal, assert_raises
+from scipy.io import savemat
 from six.moves import range, zip, cPickle
 
 from fuel.converters.base import (fill_hdf5_file, check_exists,
                                   MissingInputFiles)
-from fuel.converters import binarized_mnist, cifar10, mnist, cifar100
+from fuel.converters import binarized_mnist, cifar10, mnist, cifar100, svhn
 
 if six.PY3:
     getbuffer = memoryview
@@ -348,6 +350,88 @@ class TestCIFAR100(object):
                      ('batch', 'index'))
         assert_equal(tuple(dim.label for dim in h5file['coarse_labels'].dims),
                      ('batch', 'index'))
+
+
+class TestSVHN(object):
+    def setUp(self):
+        numpy.random.seed(9 + 5 + 2015)
+        self.f1_train_features_mock = numpy.random.randint(
+            0, 256, (32, 32, 3, 10)).astype('uint8')
+        self.f1_train_targets_mock = numpy.random.randint(
+            0, 10, (10, 1)).astype('uint8')
+        self.f1_test_features_mock = numpy.random.randint(
+            0, 256, (32, 32, 3, 10)).astype('uint8')
+        self.f1_test_targets_mock = numpy.random.randint(
+            0, 10, (10, 1)).astype('uint8')
+        self.f1_extra_features_mock = numpy.random.randint(
+            0, 256, (32, 32, 3, 10)).astype('uint8')
+        self.f1_extra_targets_mock = numpy.random.randint(
+            0, 10, (10, 1)).astype('uint8')
+        self.tempdir = tempfile.mkdtemp()
+        cwd = os.getcwd()
+        os.chdir(self.tempdir)
+        savemat('train_32x32.mat', {'X': self.f1_train_features_mock,
+                                    'y': self.f1_train_targets_mock})
+        savemat('test_32x32.mat', {'X': self.f1_test_features_mock,
+                                   'y': self.f1_test_targets_mock})
+        savemat('extra_32x32.mat', {'X': self.f1_extra_features_mock,
+                                    'y': self.f1_extra_targets_mock})
+        with tarfile.open('train.tar.gz', 'w:gz') as tar_file:
+            pass
+        with tarfile.open('test.tar.gz', 'w:gz') as tar_file:
+            pass
+        with tarfile.open('extra.tar.gz', 'w:gz') as tar_file:
+            pass
+        os.chdir(cwd)
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_format_1_converter_not_implemented(self):
+        assert_raises(NotImplementedError, svhn.convert_svhn_format_1,
+                      self.tempdir, 'svhn_format_1.hdf5')
+
+    def test_format_2_converter(self):
+        filename = os.path.join(self.tempdir, 'svhn_format_2.hdf5')
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('svhn')
+        svhn.fill_subparser(subparser)
+        subparser.set_defaults(directory=self.tempdir, output_file=filename)
+        args = parser.parse_args(['svhn', '2'])
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        func(**args_dict)
+        h5file = h5py.File(filename, mode='r')
+        assert_equal(
+            h5file['features'][...],
+            numpy.vstack([self.f1_train_features_mock.transpose(3, 2, 0, 1),
+                          self.f1_test_features_mock.transpose(3, 2, 0, 1),
+                          self.f1_extra_features_mock.transpose(3, 2, 0, 1)]))
+        assert_equal(
+            h5file['targets'][...],
+            numpy.vstack([self.f1_train_targets_mock,
+                          self.f1_test_targets_mock,
+                          self.f1_extra_targets_mock]))
+        assert_equal(str(h5file['features'].dtype), 'uint8')
+        assert_equal(str(h5file['targets'].dtype), 'uint8')
+        assert_equal(tuple(dim.label for dim in h5file['features'].dims),
+                     ('batch', 'channel', 'height', 'width'))
+        assert_equal(tuple(dim.label for dim in h5file['targets'].dims),
+                     ('batch', 'index'))
+
+    @mock.patch('fuel.converters.svhn.convert_svhn_format_1')
+    def test_converter_call_format_1(self, mock_converter_format_1):
+        svhn.convert_svhn(1, './', 'svhn_format_{}.hdf5')
+        mock_converter_format_1.assert_called_with('./', 'svhn_format_1.hdf5')
+
+    @mock.patch('fuel.converters.svhn.convert_svhn_format_2')
+    def test_converter_call_format_2(self, mock_converter_format_2):
+        svhn.convert_svhn(2, './', 'svhn_format_{}.hdf5')
+        mock_converter_format_2.assert_called_with('./', 'svhn_format_2.hdf5')
+
+    def test_converter_error_wrong_format(self):
+        assert_raises(ValueError, svhn.convert_svhn, 3, './', 'mock.hdf5')
 
 
 def test_check_exists():
