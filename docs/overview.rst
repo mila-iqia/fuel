@@ -2,7 +2,7 @@ Overview
 ========
 
 The data pipeline abstraction that Fuel provides looks complicated at first
-sight, but can be very powerful powerful.
+sight, but can be very powerful.
 
 .. digraph:: datasets
    :caption: A simplified overview of the interactions between the different parts of the data-handling classes in Blocks. Dashed lines are optional.
