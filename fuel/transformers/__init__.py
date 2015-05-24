@@ -600,7 +600,7 @@ class Rename(Transformer):
     data_stream : :class:`DataStream` or :class:`Transformer`.
         The data stream.
     names : dict
-        A dictionnary mapping the old and new names of the sources
+        A dictionary mapping the old and new names of the sources
         to rename.
 
     """
