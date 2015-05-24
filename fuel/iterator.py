@@ -11,6 +11,10 @@ class DataIterator(six.Iterator):
     request_iterator : iterator
         An iterator which returns the request to pass to the data stream
         for each step.
+    as_dict : bool, optional
+        If `True`, return dictionaries mapping source names to data
+        from each source. If `False` (default), return tuples in the
+        same order as `data_stream.sources`.
 
     """
     def __init__(self, data_stream, request_iterator=None, as_dict=False):
