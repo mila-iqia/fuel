@@ -240,6 +240,7 @@ You can now use the Iris dataset like you would use any other built-in dataset:
 
 .. doctest::
     :hide:
+    
     >>> import mock
     >>> import os
     >>> from picklable_itertools import chain
@@ -283,6 +284,7 @@ You can now use the Iris dataset like you would use any other built-in dataset:
 
 .. doctest::
     :hide:
+    
     >>> import h5py
     >>> import numpy
     >>> from fuel.converters.base import fill_hdf5_file
@@ -328,6 +330,7 @@ You can now use the Iris dataset like you would use any other built-in dataset:
 
 .. doctest::
     :hide:
+    
     >>> import os
     >>> from fuel import config
     >>> from fuel.datasets import H5PYDataset
@@ -352,6 +355,7 @@ You can now use the Iris dataset like you would use any other built-in dataset:
 
 .. doctest::
     :hide:
+    
     >>> os.remove('iris.hdf5')
 
 .. _Iris dataset: https://archive.ics.uci.edu/ml/datasets/Iris
