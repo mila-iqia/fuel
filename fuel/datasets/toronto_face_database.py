@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-import logging
 import os
 
 from fuel import config
 from fuel.datasets import H5PYDataset
-
-logger = logging.getLogger(__name__)
+from fuel.transformers.defaults import uint8_pixels_to_floatX
 
 
 class TorontoFaceDatabase(H5PYDataset):
@@ -22,8 +20,8 @@ class TorontoFaceDatabase(H5PYDataset):
     def __init__(self, which_set, **kwargs):
         kwargs.setdefault('load_in_memory', True)
         super(TorontoFaceDatabase, self).__init__(
-            path=self.data_path, 
-            which_set=which_set,
+            self.data_path, 
+            which_set,
             **kwargs)
 
     @property
