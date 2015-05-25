@@ -270,7 +270,6 @@ class TestH5PYDataset(object):
         assert_equal(rval[1], expected_targets)
         dataset.close(handle)
 
-
     def test_vlen_reshape_out_of_memory_unordered_no_check(self):
         dataset = H5PYDataset(
             self.vlen_h5file, which_set='train', load_in_memory=False,
