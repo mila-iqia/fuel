@@ -351,7 +351,7 @@ we'll attach to the ``'image_features'`` dataset using the name ``'shapes'``
 (use this *exact* name):
 
 >>> image_features_shapes = f.create_dataset(
-...     'image_features_shapes', (100, 3), dtype='uint8')
+...     'image_features_shapes', (100, 3), dtype='int32')
 >>> image_features_shapes[...] = numpy.array(
 ...     [image.shape for image in all_image_features])
 >>> image_features.dims.create_scale(image_features_shapes, 'shapes')
