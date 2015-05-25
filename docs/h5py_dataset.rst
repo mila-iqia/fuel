@@ -299,6 +299,112 @@ what you requested, and nothing more.
 >>> print(data.shape)
 (80, 10)
 
+Variable-length data
+--------------------
+
+:class:`~.datasets.hdf5.H5PYDataset` also supports variable length data. Let's
+update the image features to reflect that:
+
+>>> train_image_features = [
+...     numpy.random.randint(10, size=(3, 5, 5)).astype('float32')
+...     for i in range(90)]
+>>> test_image_features = [
+...     numpy.random.randint(10, size=(3, 6, 6)).astype('float32')
+...     for i in range(10)]
+
+In this new example, training images measure 5x5 pixels whereas test images
+measure 6x6 pixels. Image sizes could also vary within the training and test
+sets; this particular arrangement is simply for illustrative purposes.
+
+First, we put the vector features and the targets inside the HDF5 file as
+before:
+
+>>> f = h5py.File('dataset.hdf5', mode='w')
+>>> f['vector_features'] = numpy.vstack(
+...     [numpy.load('train_vector_features.npy'),
+...      numpy.load('test_vector_features.npy')])
+>>> f['targets'] = numpy.vstack(
+...     [numpy.load('train_targets.npy'),
+...      numpy.load('test_targets.npy')])
+>>> f['vector_features'].dims[0].label = 'batch'
+>>> f['vector_features'].dims[1].label = 'feature'
+>>> f['targets'].dims[0].label = 'batch'
+>>> f['targets'].dims[1].label = 'index'
+
+We now have to put the variable-length images inside the HDF5 file. We can't
+do that directly, since HDF5 and h5py don't support multi-dimensional ragged
+arrays. However, there *is* support for 1D ragged arrays. Instead, we'll
+flatten the images before putting them in the HDF5 file:
+
+>>> all_image_features = train_image_features + test_image_features
+>>> dtype = h5py.special_dtype(vlen=numpy.dtype('uint8'))
+>>> image_features = f.create_dataset('image_features', (100,), dtype=dtype)
+>>> image_features[...] = [image.flatten() for image in all_image_features]
+>>> image_features.dims[0].label = 'batch'
+
+If you're feeling lost, have a look at the `dedicated tutorial on
+variable-length data`_.
+
+The images are now in the HDF5 file, but that doesn't help us unless we can
+recover their original shape. For that, we'll create a dimension scale that
+we'll attach to the ``'image_features'`` dataset using the name ``'shapes'``
+(use this *exact* name):
+
+>>> image_features_shapes = f.create_dataset(
+...     'image_features_shapes', (100, 3), dtype='uint8')
+>>> image_features_shapes[...] = numpy.array(
+...     [image.shape for image in all_image_features])
+>>> image_features.dims.create_scale(image_features_shapes, 'shapes')
+>>> image_features.dims[0].attach_scale(image_features_shapes)
+
+We'd also like to tag those variable-length dimensions with semantic
+information. We'll create another dimension scale that we'll attach to the
+``'image_features'`` dataset using the name ``'shape_labels'``
+(use this *exact* name):
+
+>>> image_features_shape_labels = f.create_dataset(
+...     'image_features_shape_labels', (3,), dtype='S7')
+>>> image_features_shape_labels[...] = [
+...     'channel'.encode('utf8'), 'height'.encode('utf8'),
+...     'width'.encode('utf8')]
+>>> image_features.dims.create_scale(
+...     image_features_shape_labels, 'shape_labels')
+>>> image_features.dims[0].attach_scale(image_features_shape_labels)
+
+The :class:`~.datasets.hdf5.H5PYDataset` class will handle things from
+there on. When image features are loaded, it will retrieve their shapes and
+do the reshape automatically.
+
+Lastly, we create the split dictionary exactly as before:
+
+>>> split_dict = {
+...     'train': {'vector_features': (0, 90), 'image_features': (0, 90),
+...               'targets': (0, 90)},
+...     'test': {'vector_features': (90, 100), 'image_features': (90, 100),
+...              'targets': (90, 100)}}
+>>> f.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+>>> f.flush()
+>>> f.close()
+
+That's it. Now let's try to retrieve some data:
+
+>>> train_set = H5PYDataset(
+...     'dataset.hdf5', which_set='train', sources=('image_features',))
+>>> print(train_set.axis_labels['image_features'])
+('batch', 'channel', 'height', 'width')
+>>> handle = train_set.open()
+>>> images, = train_set.get_data(handle, slice(0, 10))
+>>> print(images[0].shape)
+(3, 5, 5)
+>>> train_set.close(handle)
+>>> test_set = H5PYDataset(
+...     'dataset.hdf5', which_set='test', sources=('image_features',))
+>>> handle = test_set.open()
+>>> images, = test_set.get_data(handle, slice(0, 10))
+>>> print(images[0].shape)
+(3, 6, 6)
+>>> test_set.close(handle)
+
 .. doctest::
    :hide:
 
@@ -312,3 +418,4 @@ what you requested, and nothing more.
    >>> os.remove('dataset.hdf5')
 
 .. _dimension scales: http://docs.h5py.org/en/latest/high/dims.html
+.. _dedicated tutorial on variable-length data: http://docs.h5py.org/en/latest/special.html#arbitrary-vlen-data
