@@ -255,3 +255,17 @@ class TestH5PYDataset(object):
             assert_equal(val, truth)
         assert_equal(rval[1], expected_targets)
         dataset.close(handle)
+
+    def test_vlen_reshape_out_of_memory_unordered(self):
+        dataset = H5PYDataset(
+            self.vlen_h5file, which_set='train', load_in_memory=False)
+        expected_features = numpy.empty((4,), dtype=numpy.object)
+        for i, j in enumerate([0, 3, 1, 2]):
+            expected_features[i] = self.vlen_features[j]
+        expected_targets = self.vlen_targets[[0, 3, 1, 2]]
+        handle = dataset.open()
+        rval = dataset.get_data(handle, [0, 3, 1, 2])
+        for val, truth in zip(rval[0], expected_features):
+            assert_equal(val, truth)
+        assert_equal(rval[1], expected_targets)
+        dataset.close(handle)
