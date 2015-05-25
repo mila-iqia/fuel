@@ -29,6 +29,5 @@ all_converters = (
     ('cifar100', cifar100.fill_subparser),
     ('iris', iris.fill_subparser),
     ('mnist', mnist.fill_subparser),
-    ('mnist', mnist.fill_subparser),
     ('svhn', svhn.fill_subparser),
     ('toronto_face_database', toronto_face_database.fill_subparser))
