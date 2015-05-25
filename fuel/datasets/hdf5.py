@@ -111,8 +111,6 @@ class H5PYDataset(Dataset):
         at the moment, `slice.step` must be either 1 or `None`.**
     load_in_memory : bool, optional
         Whether to load the data in main memory. Defaults to `False`.
-    flatten : list of str, optional
-        Which sources to flatten as a 2D array, if any. Defaults to `None`.
     driver : str, optional
         Low-level driver to use. Defaults to `None`. See h5py
         documentation for a complete list of available options.
