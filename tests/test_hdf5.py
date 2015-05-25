@@ -89,7 +89,6 @@ class TestH5PYDataset(object):
             'width'.encode('utf8')]
         features.dims.create_scale(features_shape_labels, 'shape_labels')
         features.dims[0].attach_scale(features_shape_labels)
-
         targets = vlen_h5file.create_dataset('targets', (4, 1), dtype='uint8')
         targets[...] = self.vlen_targets
         targets.dims[0].label = 'batch'

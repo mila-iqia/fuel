@@ -360,11 +360,9 @@ class H5PYDataset(Dataset):
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:
-            rval, rval_shapes = self._in_memory_get_data(
-                state=state, request=request)
+            rval, rval_shapes = self._in_memory_get_data(state, request)
         else:
-            rval, rval_shapes = self._out_of_memory_get_data(
-                state=state, request=request)
+            rval, rval_shapes = self._out_of_memory_get_data(state, request)
         for i, shapes in enumerate(rval_shapes):
             if shapes is not None:
                 for j, (rv, sh) in enumerate(zip(rval[i], shapes)):
