@@ -76,7 +76,8 @@ class Hdf5Dataset(Dataset):
         return data
 
 
-@do_not_pickle_attributes('data_sources', 'external_file_handle')
+@do_not_pickle_attributes('data_sources', 'external_file_handle',
+                          'source_shapes')
 class H5PYDataset(Dataset):
     """An h5py-fueled HDF5 dataset.
 
@@ -122,7 +123,7 @@ class H5PYDataset(Dataset):
         indices are ordered.
 
     """
-    interface_version = '0.1'
+    interface_version = '0.2'
     _ref_counts = defaultdict(int)
     _file_handles = {}
 
@@ -227,6 +228,14 @@ class H5PYDataset(Dataset):
                 split_dict[split][source] = (start, stop, comment)
         return split_dict
 
+    @staticmethod
+    def unordered_fancy_index(request, indexable):
+        indices = numpy.argsort(request)
+        data = numpy.empty(shape=(len(request),) + indexable.shape[1:],
+                           dtype=indexable.dtype)
+        data[indices] = indexable[numpy.array(request)[indices], ...]
+        return data
+
     @property
     def split_dict(self):
         if not hasattr(self, '_split_dict'):
@@ -242,8 +251,16 @@ class H5PYDataset(Dataset):
         handle = self._file_handle
         axis_labels = {}
         for source_name in handle:
-            axis_labels[source_name] = tuple(
-                dim.label for dim in handle[source_name].dims)
+            vlen_source = (len(handle[source_name].dims) == 1
+                           and 'shapes' in handle[source_name].dims[0])
+            if vlen_source:
+                axis_labels[source_name] = (
+                    (handle[source_name].dims[0].label,) +
+                    tuple(label.decode('utf8') for label in
+                          handle[source_name].dims[0]['shape_labels']))
+            else:
+                axis_labels[source_name] = tuple(
+                    dim.label for dim in handle[source_name].dims)
         self._out_of_memory_close()
         return axis_labels
 
@@ -254,6 +271,18 @@ class H5PYDataset(Dataset):
     @property
     def provides_sources(self):
         return tuple(self.split_dict[self.which_set].keys())
+
+    @property
+    def sources_to_reshape(self):
+        if not hasattr(self, '_sources_to_reshape'):
+            self._out_of_memory_open()
+            handle = self._file_handle
+            self._sources_to_reshape = tuple(
+                source_name for source_name in self.sources if
+                len(handle[source_name].dims) == 1 and
+                'shapes' in handle[source_name].dims[0])
+            self._out_of_memory_close()
+        return self._sources_to_reshape
 
     @property
     def subsets(self):
@@ -278,15 +307,20 @@ class H5PYDataset(Dataset):
     def load(self):
         if not hasattr(self, '_external_file_handle'):
             self.external_file_handle = None
+        self._out_of_memory_open()
+        handle = self._file_handle
         if self.load_in_memory:
-            self._out_of_memory_open()
-            handle = self._file_handle
             self.data_sources = tuple(
                 handle[source_name][subset] for source_name, subset in
                 zip(self.sources, self.subsets))
-            self._out_of_memory_close()
+            self.source_shapes = tuple(
+                handle[source_name].dims[0]['shapes'][subset]
+                if source_name in self.sources_to_reshape else None
+                for source_name, subset in zip(self.sources, self.subsets))
         else:
             self.data_sources = None
+            self.source_shapes = None
+        self._out_of_memory_close()
 
     @property
     def num_examples(self):
@@ -326,35 +360,57 @@ class H5PYDataset(Dataset):
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:
-            return self._in_memory_get_data(state=state, request=request)
+            rval, rval_shapes = self._in_memory_get_data(
+                state=state, request=request)
         else:
-            return self._out_of_memory_get_data(state=state, request=request)
+            rval, rval_shapes = self._out_of_memory_get_data(
+                state=state, request=request)
+        for i, shapes in enumerate(rval_shapes):
+            if shapes is not None:
+                for j, (rv, sh) in enumerate(zip(rval[i], shapes)):
+                    rval[i][j] = rv.reshape(sh)
+        return tuple(rval)
 
     def _in_memory_get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
-        return tuple(data_source[request] for data_source in self.data_sources)
+        rval = [data_source[request] for data_source in self.data_sources]
+        rval_shapes = [shapes[request] if shapes is not None else None
+                       for shapes in self.source_shapes]
+        return rval, rval_shapes
 
     def _out_of_memory_get_data(self, state=None, request=None):
         rval = []
+        rval_shapes = []
         handle = self._file_handle
         for source_name, subset in zip(self.sources, self.subsets):
             if isinstance(request, slice):
                 req = slice(request.start + subset.start,
                             request.stop + subset.start, request.step)
                 data = handle[source_name][req]
+                if source_name in self.sources_to_reshape:
+                    data_shapes = handle[
+                        source_name].dims[0]['shapes'][req]
+                else:
+                    data_shapes = None
             elif isinstance(request, list):
                 req = [index + subset.start for index in request]
                 if self.sort_indices:
-                    indices = numpy.argsort(req)
-                    source = handle[source_name]
-                    data = numpy.empty(
-                        shape=(len(req),) + source.shape[1:],
-                        dtype=source.dtype)
-                    data[indices] = source[numpy.array(req)[indices], ...]
+                    data = self.unordered_fancy_index(req, handle[source_name])
+                    if source_name in self.sources_to_reshape:
+                        data_shapes = self.unordered_fancy_index(
+                            req, handle[source_name].dims[0]['shapes'])
+                    else:
+                        data_shapes = None
                 else:
                     data = handle[source_name][req]
+                    if source_name in self.sources_to_reshape:
+                        data_shapes = handle[
+                            source_name].dims[0]['shapes'][req]
+                    else:
+                        data_shapes = None
             else:
                 raise ValueError
             rval.append(data)
-        return tuple(rval)
+            rval_shapes.append(data_shapes)
+        return rval, rval_shapes

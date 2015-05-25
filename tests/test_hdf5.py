@@ -50,21 +50,57 @@ class TestH5PYDataset(object):
     def setUp(self):
         self.features = numpy.arange(3600, dtype='uint8').reshape((100, 36))
         self.targets = numpy.arange(30, dtype='uint8').reshape((30, 1))
-        self.h5file = h5py.File(
+        h5file = h5py.File(
             'file.hdf5', mode='w', driver='core', backing_store=False)
-        self.h5file['features'] = self.features
-        self.h5file['features'].dims[0].label = 'batch'
-        self.h5file['features'].dims[1].label = 'feature'
-        self.h5file['targets'] = self.targets
-        self.h5file['targets'].dims[0].label = 'batch'
-        self.h5file['targets'].dims[1].label = 'index'
+        h5file['features'] = self.features
+        h5file['features'].dims[0].label = 'batch'
+        h5file['features'].dims[1].label = 'feature'
+        h5file['targets'] = self.targets
+        h5file['targets'].dims[0].label = 'batch'
+        h5file['targets'].dims[1].label = 'index'
         split_dict = {'train': {'features': (0, 20, '.'), 'targets': (0, 20)},
                       'test': {'features': (20, 30, ''), 'targets': (20, 30)},
                       'unlabeled': {'features': (30, 100)}}
-        self.h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+        self.h5file = h5file
+
+        vlen_h5file = h5py.File(
+            'test_vl.hdf5', mode='w', driver='core', backing_store=False)
+        self.vlen_features = [
+            numpy.arange(12, dtype='uint8').reshape((3, 2, 2)),
+            numpy.arange(48, dtype='uint8').reshape((3, 4, 4)),
+            numpy.arange(60, dtype='uint8').reshape((3, 5, 4)),
+            numpy.arange(18, dtype='uint8').reshape((3, 2, 3))]
+        self.vlen_targets = numpy.arange(4, dtype='uint8').reshape((4, 1))
+        dtype = h5py.special_dtype(vlen=numpy.dtype('uint8'))
+        features = vlen_h5file.create_dataset('features', (4,), dtype=dtype)
+        features[...] = [d.flatten() for d in self.vlen_features]
+        features.dims[0].label = 'batch'
+        features_shapes = vlen_h5file.create_dataset(
+            'features_shapes', (4, 3), dtype='uint8')
+        features_shapes[...] = numpy.array(
+            [d.shape for d in self.vlen_features])
+        features.dims.create_scale(features_shapes, 'shapes')
+        features.dims[0].attach_scale(features_shapes)
+        features_shape_labels = vlen_h5file.create_dataset(
+            'features_shape_labels', (3,), dtype='S7')
+        features_shape_labels[...] = [
+            'channel'.encode('utf8'), 'height'.encode('utf8'),
+            'width'.encode('utf8')]
+        features.dims.create_scale(features_shape_labels, 'shape_labels')
+        features.dims[0].attach_scale(features_shape_labels)
+
+        targets = vlen_h5file.create_dataset('targets', (4, 1), dtype='uint8')
+        targets[...] = self.vlen_targets
+        targets.dims[0].label = 'batch'
+        targets.dims[1].label = 'index'
+        split_dict = {'train': {'features': (0, 4), 'targets': (0, 4)}}
+        vlen_h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+        self.vlen_h5file = vlen_h5file
 
     def tearDown(self):
         self.h5file.close()
+        self.vlen_h5file.close()
 
     def test_split_parsing(self):
         train_set = H5PYDataset(self.h5file, which_set='train')
@@ -80,9 +116,17 @@ class TestH5PYDataset(object):
                                        'targets': ('batch', 'index')}
 
     def test_pickling(self):
-        dataset = cPickle.loads(
-            cPickle.dumps(H5PYDataset(self.h5file, which_set='train')))
-        assert dataset.data_sources is None
+        try:
+            features = numpy.arange(360, dtype='uint8').reshape((10, 36))
+            h5file = h5py.File('file.hdf5', mode='w')
+            h5file['features'] = features
+            split_dict = {'train': {'features': (0, 10, '.')}}
+            h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+            dataset = cPickle.loads(
+                cPickle.dumps(H5PYDataset(h5file, which_set='train')))
+            assert dataset.data_sources is None
+        finally:
+            os.remove('file.hdf5')
 
     def test_data_stream_pickling(self):
         stream = DataStream(H5PYDataset(self.h5file, which_set='train'))
@@ -176,3 +220,39 @@ class TestH5PYDataset(object):
     def test_value_error_out_of_memory_get_data(self):
         dataset = H5PYDataset(self.h5file, which_set='train')
         assert_raises(ValueError, dataset._out_of_memory_get_data, None, True)
+
+    def test_vlen_axis_labels(self):
+        dataset = H5PYDataset(self.vlen_h5file, which_set='train')
+        assert_equal(dataset.axis_labels['features'],
+                     ('batch', 'channel', 'height', 'width'))
+        assert_equal(dataset.axis_labels['targets'], ('batch', 'index'))
+
+    def test_vlen_reshape_in_memory(self):
+        dataset = H5PYDataset(
+            self.vlen_h5file, which_set='train', subset=slice(1, 3),
+            load_in_memory=True)
+        expected_features = numpy.empty((2,), dtype=numpy.object)
+        for i, f in enumerate(self.vlen_features[1:3]):
+            expected_features[i] = f
+        expected_targets = self.vlen_targets[1:3]
+        handle = dataset.open()
+        rval = dataset.get_data(handle, slice(0, 2))
+        for val, truth in zip(rval[0], expected_features):
+            assert_equal(val, truth)
+        assert_equal(rval[1], expected_targets)
+        dataset.close(handle)
+
+    def test_vlen_reshape_out_of_memory(self):
+        dataset = H5PYDataset(
+            self.vlen_h5file, which_set='train', subset=slice(1, 3),
+            load_in_memory=False)
+        expected_features = numpy.empty((2,), dtype=numpy.object)
+        for i, f in enumerate(self.vlen_features[1:3]):
+            expected_features[i] = f
+        expected_targets = self.vlen_targets[1:3]
+        handle = dataset.open()
+        rval = dataset.get_data(handle, slice(0, 2))
+        for val, truth in zip(rval[0], expected_features):
+            assert_equal(val, truth)
+        assert_equal(rval[1], expected_targets)
+        dataset.close(handle)
