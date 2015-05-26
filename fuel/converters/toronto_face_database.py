@@ -1,5 +1,4 @@
 import os
-
 import h5py
 
 from scipy.io import loadmat
@@ -10,22 +9,21 @@ ALL_FILES = ['TFD_48x48.mat']
 
 
 @check_exists(required_files=ALL_FILES)
-def convert_toronto_face_database(input_directory, output_fname):
+def convert_toronto_face_database(directory, output_file):
     """Converts the Toronto Face Database to HDF5.
 
     ToDo
 
     Parameters
     ----------
-    input_directory : str
+    directory : str
         Directory in which the required input files reside.
-    output_fname : str
+    output_file : str
         Where to save the converted dataset.
 
     """
-    with h5py.File(output_fname, mode="w") as h5file:
-
-        tfd = loadmat(os.path.join(input_directory, 'TFD_48x48.mat'))
+    with h5py.File(output_file, mode="w") as h5file:
+        tfd = loadmat(os.path.join(directory, 'TFD_48x48.mat'))
 
         folds = tfd['folds']
         features = tfd['images'].reshape([-1, 1, 48, 48])

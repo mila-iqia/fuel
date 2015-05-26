@@ -8,10 +8,10 @@ from fuel.transformers.defaults import uint8_pixels_to_floatX
 
 class TorontoFaceDatabase(H5PYDataset):
     u"""
-    
+
     Parameters
     ----------
-    which_set : 
+    which_set :
 
     """
     filename = 'toronto_face_database.hdf5'
@@ -20,9 +20,7 @@ class TorontoFaceDatabase(H5PYDataset):
     def __init__(self, which_set, **kwargs):
         kwargs.setdefault('load_in_memory', True)
         super(TorontoFaceDatabase, self).__init__(
-            self.data_path, 
-            which_set,
-            **kwargs)
+            self.data_path, which_set, **kwargs)
 
     @property
     def data_path(self):
