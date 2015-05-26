@@ -305,16 +305,21 @@ Variable-length data
 :class:`~.datasets.hdf5.H5PYDataset` also supports variable length data. Let's
 update the image features to reflect that:
 
->>> train_image_features = [
-...     numpy.random.randint(10, size=(3, 5, 5)).astype('float32')
-...     for i in range(90)]
->>> test_image_features = [
-...     numpy.random.randint(10, size=(3, 6, 6)).astype('float32')
-...     for i in range(10)]
+.. doctest::
+   :hide:
 
-In this new example, training images measure 5x5 pixels whereas test images
-measure 6x6 pixels. Image sizes could also vary within the training and test
-sets; this particular arrangement is simply for illustrative purposes.
+   >>> numpy.random.seed(1234)
+
+>>> sizes = numpy.random.randint(3, 9, size=(100,))
+>>> train_image_features = [
+...     numpy.random.randint(256, size=(3, size, size)).astype('uint8')
+...     for size in sizes[:90]]
+>>> test_image_features = [
+...     numpy.random.randint(256, size=(3, size, size)).astype('uint8')
+...     for size in sizes[90:]]
+
+In this new example, images have random shapes ranging from 3x3 pixels to 8x8
+pixels.
 
 First, we put the vector features and the targets inside the HDF5 file as
 before:
@@ -394,15 +399,15 @@ That's it. Now let's try to retrieve some data:
 ('batch', 'channel', 'height', 'width')
 >>> handle = train_set.open()
 >>> images, = train_set.get_data(handle, slice(0, 10))
->>> print(images[0].shape)
-(3, 5, 5)
+>>> print(images[0].shape, images[1].shape)
+(3, 6, 6) (3, 8, 8)
 >>> train_set.close(handle)
 >>> test_set = H5PYDataset(
 ...     'dataset.hdf5', which_set='test', sources=('image_features',))
 >>> handle = test_set.open()
 >>> images, = test_set.get_data(handle, slice(0, 10))
->>> print(images[0].shape)
-(3, 6, 6)
+>>> print(images[0].shape, images[1].shape)
+(3, 7, 7) (3, 4, 4)
 >>> test_set.close(handle)
 
 .. doctest::
