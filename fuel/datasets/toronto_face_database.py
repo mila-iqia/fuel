@@ -7,13 +7,36 @@ from fuel.transformers.defaults import uint8_pixels_to_floatX
 
 
 class TorontoFaceDatabase(H5PYDataset):
-    u"""
+    u"""Toronto Face Database.
+
+    The Toronto Face Dataset [TFD] contains face images from 8 different
+    sources subsumed into a common dataset. To homogenize the images they
+    where all centered and cropped using a face detector.
+
+    In order to use this dataset you need to get the permissions/licenses
+    from all sources:
+
+    ======== ================================================================ ===== ==================================  
+    Dataset  URL                                                              Price Notes
+    ======== ================================================================ ===== ==================================
+    JACFEE   http://www.humintell.com/for-use-in-research/                    $175  Get the Standard Expressor version
+    POFA     http://www.paulekman.com/product/pictures-of-facial-affect-pofa/ $175
+    KDEF     http://www.emotionlab.se/resources/kdef
+    CK+      http://www.pitt.edu/~emotion/ck-spread.htm
+    MMI      http://www.mmifacedb.com/
+    MSFDE    http://psychophysiolab.com/msfde/terms.php
+    NimStim  http://www.macbrain.org/resources.htm
+    RadBound http://www.socsci.ru.nl:8180/RaFD2/RaFD?p=register
+
+    .. [TFD] Joshua Susskind, Adam Anderson, and Geoffrey Hinton,
+       *The Toronto Face Database*,
+       Technical Report, July 2010, UTML TR 2010—001.
 
     Parameters
     ----------
     which_set :
 
-    """
+    """  # noqa
     filename = 'toronto_face_database.hdf5'
     default_transformers = uint8_pixels_to_floatX(('features',))
 
