@@ -391,24 +391,27 @@ Lastly, we create the split dictionary exactly as before:
 >>> f.flush()
 >>> f.close()
 
-That's it. Now let's try to retrieve some data:
+That's it. Now let's kick the tires a little. The axis labels appear as they
+should:
 
 >>> train_set = H5PYDataset(
 ...     'dataset.hdf5', which_set='train', sources=('image_features',))
 >>> print(train_set.axis_labels['image_features'])
 ('batch', 'channel', 'height', 'width')
+
+:class:`~.datasets.hdf5.H5PYDataset` retrieves images of different shapes and
+automatically unflattens them:
+
 >>> handle = train_set.open()
 >>> images, = train_set.get_data(handle, slice(0, 10))
+>>> train_set.close(handle)
 >>> print(images[0].shape, images[1].shape)
 (3, 6, 6) (3, 8, 8)
->>> train_set.close(handle)
->>> test_set = H5PYDataset(
-...     'dataset.hdf5', which_set='test', sources=('image_features',))
->>> handle = test_set.open()
->>> images, = test_set.get_data(handle, slice(0, 10))
->>> print(images[0].shape, images[1].shape)
-(3, 7, 7) (3, 4, 4)
->>> test_set.close(handle)
+
+The object returned by ``get_data`` is a 1D numpy array of objects:
+
+>>> print(type(images), images.dtype, images.shape) # doctest: +ELLIPSIS
+<... 'numpy.ndarray'> object (10,)
 
 .. doctest::
    :hide:
