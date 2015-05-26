@@ -4,7 +4,7 @@ from collections import defaultdict, OrderedDict
 import h5py
 import numpy
 import tables
-from six.moves import zip
+from six.moves import zip, range
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
@@ -360,26 +360,26 @@ class H5PYDataset(Dataset):
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:
-            data, data_shapes = self._in_memory_get_data(state, request)
+            data, shapes = self._in_memory_get_data(state, request)
         else:
-            data, data_shapes = self._out_of_memory_get_data(state, request)
-        for i, shapes in enumerate(data_shapes):
-            if shapes is not None:
-                for j, (val, shape) in enumerate(zip(data[i], shapes)):
-                    data[i][j] = val.reshape(shape)
+            data, shapes = self._out_of_memory_get_data(state, request)
+        for i in range(len(data)):
+            if shapes[i] is not None:
+                for j in range(len(data[i])):
+                    data[i][j] = data[i][j].reshape(shapes[i][j])
         return tuple(data)
 
     def _in_memory_get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
         data = [data_source[request] for data_source in self.data_sources]
-        data_shapes = [shapes[request] if shapes is not None else None
-                       for shapes in self.source_shapes]
-        return data, data_shapes
+        shapes = [shape[request] if shape is not None else None
+                  for shape in self.source_shapes]
+        return data, shapes
 
     def _out_of_memory_get_data(self, state=None, request=None):
         data = []
-        data_shapes = []
+        shapes = []
         handle = self._file_handle
         for source_name, subset in zip(self.sources, self.subsets):
             if isinstance(request, slice):
@@ -410,5 +410,5 @@ class H5PYDataset(Dataset):
             else:
                 raise ValueError
             data.append(val)
-            data_shapes.append(shape)
-        return data, data_shapes
+            shapes.append(shape)
+        return data, shapes
