@@ -360,55 +360,55 @@ class H5PYDataset(Dataset):
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:
-            rval, rval_shapes = self._in_memory_get_data(state, request)
+            data, data_shapes = self._in_memory_get_data(state, request)
         else:
-            rval, rval_shapes = self._out_of_memory_get_data(state, request)
-        for i, shapes in enumerate(rval_shapes):
+            data, data_shapes = self._out_of_memory_get_data(state, request)
+        for i, shapes in enumerate(data_shapes):
             if shapes is not None:
-                for j, (rv, sh) in enumerate(zip(rval[i], shapes)):
-                    rval[i][j] = rv.reshape(sh)
-        return tuple(rval)
+                for j, (val, shape) in enumerate(zip(data[i], shapes)):
+                    data[i][j] = val.reshape(shape)
+        return tuple(data)
 
     def _in_memory_get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
-        rval = [data_source[request] for data_source in self.data_sources]
-        rval_shapes = [shapes[request] if shapes is not None else None
+        data = [data_source[request] for data_source in self.data_sources]
+        data_shapes = [shapes[request] if shapes is not None else None
                        for shapes in self.source_shapes]
-        return rval, rval_shapes
+        return data, data_shapes
 
     def _out_of_memory_get_data(self, state=None, request=None):
-        rval = []
-        rval_shapes = []
+        data = []
+        data_shapes = []
         handle = self._file_handle
         for source_name, subset in zip(self.sources, self.subsets):
             if isinstance(request, slice):
                 req = slice(request.start + subset.start,
                             request.stop + subset.start, request.step)
-                data = handle[source_name][req]
+                val = handle[source_name][req]
                 if source_name in self.sources_to_reshape:
-                    data_shapes = handle[
+                    shape = handle[
                         source_name].dims[0]['shapes'][req]
                 else:
-                    data_shapes = None
+                    shape = None
             elif isinstance(request, list):
                 req = [index + subset.start for index in request]
                 if self.sort_indices:
-                    data = self.unordered_fancy_index(req, handle[source_name])
+                    val = self.unordered_fancy_index(req, handle[source_name])
                     if source_name in self.sources_to_reshape:
-                        data_shapes = self.unordered_fancy_index(
+                        shape = self.unordered_fancy_index(
                             req, handle[source_name].dims[0]['shapes'])
                     else:
-                        data_shapes = None
+                        shape = None
                 else:
-                    data = handle[source_name][req]
+                    val = handle[source_name][req]
                     if source_name in self.sources_to_reshape:
-                        data_shapes = handle[
+                        shape = handle[
                             source_name].dims[0]['shapes'][req]
                     else:
-                        data_shapes = None
+                        shape = None
             else:
                 raise ValueError
-            rval.append(data)
-            rval_shapes.append(data_shapes)
-        return rval, rval_shapes
+            data.append(val)
+            data_shapes.append(shape)
+        return data, data_shapes
