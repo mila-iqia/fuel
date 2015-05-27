@@ -210,16 +210,16 @@ def convert_svhn_format_1(directory, output_file):
         split_dict = {
             'train': {
                 'features': train_interval, 'targets': train_interval,
-                'bbox_height': train_interval, 'bbox_width': train_interval,
-                'bbox_left': train_interval, 'bbox_top': train_interval},
+                'bbox_heights': train_interval, 'bbox_widths': train_interval,
+                'bbox_lefts': train_interval, 'bbox_tops': train_interval},
             'test': {
                 'features': test_interval, 'targets': test_interval,
-                'bbox_height': test_interval, 'bbox_width': test_interval,
-                'bbox_left': test_interval, 'bbox_top': test_interval},
+                'bbox_heights': test_interval, 'bbox_widths': test_interval,
+                'bbox_lefts': test_interval, 'bbox_tops': test_interval},
             'extra': {
                 'features': extra_interval, 'targets': extra_interval,
-                'bbox_height': extra_interval, 'bbox_width': extra_interval,
-                'bbox_left': extra_interval, 'bbox_top': extra_interval}}
+                'bbox_heights': extra_interval, 'bbox_widths': extra_interval,
+                'bbox_lefts': extra_interval, 'bbox_tops': extra_interval}}
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     finally:
         h5file.flush()
