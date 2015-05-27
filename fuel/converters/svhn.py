@@ -11,6 +11,7 @@ from six.moves import range
 from PIL import Image
 
 from fuel.converters.base import fill_hdf5_file, check_exists, progress_bar
+from fuel.datasets import H5PYDataset
 
 
 FORMAT_1_FILES = ['{}.tar.gz'.format(s) for s in ['train', 'test', 'extra']]
@@ -202,6 +203,24 @@ def convert_svhn_format_1(directory, output_file):
                 split='extra', h5file=h5file, num_examples=num_extra,
                 offset=num_train + num_test, base_path=TMPDIR,
                 boxes_and_labels=extra_boxes_and_labels, bar=bar)
+
+        train_interval = (0, num_train)
+        test_interval = (num_train, num_train + num_test)
+        extra_interval = (num_train + num_test, num_examples)
+        split_dict = {
+            'train': {
+                'features': train_interval, 'targets': train_interval,
+                'bbox_height': train_interval, 'bbox_width': train_interval,
+                'bbox_left': train_interval, 'bbox_top': train_interval},
+            'test': {
+                'features': test_interval, 'targets': test_interval,
+                'bbox_height': test_interval, 'bbox_width': test_interval,
+                'bbox_left': test_interval, 'bbox_top': test_interval},
+            'extra': {
+                'features': extra_interval, 'targets': extra_interval,
+                'bbox_height': extra_interval, 'bbox_width': extra_interval,
+                'bbox_left': extra_interval, 'bbox_top': extra_interval}}
+        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
     finally:
         h5file.flush()
         h5file.close()
