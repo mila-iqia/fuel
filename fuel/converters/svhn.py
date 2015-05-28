@@ -57,7 +57,7 @@ def convert_svhn_format_1(directory, output_file):
                              [(source, 'uint16') for source in sources[2:]])
         source_shape_labels = dict(
             [('features', ('channel', 'height', 'width')),
-             ('targets', 'index')] +
+             ('targets', ('index',))] +
             [(source, ('bounding_box',)) for source in sources[2:]])
 
         def extract_tar(split):
