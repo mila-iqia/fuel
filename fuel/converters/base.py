@@ -117,7 +117,7 @@ def fill_hdf5_file(h5file, data):
 
 
 @contextmanager
-def progress_bar(name, maxval):
+def progress_bar(name, maxval, prefix='Converting'):
     """Manages a progress bar for a conversion.
 
     Parameters
@@ -128,7 +128,7 @@ def progress_bar(name, maxval):
         Total number of steps for the conversion.
 
     """
-    widgets = ['Converting {}: '.format(name), Percentage(), ' ',
+    widgets = ['{} {}: '.format(prefix, name), Percentage(), ' ',
                Bar(marker='=', left='[', right=']'), ' ', ETA()]
     bar = ProgressBar(widgets=widgets, maxval=maxval, fd=sys.stdout).start()
     try:
