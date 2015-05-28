@@ -230,6 +230,23 @@ class H5PYDataset(Dataset):
 
     @staticmethod
     def unordered_fancy_index(request, indexable):
+        """Safe list indexing.
+
+        Some objects, such as h5py datasets, only support list indexing
+        if the list is ordered.
+
+        This static method adds support for unordered list indexing by
+        ordering the requested indices, accessing the corresponding
+        elements and re-shuffling the result.
+
+        Parameters
+        ----------
+        request : list of int
+            Unordered list of example indices.
+        indexable : any fancy-indexable object
+            Indexable we'd like to do unordered fancy indexing on.
+
+        """
         if len(request) > 1:
             indices = numpy.argsort(request)
             data = numpy.empty(shape=(len(request),) + indexable.shape[1:],
