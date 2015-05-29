@@ -4,7 +4,7 @@ from collections import defaultdict, OrderedDict
 import h5py
 import numpy
 import tables
-from six.moves import zip
+from six.moves import zip, range
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes
@@ -76,7 +76,8 @@ class Hdf5Dataset(Dataset):
         return data
 
 
-@do_not_pickle_attributes('data_sources', 'external_file_handle')
+@do_not_pickle_attributes('data_sources', 'external_file_handle',
+                          'source_shapes')
 class H5PYDataset(Dataset):
     """An h5py-fueled HDF5 dataset.
 
@@ -122,7 +123,7 @@ class H5PYDataset(Dataset):
         indices are ordered.
 
     """
-    interface_version = '0.1'
+    interface_version = '0.2'
     _ref_counts = defaultdict(int)
     _file_handles = {}
 
@@ -227,6 +228,34 @@ class H5PYDataset(Dataset):
                 split_dict[split][source] = (start, stop, comment)
         return split_dict
 
+    @staticmethod
+    def unsorted_fancy_index(request, indexable):
+        """Safe unsorted list indexing.
+
+        Some objects, such as h5py datasets, only support list indexing
+        if the list is sorted.
+
+        This static method adds support for unsorted list indexing by
+        sorting the requested indices, accessing the corresponding
+        elements and re-shuffling the result.
+
+        Parameters
+        ----------
+        request : list of int
+            Unsorted list of example indices.
+        indexable : any fancy-indexable object
+            Indexable we'd like to do unsorted fancy indexing on.
+
+        """
+        if len(request) > 1:
+            indices = numpy.argsort(request)
+            data = numpy.empty(shape=(len(request),) + indexable.shape[1:],
+                               dtype=indexable.dtype)
+            data[indices] = indexable[numpy.array(request)[indices], ...]
+        else:
+            data = indexable[request]
+        return data
+
     @property
     def split_dict(self):
         if not hasattr(self, '_split_dict'):
@@ -242,8 +271,14 @@ class H5PYDataset(Dataset):
         handle = self._file_handle
         axis_labels = {}
         for source_name in handle:
-            axis_labels[source_name] = tuple(
-                dim.label for dim in handle[source_name].dims)
+            if source_name in self.vlen_sources:
+                axis_labels[source_name] = (
+                    (handle[source_name].dims[0].label,) +
+                    tuple(label.decode('utf8') for label in
+                          handle[source_name].dims[0]['shape_labels']))
+            else:
+                axis_labels[source_name] = tuple(
+                    dim.label for dim in handle[source_name].dims)
         self._out_of_memory_close()
         return axis_labels
 
@@ -254,6 +289,23 @@ class H5PYDataset(Dataset):
     @property
     def provides_sources(self):
         return tuple(self.split_dict[self.which_set].keys())
+
+    @property
+    def vlen_sources(self):
+        if not hasattr(self, '_vlen_sources'):
+            self._out_of_memory_open()
+            handle = self._file_handle
+            vlen_sources = []
+            for source_name in self.sources:
+                source = handle[source_name]
+                if len(source.dims) > 0 and 'shapes' in source.dims[0]:
+                    if len(source.dims) > 1:
+                        raise ValueError('Variable-length sources must have '
+                                         'only one dimension.')
+                    vlen_sources.append(source_name)
+            self._vlen_sources = tuple(vlen_sources)
+            self._out_of_memory_close()
+        return self._vlen_sources
 
     @property
     def subsets(self):
@@ -278,15 +330,20 @@ class H5PYDataset(Dataset):
     def load(self):
         if not hasattr(self, '_external_file_handle'):
             self.external_file_handle = None
+        self._out_of_memory_open()
+        handle = self._file_handle
         if self.load_in_memory:
-            self._out_of_memory_open()
-            handle = self._file_handle
             self.data_sources = tuple(
                 handle[source_name][subset] for source_name, subset in
                 zip(self.sources, self.subsets))
-            self._out_of_memory_close()
+            self.source_shapes = tuple(
+                handle[source_name].dims[0]['shapes'][subset]
+                if source_name in self.vlen_sources else None
+                for source_name, subset in zip(self.sources, self.subsets))
         else:
             self.data_sources = None
+            self.source_shapes = None
+        self._out_of_memory_close()
 
     @property
     def num_examples(self):
@@ -326,35 +383,55 @@ class H5PYDataset(Dataset):
 
     def get_data(self, state=None, request=None):
         if self.load_in_memory:
-            return self._in_memory_get_data(state=state, request=request)
+            data, shapes = self._in_memory_get_data(state, request)
         else:
-            return self._out_of_memory_get_data(state=state, request=request)
+            data, shapes = self._out_of_memory_get_data(state, request)
+        for i in range(len(data)):
+            if shapes[i] is not None:
+                for j in range(len(data[i])):
+                    data[i][j] = data[i][j].reshape(shapes[i][j])
+        return tuple(data)
 
     def _in_memory_get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
-        return tuple(data_source[request] for data_source in self.data_sources)
+        data = [data_source[request] for data_source in self.data_sources]
+        shapes = [shape[request] if shape is not None else None
+                  for shape in self.source_shapes]
+        return data, shapes
 
     def _out_of_memory_get_data(self, state=None, request=None):
-        rval = []
+        data = []
+        shapes = []
         handle = self._file_handle
         for source_name, subset in zip(self.sources, self.subsets):
             if isinstance(request, slice):
                 req = slice(request.start + subset.start,
                             request.stop + subset.start, request.step)
-                data = handle[source_name][req]
+                val = handle[source_name][req]
+                if source_name in self.vlen_sources:
+                    shape = handle[
+                        source_name].dims[0]['shapes'][req]
+                else:
+                    shape = None
             elif isinstance(request, list):
                 req = [index + subset.start for index in request]
                 if self.sort_indices:
-                    indices = numpy.argsort(req)
-                    source = handle[source_name]
-                    data = numpy.empty(
-                        shape=(len(req),) + source.shape[1:],
-                        dtype=source.dtype)
-                    data[indices] = source[numpy.array(req)[indices], ...]
+                    val = self.unsorted_fancy_index(req, handle[source_name])
+                    if source_name in self.vlen_sources:
+                        shape = self.unsorted_fancy_index(
+                            req, handle[source_name].dims[0]['shapes'])
+                    else:
+                        shape = None
                 else:
-                    data = handle[source_name][req]
+                    val = handle[source_name][req]
+                    if source_name in self.vlen_sources:
+                        shape = handle[
+                            source_name].dims[0]['shapes'][req]
+                    else:
+                        shape = None
             else:
                 raise ValueError
-            rval.append(data)
-        return tuple(rval)
+            data.append(val)
+            shapes.append(shape)
+        return data, shapes
