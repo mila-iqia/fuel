@@ -226,6 +226,14 @@ class TestH5PYDataset(object):
                      ('batch', 'channel', 'height', 'width'))
         assert_equal(dataset.axis_labels['targets'], ('batch', 'index'))
 
+    def test_vlen_sources_raises_error_on_dim_gt_1(self):
+        targets = self.vlen_h5file['targets']
+        targets_shapes = self.vlen_h5file.create_dataset(
+            'targets_shapes', (4, 1), dtype='uint8')
+        targets.dims.create_scale(targets_shapes, 'shapes')
+        targets.dims[0].attach_scale(targets_shapes)
+        assert_raises(ValueError, H5PYDataset, self.vlen_h5file, 'train')
+
     def test_vlen_reshape_in_memory(self):
         dataset = H5PYDataset(
             self.vlen_h5file, which_set='train', subset=slice(1, 3),
