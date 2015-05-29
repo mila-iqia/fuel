@@ -235,8 +235,10 @@ class TestH5PYDataset(object):
         h5file['features'].dims[1].label = 'feature'
         h5file['train_features_subset'] = numpy.arange(0, 10, 2)
         h5file['test_features_subset'] = numpy.arange(1, 10, 2)
-        h5file['features'].attrs['train_subset'] = h5file['train_features_subset'].ref
-        h5file['features'].attrs['test_subset'] = h5file['test_features_subset'].ref
+        h5file['features'].attrs['train_subset'] = h5file[
+            'train_features_subset'].ref
+        h5file['features'].attrs['test_subset'] = h5file[
+            'test_features_subset'].ref
         split_dict = {'train': {'features': (-1, -1, '.')},
                       'test': {'features': (-1, -1, '')}}
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
@@ -256,8 +258,10 @@ class TestH5PYDataset(object):
         h5file['features'].dims[1].label = 'feature'
         h5file['train_features_subset'] = numpy.arange(0, 10, 2)
         h5file['test_features_subset'] = numpy.arange(1, 10, 2)
-        h5file['features'].attrs['train_subset'] = h5file['train_features_subset'].ref
-        h5file['features'].attrs['test_subset'] = h5file['test_features_subset'].ref
+        h5file['features'].attrs['train_subset'] = h5file[
+            'train_features_subset'].ref
+        h5file['features'].attrs['test_subset'] = h5file[
+            'test_features_subset'].ref
         split_dict = {'train': {'features': (-1, -1, '.')},
                       'test': {'features': (-1, -1, '')}}
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
