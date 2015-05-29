@@ -276,7 +276,8 @@ class H5PYDataset(Dataset):
                 split, source, start, stop, available, comment = row
                 if start < 0 and stop < 0:
                     stop = handle[
-                        handle[source].attrs['{}_subset'.format(split.decode('utf8'))]][...]
+                        handle[source].attrs[
+                            '{}_subset'.format(split.decode('utf8'))]][...]
                 split_array.append(
                     (split, source, start, stop, available, comment))
             self._split_dict = H5PYDataset.parse_split_array(split_array)
