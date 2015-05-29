@@ -425,7 +425,7 @@ class TestSVHN(object):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
-    def test_format_1_converter_not_implemented(self):
+    def test_format_1_converter(self):
         filename = os.path.join(self.tempdir, 'svhn_format_1.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
