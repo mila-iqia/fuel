@@ -226,6 +226,22 @@ class TestH5PYDataset(object):
         dataset = H5PYDataset(self.h5file, which_set='train')
         assert_raises(ValueError, dataset._out_of_memory_get_data, None, True)
 
+    def test_index_subset_sorted(self):
+        dataset = H5PYDataset(self.h5file, which_set='train', subset=[0, 2, 4])
+        handle = dataset.open()
+        request = slice(0, 3)
+        assert_equal(dataset.get_data(handle, request),
+                     (self.features[[0, 2, 4]], self.targets[[0, 2, 4]]))
+        dataset.close(handle)
+
+    def test_index_subset_unsorted(self):
+        dataset = H5PYDataset(self.h5file, which_set='train', subset=[0, 4, 2])
+        handle = dataset.open()
+        request = slice(0, 3)
+        assert_equal(dataset.get_data(handle, request),
+                     (self.features[[0, 4, 2]], self.targets[[0, 4, 2]]))
+        dataset.close(handle)
+
     def test_vlen_axis_labels(self):
         dataset = H5PYDataset(self.vlen_h5file, which_set='train')
         assert_equal(dataset.axis_labels['features'],

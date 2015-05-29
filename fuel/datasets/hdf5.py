@@ -155,7 +155,7 @@ class H5PYDataset(Dataset):
                 "{}.".format(self.available_splits))
         self.which_set = which_set
         subset = subset if subset else slice(None)
-        if subset.step not in (1, None):
+        if hasattr(subset, 'step') and subset.step not in (1, None):
             raise ValueError("subset.step must be either 1 or None")
         self._subset_template = subset
         self.load_in_memory = load_in_memory
@@ -325,14 +325,19 @@ class H5PYDataset(Dataset):
             for i, source_name in enumerate(self.sources):
                 start, stop = self.split_dict[self.which_set][source_name][:2]
                 subset = subsets[i]
-                subset = slice(
-                    start if subset.start is None else subset.start,
-                    stop if subset.stop is None else subset.stop,
-                    subset.step)
-                subsets[i] = subset
+                if hasattr(subset, 'step'):
+                    subset = slice(
+                        start if subset.start is None else subset.start,
+                        stop if subset.stop is None else subset.stop,
+                        subset.step)
+                    subsets[i] = subset
+                    subset_num_examples = subset.stop - subset.start
+                else:
+                    subsets[i] = numpy.arange(start, stop)[subset]
+                    subset_num_examples = len(subset)
                 if num_examples is None:
-                    num_examples = subset.stop - subset.start
-                if num_examples != subset.stop - subset.start:
+                    num_examples = subset_num_examples
+                if num_examples != subset_num_examples:
                     raise ValueError("sources have different lengths")
             self._subsets = subsets
         return self._subsets
@@ -357,7 +362,10 @@ class H5PYDataset(Dataset):
 
     @property
     def num_examples(self):
-        return self.subsets[0].stop - self.subsets[0].start
+        if hasattr(self.subsets[0], 'step'):
+            return self.subsets[0].stop - self.subsets[0].start
+        else:
+            return len(self.subsets[0])
 
     def open(self):
         return None if self.load_in_memory else self._out_of_memory_open()
@@ -411,21 +419,27 @@ class H5PYDataset(Dataset):
         return data, shapes
 
     def _out_of_memory_get_data(self, state=None, request=None):
+        if not isinstance(request, (slice, list)):
+            raise ValueError()
         data = []
         shapes = []
         handle = self._file_handle
         for source_name, subset in zip(self.sources, self.subsets):
-            if isinstance(request, slice):
-                req = slice(request.start + subset.start,
-                            request.stop + subset.start, request.step)
+            if hasattr(subset, 'step'):
+                if isinstance(request, slice):
+                    req = slice(request.start + subset.start,
+                                request.stop + subset.start, request.step)
+                else:
+                    req = [index + subset.start for index in request]
+            else:
+                req = subset[request]
+            if hasattr(req, 'step'):
                 val = handle[source_name][req]
                 if source_name in self.vlen_sources:
-                    shape = handle[
-                        source_name].dims[0]['shapes'][req]
+                    shape = handle[source_name].dims[0]['shapes'][req]
                 else:
                     shape = None
-            elif isinstance(request, list):
-                req = [index + subset.start for index in request]
+            else:
                 if self.sort_indices:
                     val = self.unsorted_fancy_index(req, handle[source_name])
                     if source_name in self.vlen_sources:
@@ -436,12 +450,9 @@ class H5PYDataset(Dataset):
                 else:
                     val = handle[source_name][req]
                     if source_name in self.vlen_sources:
-                        shape = handle[
-                            source_name].dims[0]['shapes'][req]
+                        shape = handle[source_name].dims[0]['shapes'][req]
                     else:
                         shape = None
-            else:
-                raise ValueError
             data.append(val)
             shapes.append(shape)
         return data, shapes
