@@ -133,7 +133,7 @@ class H5PYDataset(Dataset):
         indices are ordered.
 
     """
-    interface_version = '0.2'
+    interface_version = '0.3'
     _ref_counts = defaultdict(int)
     _file_handles = {}
 
@@ -186,7 +186,7 @@ class H5PYDataset(Dataset):
         for split in split_dict.values():
             sources |= set(split.keys())
             for val in split.values():
-                if len(val) == 3:
+                if len(val) == 4:
                     comment_len = max([comment_len, len(val[-1])])
         sources = sorted(list(sources))
         source_len = max(len(source) for source in sources)
@@ -197,7 +197,9 @@ class H5PYDataset(Dataset):
             dtype=numpy.dtype([
                 ('split', 'a', split_len),
                 ('source', 'a', source_len),
-                ('start', numpy.int64, 1), ('stop', numpy.int64, 1),
+                ('start', numpy.int64, 1),
+                ('stop', numpy.int64, 1),
+                ('indices', h5py.special_dtype(ref=h5py.Reference)),
                 ('available', numpy.bool, 1),
                 ('comment', 'a', comment_len)]))
 
@@ -206,19 +208,24 @@ class H5PYDataset(Dataset):
             if source in split_dict[split]:
                 start, stop = split_dict[split][source][:2]
                 available = True
+                indices = h5py.Reference()
                 # Workaround for bug when pickling an empty string
                 comment = '.'
-                if len(split_dict[split][source]) == 3:
-                    comment = split_dict[split][source][2]
+                if len(split_dict[split][source]) > 2:
+                    indices = split_dict[split][source][2]
+                if len(split_dict[split][source]) > 3:
+                    comment = split_dict[split][source][3]
                     if not comment:
                         comment = '.'
             else:
-                (start, stop, available, comment) = (0, 0, False, '.')
+                (start, stop, indices, available, comment) = (
+                    0, 0, h5py.Reference(), False, '.')
             # Workaround for H5PY being unable to store unicode type
             split_array[i]['split'] = split.encode('utf8')
             split_array[i]['source'] = source.encode('utf8')
             split_array[i]['start'] = start
             split_array[i]['stop'] = stop
+            split_array[i]['indices'] = indices
             split_array[i]['available'] = available
             split_array[i]['comment'] = comment.encode('utf8')
 
@@ -228,14 +235,14 @@ class H5PYDataset(Dataset):
     def parse_split_array(split_array):
         split_dict = OrderedDict()
         for row in split_array:
-            split, source, start, stop, available, comment = row
+            split, source, start, stop, indices, available, comment = row
             split = split.decode('utf8')
             source = source.decode('utf8')
             comment = comment.decode('utf8')
             if available:
                 if split not in split_dict:
                     split_dict[split] = OrderedDict()
-                split_dict[split][source] = (start, stop, comment)
+                split_dict[split][source] = (start, stop, indices, comment)
         return split_dict
 
     @staticmethod
@@ -271,15 +278,7 @@ class H5PYDataset(Dataset):
         if not hasattr(self, '_split_dict'):
             self._out_of_memory_open()
             handle = self._file_handle
-            split_array = []
-            for row in handle.attrs['split']:
-                split, source, start, stop, available, comment = row
-                if start < 0 and stop < 0:
-                    stop = handle[
-                        handle[source].attrs[
-                            '{}_subset'.format(split.decode('utf8'))]][...]
-                split_array.append(
-                    (split, source, start, stop, available, comment))
+            split_array = handle.attrs['split']
             self._split_dict = H5PYDataset.parse_split_array(split_array)
             self._out_of_memory_close()
         return self._split_dict
@@ -328,12 +327,15 @@ class H5PYDataset(Dataset):
     @property
     def subsets(self):
         if not hasattr(self, '_subsets'):
+            self._out_of_memory_open()
+            handle = self._file_handle
             subsets = [self._subset_template for source in self.sources]
             num_examples = None
             for i, source_name in enumerate(self.sources):
-                start, stop = self.split_dict[self.which_set][source_name][:2]
-                if start < 0:
-                    source_subset = stop
+                start, stop, indices = self.split_dict[
+                    self.which_set][source_name][:3]
+                if indices:
+                    source_subset = handle[indices]
                 else:
                     source_subset = slice(start, stop)
                 subset = subsets[i]
@@ -357,6 +359,7 @@ class H5PYDataset(Dataset):
                 if num_examples != subset_num_examples:
                     raise ValueError("sources have different lengths")
             self._subsets = subsets
+            self._out_of_memory_close()
         return self._subsets
 
     def load(self):

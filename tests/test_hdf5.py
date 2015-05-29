@@ -64,9 +64,9 @@ class TestH5PYDataset(object):
         h5file['targets'] = self.targets
         h5file['targets'].dims[0].label = 'batch'
         h5file['targets'].dims[1].label = 'index'
-        split_dict = {'train': {'features': (0, 20, '.'), 'targets': (0, 20)},
-                      'test': {'features': (20, 30, ''), 'targets': (20, 30)},
-                      'unlabeled': {'features': (30, 100)}}
+        split_dict = {'train': {'features': (0, 20, None), 'targets': (0, 20)},
+                      'test': {'features': (20, 30), 'targets': (20, 30)},
+                      'unlabeled': {'features': (30, 100, None, '.')}}
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         self.h5file = h5file
 
@@ -125,7 +125,7 @@ class TestH5PYDataset(object):
             features = numpy.arange(360, dtype='uint16').reshape((10, 36))
             h5file = h5py.File('file.hdf5', mode='w')
             h5file['features'] = features
-            split_dict = {'train': {'features': (0, 10, '.')}}
+            split_dict = {'train': {'features': (0, 10, None, '.')}}
             h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
             dataset = cPickle.loads(
                 cPickle.dumps(H5PYDataset(h5file, which_set='train')))
@@ -204,9 +204,9 @@ class TestH5PYDataset(object):
     def test_value_error_on_unequal_sources(self):
         def get_subsets():
             return H5PYDataset(self.h5file, which_set='train').subsets
-        split_dict = {'train': {'features': (0, 20, '.'), 'targets': (0, 15)},
-                      'test': {'features': (20, 30, ''), 'targets': (20, 30)},
-                      'unlabeled': {'features': (30, 100)}}
+        split_dict = {'train': {'features': (0, 20), 'targets': (0, 15)},
+                      'test': {'features': (20, 30), 'targets': (20, 30)},
+                      'unlabeled': {'features': (30, 100, None, '.')}}
         self.h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         assert_raises(ValueError, get_subsets)
 
@@ -235,12 +235,10 @@ class TestH5PYDataset(object):
         h5file['features'].dims[1].label = 'feature'
         h5file['train_features_subset'] = numpy.arange(0, 10, 2)
         h5file['test_features_subset'] = numpy.arange(1, 10, 2)
-        h5file['features'].attrs['train_subset'] = h5file[
-            'train_features_subset'].ref
-        h5file['features'].attrs['test_subset'] = h5file[
-            'test_features_subset'].ref
-        split_dict = {'train': {'features': (-1, -1, '.')},
-                      'test': {'features': (-1, -1, '')}}
+        train_ref = h5file['train_features_subset'].ref
+        test_ref = h5file['test_features_subset'].ref
+        split_dict = {'train': {'features': (-1, -1, train_ref, '.')},
+                      'test': {'features': (-1, -1, test_ref, '')}}
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         dataset = H5PYDataset(h5file, which_set='train', load_in_memory=False)
         handle = dataset.open()
@@ -258,12 +256,10 @@ class TestH5PYDataset(object):
         h5file['features'].dims[1].label = 'feature'
         h5file['train_features_subset'] = numpy.arange(0, 10, 2)
         h5file['test_features_subset'] = numpy.arange(1, 10, 2)
-        h5file['features'].attrs['train_subset'] = h5file[
-            'train_features_subset'].ref
-        h5file['features'].attrs['test_subset'] = h5file[
-            'test_features_subset'].ref
-        split_dict = {'train': {'features': (-1, -1, '.')},
-                      'test': {'features': (-1, -1, '')}}
+        train_ref = h5file['train_features_subset'].ref
+        test_ref = h5file['test_features_subset'].ref
+        split_dict = {'train': {'features': (-1, -1, train_ref, '.')},
+                      'test': {'features': (-1, -1, test_ref, '')}}
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         dataset = H5PYDataset(h5file, which_set='train', load_in_memory=True)
         handle = dataset.open()
