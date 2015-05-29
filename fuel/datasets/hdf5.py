@@ -229,22 +229,22 @@ class H5PYDataset(Dataset):
         return split_dict
 
     @staticmethod
-    def unordered_fancy_index(request, indexable):
-        """Safe list indexing.
+    def unsorted_fancy_index(request, indexable):
+        """Safe unsorted list indexing.
 
         Some objects, such as h5py datasets, only support list indexing
-        if the list is ordered.
+        if the list is sorted.
 
-        This static method adds support for unordered list indexing by
-        ordering the requested indices, accessing the corresponding
+        This static method adds support for unsorted list indexing by
+        sorting the requested indices, accessing the corresponding
         elements and re-shuffling the result.
 
         Parameters
         ----------
         request : list of int
-            Unordered list of example indices.
+            Unsorted list of example indices.
         indexable : any fancy-indexable object
-            Indexable we'd like to do unordered fancy indexing on.
+            Indexable we'd like to do unsorted fancy indexing on.
 
         """
         if len(request) > 1:
@@ -414,9 +414,9 @@ class H5PYDataset(Dataset):
             elif isinstance(request, list):
                 req = [index + subset.start for index in request]
                 if self.sort_indices:
-                    val = self.unordered_fancy_index(req, handle[source_name])
+                    val = self.unsorted_fancy_index(req, handle[source_name])
                     if source_name in self.sources_to_reshape:
-                        shape = self.unordered_fancy_index(
+                        shape = self.unsorted_fancy_index(
                             req, handle[source_name].dims[0]['shapes'])
                     else:
                         shape = None
