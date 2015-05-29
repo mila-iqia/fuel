@@ -271,9 +271,7 @@ class H5PYDataset(Dataset):
         handle = self._file_handle
         axis_labels = {}
         for source_name in handle:
-            vlen_source = (len(handle[source_name].dims) == 1
-                           and 'shapes' in handle[source_name].dims[0])
-            if vlen_source:
+            if source_name in self.vlen_sources:
                 axis_labels[source_name] = (
                     (handle[source_name].dims[0].label,) +
                     tuple(label.decode('utf8') for label in
@@ -293,16 +291,21 @@ class H5PYDataset(Dataset):
         return tuple(self.split_dict[self.which_set].keys())
 
     @property
-    def sources_to_reshape(self):
-        if not hasattr(self, '_sources_to_reshape'):
+    def vlen_sources(self):
+        if not hasattr(self, '_vlen_sources'):
             self._out_of_memory_open()
             handle = self._file_handle
-            self._sources_to_reshape = tuple(
-                source_name for source_name in self.sources if
-                len(handle[source_name].dims) == 1 and
-                'shapes' in handle[source_name].dims[0])
+            vlen_sources = []
+            for source_name in self.sources:
+                source = handle[source_name]
+                if len(source.dims) > 0 and 'shapes' in source.dims[0]:
+                    if len(source.dims) > 1:
+                        raise ValueError('Variable-length sources must have '
+                                         'only one dimension.')
+                    vlen_sources.append(source_name)
+            self._vlen_sources = tuple(vlen_sources)
             self._out_of_memory_close()
-        return self._sources_to_reshape
+        return self._vlen_sources
 
     @property
     def subsets(self):
@@ -335,7 +338,7 @@ class H5PYDataset(Dataset):
                 zip(self.sources, self.subsets))
             self.source_shapes = tuple(
                 handle[source_name].dims[0]['shapes'][subset]
-                if source_name in self.sources_to_reshape else None
+                if source_name in self.vlen_sources else None
                 for source_name, subset in zip(self.sources, self.subsets))
         else:
             self.data_sources = None
@@ -406,7 +409,7 @@ class H5PYDataset(Dataset):
                 req = slice(request.start + subset.start,
                             request.stop + subset.start, request.step)
                 val = handle[source_name][req]
-                if source_name in self.sources_to_reshape:
+                if source_name in self.vlen_sources:
                     shape = handle[
                         source_name].dims[0]['shapes'][req]
                 else:
@@ -415,14 +418,14 @@ class H5PYDataset(Dataset):
                 req = [index + subset.start for index in request]
                 if self.sort_indices:
                     val = self.unsorted_fancy_index(req, handle[source_name])
-                    if source_name in self.sources_to_reshape:
+                    if source_name in self.vlen_sources:
                         shape = self.unsorted_fancy_index(
                             req, handle[source_name].dims[0]['shapes'])
                     else:
                         shape = None
                 else:
                     val = handle[source_name][req]
-                    if source_name in self.sources_to_reshape:
+                    if source_name in self.vlen_sources:
                         shape = handle[
                             source_name].dims[0]['shapes'][req]
                     else:
