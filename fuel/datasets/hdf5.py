@@ -271,7 +271,14 @@ class H5PYDataset(Dataset):
         if not hasattr(self, '_split_dict'):
             self._out_of_memory_open()
             handle = self._file_handle
-            split_array = handle.attrs['split']
+            split_array = []
+            for row in handle.attrs['split']:
+                split, source, start, stop, available, comment = row
+                if start < 0 and stop < 0:
+                    stop = handle[
+                        handle[source].attrs['{}_subset'.format(split.decode('utf8'))]][...]
+                split_array.append(
+                    (split, source, start, stop, available, comment))
             self._split_dict = H5PYDataset.parse_split_array(split_array)
             self._out_of_memory_close()
         return self._split_dict
@@ -324,17 +331,26 @@ class H5PYDataset(Dataset):
             num_examples = None
             for i, source_name in enumerate(self.sources):
                 start, stop = self.split_dict[self.which_set][source_name][:2]
+                if start < 0:
+                    source_subset = stop
+                else:
+                    source_subset = slice(start, stop)
                 subset = subsets[i]
-                if hasattr(subset, 'step'):
+                if hasattr(subset, 'step') and hasattr(source_subset, 'step'):
                     subset = slice(
-                        start if subset.start is None else subset.start,
-                        stop if subset.stop is None else subset.stop,
+                        source_subset.start
+                        if subset.start is None else subset.start,
+                        source_subset.stop
+                        if subset.stop is None else subset.stop,
                         subset.step)
                     subsets[i] = subset
                     subset_num_examples = subset.stop - subset.start
                 else:
-                    subsets[i] = numpy.arange(start, stop)[subset]
-                    subset_num_examples = len(subset)
+                    if hasattr(source_subset, 'step'):
+                        source_subset = numpy.arange(
+                            source_subset.start, source_subset.stop)
+                    subsets[i] = source_subset[subset]
+                    subset_num_examples = len(subsets[i])
                 if num_examples is None:
                     num_examples = subset_num_examples
                 if num_examples != subset_num_examples:
@@ -348,13 +364,21 @@ class H5PYDataset(Dataset):
         self._out_of_memory_open()
         handle = self._file_handle
         if self.load_in_memory:
-            self.data_sources = tuple(
-                handle[source_name][subset] for source_name, subset in
-                zip(self.sources, self.subsets))
-            self.source_shapes = tuple(
-                handle[source_name].dims[0]['shapes'][subset]
-                if source_name in self.vlen_sources else None
-                for source_name, subset in zip(self.sources, self.subsets))
+            data_sources = []
+            source_shapes = []
+            for source_name, subset in zip(self.sources, self.subsets):
+                if hasattr(subset, 'step'):
+                    data_source = handle[source_name][subset]
+                else:
+                    data_source = handle[source_name][list(subset)]
+                data_sources.append(data_source)
+                if source_name in self.vlen_sources:
+                    shapes = handle[source_name].dims[0]['shapes'][subset]
+                else:
+                    shapes = None
+                source_shapes.append(shapes)
+            self.data_sources = tuple(data_sources)
+            self.source_shapes = tuple(source_shapes)
         else:
             self.data_sources = None
             self.source_shapes = None

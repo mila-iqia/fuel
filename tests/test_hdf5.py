@@ -54,7 +54,7 @@ class TestPytablesDataset(object):
 
 class TestH5PYDataset(object):
     def setUp(self):
-        self.features = numpy.arange(3600, dtype='uint8').reshape((100, 36))
+        self.features = numpy.arange(3600, dtype='uint16').reshape((100, 36))
         self.targets = numpy.arange(30, dtype='uint8').reshape((30, 1))
         h5file = h5py.File(
             'file.hdf5', mode='w', driver='core', backing_store=False)
@@ -122,7 +122,7 @@ class TestH5PYDataset(object):
 
     def test_pickling(self):
         try:
-            features = numpy.arange(360, dtype='uint8').reshape((10, 36))
+            features = numpy.arange(360, dtype='uint16').reshape((10, 36))
             h5file = h5py.File('file.hdf5', mode='w')
             h5file['features'] = features
             split_dict = {'train': {'features': (0, 10, '.')}}
@@ -225,6 +225,48 @@ class TestH5PYDataset(object):
     def test_value_error_out_of_memory_get_data(self):
         dataset = H5PYDataset(self.h5file, which_set='train')
         assert_raises(ValueError, dataset._out_of_memory_get_data, None, True)
+
+    def test_index_split_out_of_memory(self):
+        features = numpy.arange(50, dtype='uint8').reshape((10, 5))
+        h5file = h5py.File(
+            'index_split.hdf5', mode='w', driver='core', backing_store=False)
+        h5file['features'] = features
+        h5file['features'].dims[0].label = 'batch'
+        h5file['features'].dims[1].label = 'feature'
+        h5file['train_features_subset'] = numpy.arange(0, 10, 2)
+        h5file['test_features_subset'] = numpy.arange(1, 10, 2)
+        h5file['features'].attrs['train_subset'] = h5file['train_features_subset'].ref
+        h5file['features'].attrs['test_subset'] = h5file['test_features_subset'].ref
+        split_dict = {'train': {'features': (-1, -1, '.')},
+                      'test': {'features': (-1, -1, '')}}
+        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+        dataset = H5PYDataset(h5file, which_set='train', load_in_memory=False)
+        handle = dataset.open()
+        request = slice(0, 5)
+        assert_equal(
+            dataset.get_data(handle, request)[0], features[0:10:2])
+        dataset.close(handle)
+
+    def test_index_split_in_memory(self):
+        features = numpy.arange(50, dtype='uint8').reshape((10, 5))
+        h5file = h5py.File(
+            'index_split.hdf5', mode='w', driver='core', backing_store=False)
+        h5file['features'] = features
+        h5file['features'].dims[0].label = 'batch'
+        h5file['features'].dims[1].label = 'feature'
+        h5file['train_features_subset'] = numpy.arange(0, 10, 2)
+        h5file['test_features_subset'] = numpy.arange(1, 10, 2)
+        h5file['features'].attrs['train_subset'] = h5file['train_features_subset'].ref
+        h5file['features'].attrs['test_subset'] = h5file['test_features_subset'].ref
+        split_dict = {'train': {'features': (-1, -1, '.')},
+                      'test': {'features': (-1, -1, '')}}
+        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+        dataset = H5PYDataset(h5file, which_set='train', load_in_memory=True)
+        handle = dataset.open()
+        request = slice(0, 5)
+        assert_equal(
+            dataset.get_data(handle, request)[0], features[0:10:2])
+        dataset.close(handle)
 
     def test_index_subset_sorted(self):
         dataset = H5PYDataset(self.h5file, which_set='train', subset=[0, 2, 4])
