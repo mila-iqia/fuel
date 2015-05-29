@@ -47,6 +47,8 @@ def convert_svhn_format_1(directory, output_file):
 
         splits = ('train', 'test', 'extra')
         file_paths = dict(zip(splits, FORMAT_1_FILES))
+        for split, path in file_paths.items():
+            file_paths[split] = os.path.join(directory, path)
         split_structs = dict(
             [(split, os.path.join(TMPDIR, split, 'digitStruct.mat'))
              for split in splits])
