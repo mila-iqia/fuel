@@ -279,7 +279,14 @@ class H5PYDataset(Dataset):
             self._out_of_memory_open()
             handle = self._file_handle
             split_array = handle.attrs['split']
-            self._split_dict = H5PYDataset.parse_split_array(split_array)
+            split_dict = H5PYDataset.parse_split_array(split_array)
+            for split in split_dict:
+                for source in split_dict[split]:
+                    row = list(split_dict[split][source])
+                    # Get indices
+                    row[2] = handle[row[2]] if row[2] else None
+                    split_dict[split][source] = tuple(row)
+            self._split_dict = split_dict
             self._out_of_memory_close()
         return self._split_dict
 
@@ -327,15 +334,13 @@ class H5PYDataset(Dataset):
     @property
     def subsets(self):
         if not hasattr(self, '_subsets'):
-            self._out_of_memory_open()
-            handle = self._file_handle
             subsets = [self._subset_template for source in self.sources]
             num_examples = None
             for i, source_name in enumerate(self.sources):
                 start, stop, indices = self.split_dict[
                     self.which_set][source_name][:3]
                 if indices:
-                    source_subset = handle[indices]
+                    source_subset = indices
                 else:
                     source_subset = slice(start, stop)
                 subset = subsets[i]
@@ -359,7 +364,6 @@ class H5PYDataset(Dataset):
                 if num_examples != subset_num_examples:
                     raise ValueError("sources have different lengths")
             self._subsets = subsets
-            self._out_of_memory_close()
         return self._subsets
 
     def load(self):
