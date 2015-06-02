@@ -87,7 +87,7 @@ class PytablesDataset(Dataset):
 
 
 @do_not_pickle_attributes('data_sources', 'external_file_handle',
-                          'source_shapes')
+                          'source_shapes', 'subsets')
 class H5PYDataset(Dataset):
     """An h5py-fueled HDF5 dataset.
 
@@ -97,7 +97,7 @@ class H5PYDataset(Dataset):
       source names.
     * Data sources are not explicitly split. Instead, splits are defined
       in the `split` attribute of the root group. It's expected to be a
-      1D numpy array of compound ``dtype`` with six fields, organized as
+      1D numpy array of compound ``dtype`` with seven fields, organized as
       follows:
 
       1. ``split`` : string identifier for the split name
@@ -106,9 +106,11 @@ class H5PYDataset(Dataset):
          array
       4. ``stop`` : stop index (exclusive) of the split in the source
          array
-      5. ``available`` : boolean, ``False`` is this split is not available
+      6. ``indices`` : h5py.Reference, reference to a dataset containing
+         subset indices for this split/source pair.
+      6. ``available`` : boolean, ``False`` is this split is not available
          for this source
-      6. ``comment`` : comment string
+      7. ``comment`` : comment string
 
     Parameters
     ----------
@@ -132,6 +134,21 @@ class H5PYDataset(Dataset):
         that case, it is the user's responsibility to make sure that
         indices are ordered.
 
+    Attributes
+    ----------
+    sources : tuple of strings
+        The sources this dataset will provide when queried for data.
+    provides_sources : tuple of strings
+        The sources this dataset *is able to* provide for the requested
+        split.
+    example_iteration_scheme : :class:`.IterationScheme` or ``None``
+        The iteration scheme the class uses in order to produce a stream of
+        examples.
+    vlen_sources : tuple of strings
+        All sources provided by this dataset which have variable length.
+    default_axis_labels : dict mapping string to tuple of strings
+        Maps all sources provided by this dataset to their axis labels.
+
     """
     interface_version = '0.3'
     _ref_counts = defaultdict(int)
@@ -146,22 +163,42 @@ class H5PYDataset(Dataset):
         else:
             self.path = file_or_path
             self.external_file_handle = None
-        self.driver = driver
-        self.sort_indices = sort_indices
-        if which_set not in self.available_splits:
-            raise ValueError(
-                "'{}' split is not provided by this ".format(which_set) +
-                "dataset. Available splits are " +
-                "{}.".format(self.available_splits))
         self.which_set = which_set
         subset = subset if subset else slice(None)
         if hasattr(subset, 'step') and subset.step not in (1, None):
             raise ValueError("subset.step must be either 1 or None")
         self._subset_template = subset
         self.load_in_memory = load_in_memory
+        self.driver = driver
+        self.sort_indices = sort_indices
 
-        kwargs.setdefault('axis_labels', self.load_axis_labels())
+        self._parse_dataset_info()
+
+        kwargs.setdefault('axis_labels', self.default_axis_labels)
         super(H5PYDataset, self).__init__(**kwargs)
+
+    def _parse_dataset_info(self):
+        """Parses information related to the HDF5 interface.
+
+        In addition to verifying that the `self.which_set` split is
+        available, this method sets the following attributes:
+
+        * `provides_sources`
+        * `vlen_sources`
+        * `default_axis_labels`
+        """
+        self._out_of_memory_open()
+        handle = self._file_handle
+        available_splits = self.get_all_splits(handle)
+        which_set = self.which_set
+        if which_set not in available_splits:
+            raise ValueError(
+                "'{}' split is not provided by this ".format(which_set) +
+                "dataset. Available splits are {}.".format(available_splits))
+        self.provides_sources = self.get_provided_sources(handle, which_set)
+        self.vlen_sources = self.get_vlen_sources(handle)
+        self.default_axis_labels = self.get_axis_labels(handle)
+        self._out_of_memory_close()
 
     @staticmethod
     def create_split_array(split_dict):
@@ -171,12 +208,12 @@ class H5PYDataset(Dataset):
         ----------
         split_dict : dict
             Maps split names to dict. Those dict map source names to
-            tuples. Those tuples contain two or three elements:
-            the start index, the stop index and (optionally) a comment.
-            If a particular split/source combination isn't present
-            in the split dict, it's considered as unavailable and the
-            `available` element will be set to `False` it its split array
-            entry.
+            tuples. Those tuples contain two, three or four elements:
+            the start index, the stop index, (optionally) subset
+            indices and (optionally) a comment.  If a particular
+            split/source combination isn't present in the split dict,
+            it's considered as unavailable and the `available` element
+            will be set to `False` it its split array entry.
 
         """
         # Determine maximum split, source and string lengths
@@ -232,18 +269,170 @@ class H5PYDataset(Dataset):
         return split_array
 
     @staticmethod
-    def parse_split_array(split_array):
-        split_dict = OrderedDict()
-        for row in split_array:
-            split, source, start, stop, indices, available, comment = row
-            split = split.decode('utf8')
-            source = source.decode('utf8')
-            comment = comment.decode('utf8')
-            if available:
-                if split not in split_dict:
-                    split_dict[split] = OrderedDict()
-                split_dict[split][source] = (start, stop, indices, comment)
-        return split_dict
+    def get_all_splits(h5file):
+        """Returns the names of all splits of an HDF5 dataset.
+
+        Parameters
+        ----------
+        h5file : HDF5 file handle
+            An HDF5 dataset respecting the H5PYDataset interface.
+
+        Returns
+        -------
+        available_splits : tuple of str
+            Names of all splits in ``h5file``.
+
+        """
+        available_splits = tuple(
+            set(row['split'].decode('utf8') for row in h5file.attrs['split']))
+        return available_splits
+
+    @staticmethod
+    def get_all_sources(h5file):
+        """Returns the names of all sources of an HDF5 dataset.
+
+        Parameters
+        ----------
+        h5file : HDF5 file handle
+            An HDF5 dataset respecting the H5PYDataset interface.
+
+        Returns
+        -------
+        all_sources : tuple of str
+            Names of all sources in ``h5file``.
+
+        """
+        all_sources = tuple(
+            set(row['source'].decode('utf8') for row in h5file.attrs['split']))
+        return all_sources
+
+    @staticmethod
+    def get_provided_sources(h5file, split):
+        """Returns the sources provided by a specific split.
+
+        Parameters
+        ----------
+        h5file : HDF5 file handle
+            An HDF5 dataset respecting the H5PYDataset interface.
+        split : str
+            Name of the split.
+
+        Returns
+        -------
+        provided_sources : tuple of str
+            Names of sources provided by ``split`` in ``h5file``.
+
+        """
+        provided_sources = tuple(
+            row['source'].decode('utf8') for row in h5file.attrs['split']
+            if row['split'].decode('utf8') == split and row['available'])
+        return provided_sources
+
+    @staticmethod
+    def get_vlen_sources(h5file):
+        """Returns the names of variable-length sources in an HDF5 dataset.
+
+        Parameters
+        ----------
+        h5file : HDF5 file handle
+            An HDF5 dataset respecting the H5PYDataset interface.
+        split : str
+            Name of the split.
+
+        Returns
+        -------
+        vlen_sources : tuple of str
+            Names of all variable-length sources in ``h5file``.
+
+        """
+        vlen_sources = []
+        for source_name in H5PYDataset.get_all_sources(h5file):
+            source = h5file[source_name]
+            if len(source.dims) > 0 and 'shapes' in source.dims[0]:
+                if len(source.dims) > 1:
+                    raise ValueError('Variable-length sources must have only '
+                                     'one dimension.')
+                vlen_sources.append(source_name)
+        return vlen_sources
+
+    @staticmethod
+    def get_axis_labels(h5file):
+        """Returns axis labels for all sources in an HDF5 dataset.
+
+        Parameters
+        ----------
+        h5file : HDF5 file handle
+            An HDF5 dataset respecting the H5PYDataset interface.
+
+        Returns
+        -------
+        axis_labels : dict
+            Maps source names to a tuple of str representing the axis
+            labels.
+
+        """
+        axis_labels = {}
+        vlen_sources = H5PYDataset.get_vlen_sources(h5file)
+        for source_name in H5PYDataset.get_all_sources(h5file):
+            if source_name in vlen_sources:
+                axis_labels[source_name] = (
+                    (h5file[source_name].dims[0].label,) +
+                    tuple(label.decode('utf8') for label in
+                          h5file[source_name].dims[0]['shape_labels']))
+            else:
+                axis_labels[source_name] = tuple(
+                    dim.label for dim in h5file[source_name].dims)
+        return axis_labels
+
+    @staticmethod
+    def get_start_stop(h5file, split):
+        """Returns start and stop indices for sources of a specific split.
+
+        Parameters
+        ----------
+        h5file : HDF5 file handle
+            An HDF5 dataset respecting the H5PYDataset interface.
+        split : str
+            Name of the split.
+
+        Returns
+        -------
+        start_stop : dict
+            Maps source names to a tuple of ``(start, stop)`` indices.
+
+        """
+        start_stop = {}
+        for row in h5file.attrs['split']:
+            if row['split'].decode('utf8') == split:
+                source = row['source'].decode('utf8')
+                start_stop[source] = (row['start'], row['stop'])
+        return start_stop
+
+    @staticmethod
+    def get_indices(h5file, split):
+        """Returns subset indices for sources of a specific split.
+
+        Parameters
+        ----------
+        h5file : HDF5 file handle
+            An HDF5 dataset respecting the H5PYDataset interface.
+        split : str
+            Name of the split.
+
+        Returns
+        -------
+        indices : dict
+            Maps source names to a list of indices. Note that only
+            sources for which indices are specified appear in this dict.
+
+        """
+        indices = {}
+        for row in h5file.attrs['split']:
+            if row['split'].decode('utf8') == split:
+                source = row['source'].decode('utf8')
+                if row['indices']:
+                    indices[source] = h5file[row['indices']]
+        return indices
 
     @staticmethod
     def unsorted_fancy_index(request, indexable):
@@ -273,104 +462,52 @@ class H5PYDataset(Dataset):
             data = indexable[request]
         return data
 
-    @property
-    def split_dict(self):
-        if not hasattr(self, '_split_dict'):
-            self._out_of_memory_open()
-            handle = self._file_handle
-            split_array = handle.attrs['split']
-            split_dict = H5PYDataset.parse_split_array(split_array)
-            for split in split_dict:
-                for source in split_dict[split]:
-                    row = list(split_dict[split][source])
-                    # Get indices
-                    row[2] = handle[row[2]] if row[2] else None
-                    split_dict[split][source] = tuple(row)
-            self._split_dict = split_dict
-            self._out_of_memory_close()
-        return self._split_dict
-
-    def load_axis_labels(self):
-        self._out_of_memory_open()
-        handle = self._file_handle
-        axis_labels = {}
-        for source_name in handle:
-            if source_name in self.vlen_sources:
-                axis_labels[source_name] = (
-                    (handle[source_name].dims[0].label,) +
-                    tuple(label.decode('utf8') for label in
-                          handle[source_name].dims[0]['shape_labels']))
-            else:
-                axis_labels[source_name] = tuple(
-                    dim.label for dim in handle[source_name].dims)
-        self._out_of_memory_close()
-        return axis_labels
-
-    @property
-    def available_splits(self):
-        return tuple(self.split_dict.keys())
-
-    @property
-    def provides_sources(self):
-        return tuple(self.split_dict[self.which_set].keys())
-
-    @property
-    def vlen_sources(self):
-        if not hasattr(self, '_vlen_sources'):
-            self._out_of_memory_open()
-            handle = self._file_handle
-            vlen_sources = []
-            for source_name in self.sources:
-                source = handle[source_name]
-                if len(source.dims) > 0 and 'shapes' in source.dims[0]:
-                    if len(source.dims) > 1:
-                        raise ValueError('Variable-length sources must have '
-                                         'only one dimension.')
-                    vlen_sources.append(source_name)
-            self._vlen_sources = tuple(vlen_sources)
-            self._out_of_memory_close()
-        return self._vlen_sources
-
-    @property
-    def subsets(self):
-        if not hasattr(self, '_subsets'):
-            subsets = [self._subset_template for source in self.sources]
-            num_examples = None
-            for i, source_name in enumerate(self.sources):
-                start, stop, indices = self.split_dict[
-                    self.which_set][source_name][:3]
-                if indices:
-                    source_subset = indices
-                else:
-                    source_subset = slice(start, stop)
-                subset = subsets[i]
-                if hasattr(subset, 'step') and hasattr(source_subset, 'step'):
-                    subset = slice(
-                        source_subset.start
-                        if subset.start is None else subset.start,
-                        source_subset.stop
-                        if subset.stop is None else subset.stop,
-                        subset.step)
-                    subsets[i] = subset
-                    subset_num_examples = subset.stop - subset.start
-                else:
-                    if hasattr(source_subset, 'step'):
-                        source_subset = numpy.arange(
-                            source_subset.start, source_subset.stop)
-                    subsets[i] = source_subset[subset]
-                    subset_num_examples = len(subsets[i])
-                if num_examples is None:
-                    num_examples = subset_num_examples
-                if num_examples != subset_num_examples:
-                    raise ValueError("sources have different lengths")
-            self._subsets = subsets
-        return self._subsets
-
     def load(self):
+        # If the dataset is unpickled, it makes no sense to have an external
+        # file handle. However, since `load` is also called during the lifetime
+        # of a dataset (e.g. if load_in_memory = True), we don't want to
+        # accidentally overwrite the reference to a potential external file
+        # handle, hence this check.
         if not hasattr(self, '_external_file_handle'):
             self.external_file_handle = None
+
         self._out_of_memory_open()
         handle = self._file_handle
+
+        # Load subset slices / indices
+        subsets = []
+        start_stop = self.get_start_stop(handle, self.which_set)
+        indices = self.get_indices(handle, self.which_set)
+        num_examples = None
+        for source_name in self.sources:
+            subset = self._subset_template
+            if source_name in indices:
+                source_subset = indices[source_name]
+            else:
+                source_subset = slice(*start_stop[source_name])
+            if hasattr(subset, 'step') and hasattr(source_subset, 'step'):
+                subset = slice(
+                    source_subset.start
+                    if subset.start is None else subset.start,
+                    source_subset.stop
+                    if subset.stop is None else subset.stop,
+                    subset.step)
+                subsets.append(subset)
+                subset_num_examples = subset.stop - subset.start
+            else:
+                if hasattr(source_subset, 'step'):
+                    source_subset = numpy.arange(
+                        source_subset.start, source_subset.stop)
+                subset = source_subset[subset]
+                subsets.append(subset)
+                subset_num_examples = len(subset)
+            if num_examples is None:
+                num_examples = subset_num_examples
+            if num_examples != subset_num_examples:
+                raise ValueError("sources have different lengths")
+        self.subsets = subsets
+
+        # Load data sources and source shapes
         if self.load_in_memory:
             data_sources = []
             source_shapes = []
@@ -390,6 +527,7 @@ class H5PYDataset(Dataset):
         else:
             self.data_sources = None
             self.source_shapes = None
+
         self._out_of_memory_close()
 
     @property

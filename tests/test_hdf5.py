@@ -115,6 +115,27 @@ class TestH5PYDataset(object):
         unlabeled_set = H5PYDataset(self.h5file, which_set='unlabeled')
         assert unlabeled_set.provides_sources == ('features',)
 
+    def test_get_all_splits(self):
+        splits = ('train', 'test', 'unlabeled')
+        available_splits = H5PYDataset.get_all_splits(self.h5file)
+        assert (all(split in available_splits for split in splits) and
+                all(split in splits for split in available_splits))
+
+    def test_get_all_sources(self):
+        sources = ('features', 'targets')
+        all_sources = H5PYDataset.get_all_sources(self.h5file)
+        assert (all(source in all_sources for source in sources) and
+                all(source in sources for source in all_sources))
+
+    def test_unsorted_fancy_index_1(self):
+        indexable = numpy.arange(10)
+        assert_equal(H5PYDataset.unsorted_fancy_index([0], indexable), [0])
+
+    def test_unsorted_fancy_index_gt_1(self):
+        indexable = numpy.arange(10)
+        assert_equal(H5PYDataset.unsorted_fancy_index([0, 5, 2], indexable),
+                     [0, 5, 2])
+
     def test_axis_labels(self):
         dataset = H5PYDataset(self.h5file, which_set='train')
         assert dataset.axis_labels == {'features': ('batch', 'feature'),
@@ -245,6 +266,7 @@ class TestH5PYDataset(object):
         request = slice(0, 5)
         assert_equal(
             dataset.get_data(handle, request)[0], features[0:10:2])
+        assert_equal(dataset.num_examples, 5)
         dataset.close(handle)
 
     def test_index_split_in_memory(self):
@@ -266,6 +288,7 @@ class TestH5PYDataset(object):
         request = slice(0, 5)
         assert_equal(
             dataset.get_data(handle, request)[0], features[0:10:2])
+        assert_equal(dataset.num_examples, 5)
         dataset.close(handle)
 
     def test_index_subset_sorted(self):
