@@ -169,7 +169,7 @@ class TestH5PYDataset(object):
         dataset_1.close(handle_1)
         dataset_2.close(handle_2)
 
-    def test_split(self):
+    def test_single_split(self):
         train_set = H5PYDataset(self.h5file, which_set='train')
         test_set = H5PYDataset(self.h5file, which_set='test')
         train_handle = train_set.open()
@@ -180,6 +180,13 @@ class TestH5PYDataset(object):
                      (self.features[20:22], self.targets[20:22]))
         train_set.close(train_handle)
         test_set.close(test_handle)
+
+    def test_multiple_split(self):
+        dataset = H5PYDataset(self.h5file, which_set=('train', 'test'))
+        handle = dataset.open()
+        assert_equal(dataset.get_data(handle, slice(0, 30)),
+                     (self.features[:30], self.targets[:30]))
+        dataset.close(handle)
 
     def test_out_of_memory(self):
         dataset = H5PYDataset(

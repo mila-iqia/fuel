@@ -116,8 +116,10 @@ class H5PYDataset(Dataset):
     ----------
     file_or_path : :class:`h5py.File` or str
         HDF5 file handle, or path to the HDF5 file.
-    which_set : str
-        Which split to use.
+    which_set : str or tuple of str
+        Which split(s) to use. If one than more split is requested,
+        the provided sources will be the intersection of provided
+        sources for these splits.
     subset : slice, optional
         A slice of data *within the context of the split* to use. Defaults
         to `None`, in which case the whole split is used. **Note:
@@ -163,6 +165,8 @@ class H5PYDataset(Dataset):
         else:
             self.path = file_or_path
             self.external_file_handle = None
+        if not isinstance(which_set, (list, tuple)):
+            which_set = (which_set,)
         self.which_set = which_set
         subset = subset if subset else slice(None)
         if hasattr(subset, 'step') and subset.step not in (1, None):
@@ -192,11 +196,20 @@ class H5PYDataset(Dataset):
         handle = self._file_handle
         available_splits = self.get_all_splits(handle)
         which_set = self.which_set
-        if which_set not in available_splits:
-            raise ValueError(
-                "'{}' split is not provided by this ".format(which_set) +
-                "dataset. Available splits are {}.".format(available_splits))
-        self.provides_sources = self.get_provided_sources(handle, which_set)
+        provides_sources = None
+        for split in which_set:
+            if split not in available_splits:
+                raise ValueError(
+                    "'{}' split is not provided by this ".format(split) +
+                    "dataset. Available splits are " +
+                    "{}.".format(available_splits))
+            split_provides_sources = set(
+                self.get_provided_sources(handle, split))
+            if provides_sources:
+                provides_sources &= split_provides_sources
+            else:
+                provides_sources = split_provides_sources
+        self.provides_sources = tuple(sorted(provides_sources))
         self.vlen_sources = self.get_vlen_sources(handle)
         self.default_axis_labels = self.get_axis_labels(handle)
         self._out_of_memory_close()
@@ -477,8 +490,21 @@ class H5PYDataset(Dataset):
 
         # Load subset slices / indices
         subsets = []
-        start_stop = self.get_start_stop(handle, self.which_set)
-        indices = self.get_indices(handle, self.which_set)
+        if len(self.which_set) > 1:
+            indices = defaultdict(list)
+            for split in self.which_set:
+                split_start_stop = self.get_start_stop(handle, split)
+                split_indices = self.get_indices(handle, split)
+                for source_name in self.sources:
+                    if source_name in split_indices:
+                        ind = split_indices[source_name]
+                    else:
+                        ind = list(range(*split_start_stop[source_name]))
+                    indices[source_name] = sorted(
+                        set(indices[source_name] + ind))
+        else:
+            start_stop = self.get_start_stop(handle, self.which_set[0])
+            indices = self.get_indices(handle, self.which_set[0])
         num_examples = None
         for source_name in self.sources:
             subset = self._subset_template
