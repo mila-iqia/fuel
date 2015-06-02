@@ -1,5 +1,5 @@
 from itertools import product
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 import h5py
 import numpy
@@ -186,6 +186,7 @@ class H5PYDataset(Dataset):
         * `provides_sources`
         * `vlen_sources`
         * `default_axis_labels`
+
         """
         self._out_of_memory_open()
         handle = self._file_handle
