@@ -1,5 +1,7 @@
 import collections
 from abc import ABCMeta, abstractmethod
+
+import numpy
 from six import add_metaclass
 
 from picklable_itertools import iter_, izip
@@ -340,4 +342,13 @@ class IndexableDataset(Dataset):
     def get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
-        return tuple(indexable[request] for indexable in self.indexables)
+        if isinstance(request, collections.Iterable):
+            returned = []
+            for indexable in self.indexables:
+                if isinstance(indexable, numpy.ndarray):
+                    returned.append(indexable[request])
+                else:
+                    returned.append([indexable[r] for r in request])
+            return tuple(returned)
+        else:
+            return tuple(indexable[request] for indexable in self.indexables)

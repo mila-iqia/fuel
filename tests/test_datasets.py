@@ -7,7 +7,7 @@ from six.moves import zip, range
 
 from fuel.datasets import Dataset, IterableDataset, IndexableDataset
 from fuel.streams import DataStream
-from fuel.schemes import BatchSizeScheme, ConstantScheme
+from fuel.schemes import ShuffledScheme, BatchSizeScheme, ConstantScheme
 from fuel.transformers import Mapping
 
 
@@ -116,6 +116,18 @@ class TestIndexableDataset(object):
     def test_value_error_get_data_none_request(self):
         assert_raises(
             ValueError, IndexableDataset([1, 2, 3]).get_data, None, None)
+
+    def test_batch_iteration_scheme_with_lists(self):
+        """Batch schemes should work with more than ndarrays."""
+        data = IndexableDataset(OrderedDict([('foo', list(range(50))),
+                                             ('bar', list(range(1, 51)))]))
+        stream = DataStream(data,
+                            iteration_scheme=ShuffledScheme(data.num_examples,
+                                                            5))
+        returned = [sum(batches, []) for batches in
+                    zip(*list(stream.get_epoch_iterator()))]
+        assert set(returned[0]) == set(range(50))
+        assert set(returned[1]) == set(range(1, 51))
 
 
 def test_sources_selection():
