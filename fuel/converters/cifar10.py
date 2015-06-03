@@ -54,6 +54,7 @@ def convert_cifar10(directory, output_file):
     train_labels = numpy.concatenate(
         [numpy.array(batch['labels'], dtype=numpy.uint8)
             for batch in train_batches])
+    train_labels = numpy.expand_dims(train_labels, 1)
 
     file = tar_file.extractfile('cifar-10-batches-py/test_batch')
     try:
@@ -67,6 +68,7 @@ def convert_cifar10(directory, output_file):
     test_features = test['data'].reshape(test['data'].shape[0],
                                          3, 32, 32)
     test_labels = numpy.array(test['labels'], dtype=numpy.uint8)
+    test_labels = numpy.expand_dims(test_labels, 1)
 
     data = (('train', 'features', train_features),
             ('train', 'targets', train_labels),
@@ -78,6 +80,7 @@ def convert_cifar10(directory, output_file):
     h5file['features'].dims[2].label = 'height'
     h5file['features'].dims[3].label = 'width'
     h5file['targets'].dims[0].label = 'batch'
+    h5file['targets'].dims[1].label = 'index'
 
     h5file.flush()
     h5file.close()

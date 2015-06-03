@@ -13,14 +13,14 @@ def test_cifar10():
     handle = train.open()
     features, targets = train.get_data(handle, slice(49990, 50000))
     assert features.shape == (10, 3, 32, 32)
-    assert targets.shape == (10,)
+    assert targets.shape == (10, 1)
     train.close(handle)
 
     test = CIFAR10('test', load_in_memory=False)
     handle = test.open()
     features, targets = test.get_data(handle, slice(0, 10))
     assert features.shape == (10, 3, 32, 32)
-    assert targets.shape == (10,)
+    assert targets.shape == (10, 1)
     assert features.dtype == numpy.uint8
     assert targets.dtype == numpy.uint8
     test.close(handle)
