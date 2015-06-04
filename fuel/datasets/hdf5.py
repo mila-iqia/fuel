@@ -45,7 +45,6 @@ class PytablesDataset(Dataset):
         self.provides_sources = sources
         self.path = path
         self.data_node = data_node
-        self.open_file(path)
         self.start = start
         self.stop = stop
         self.nodes = None
