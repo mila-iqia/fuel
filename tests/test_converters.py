@@ -270,7 +270,8 @@ class TestCIFAR10(object):
                 self.train_features_mock + [self.test_features_mock]))
         assert_equal(
             h5file['targets'][...],
-            numpy.hstack(self.train_targets_mock + [self.test_targets_mock]))
+            numpy.hstack(self.train_targets_mock +
+                         [self.test_targets_mock]).reshape((-1, 1)))
         assert_equal(str(h5file['features'].dtype), 'uint8')
         assert_equal(str(h5file['targets'].dtype), 'uint8')
         assert_equal(tuple(dim.label for dim in h5file['features'].dims),
