@@ -29,6 +29,7 @@ class TestPytablesDataset(object):
 
     def tearDown(self):
         self.dataset.close_file()
+        self.dataset_default.close_file()
         os.remove('tmp.h5')
 
     def test_dataset_default(self):
