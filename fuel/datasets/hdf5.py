@@ -48,8 +48,8 @@ class PytablesDataset(Dataset):
         self.open_file(path)
         self.start = start
         self.stop = stop
-        self.num_examples = self.stop - self.start
         self.nodes = None
+        self.open_file(path)
         super(PytablesDataset, self).__init__(self.provides_sources)
 
     def open_file(self, path):
@@ -59,6 +59,7 @@ class PytablesDataset(Dataset):
         self.nodes = [getattr(node, source) for source in self.sources_in_file]
         if self.stop is None:
             self.stop = self.nodes[0].nrows
+        self.num_examples = self.stop - self.start
 
     def load(self):
         self.open_file(self.path)
