@@ -23,7 +23,7 @@ class TestPytablesDataset(object):
         for i in range(num_rows):
             y[i] = i
         h5file.flush()
-        h5file.close_file()
+        h5file.close()
         self.dataset = PytablesDataset('tmp.h5', ('y',), 20, 500)
         self.dataset_default = PytablesDataset('tmp.h5', ('y',))
 

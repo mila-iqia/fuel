@@ -66,6 +66,8 @@ class PytablesDataset(Dataset):
 
     def close_file(self):
         self.h5file.close_file()
+        del self._h5file
+        del self._nodes
 
     def get_data(self, state=None, request=None):
         """ Returns data from HDF5 dataset.
