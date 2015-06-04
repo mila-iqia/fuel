@@ -54,7 +54,7 @@ class PytablesDataset(Dataset):
 
     def open_file(self, path):
         self.h5file = tables.open_file(path, mode="r")
-        node = self.h5file.getNode('/', self.data_node)
+        node = self.h5file.get_node('/', self.data_node)
 
         self.nodes = [getattr(node, source) for source in self.sources_in_file]
         if self.stop is None:
@@ -65,7 +65,7 @@ class PytablesDataset(Dataset):
         self.open_file(self.path)
 
     def close_file(self):
-        self.h5file.close_file()
+        self.h5file.close()
         del self._h5file
         del self._nodes
 
