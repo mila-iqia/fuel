@@ -16,5 +16,5 @@ all_downloaders = (
     ('binarized_mnist', binarized_mnist.fill_subparser),
     ('cifar10', cifar10.fill_subparser),
     ('cifar100', cifar100.fill_subparser),
-    ('mnist', mnist.fill_subparser))
+    ('mnist', mnist.fill_subparser),
     ('svhn', svhn.fill_subparser))
