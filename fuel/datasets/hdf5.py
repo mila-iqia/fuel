@@ -11,26 +11,33 @@ from fuel.utils import do_not_pickle_attributes
 
 
 @do_not_pickle_attributes('nodes', 'h5file')
-class Hdf5Dataset(Dataset):
-    """An HDF5 dataset.
+class PytablesDataset(Dataset):
+    """A pytables dataset.
+
+    An HDF5 Dataset which was created with pytables. The dataset should
+    have the following structure: `/<data_node>/paths/to/sources`. In
+    order to have train/validation/test split you may want to open
+    several datasets with different data nodes or source paths. It is
+    also possible to use start and stop arguments to split your dataset.
 
     Parameters
     ----------
     sources : tuple of strings
-        Sources which the dataset returns
+        Sources which the dataset returns.
     start : int
-        Start index
+        Start index. Optional, by default is 0.
     stop : int
-        Stop index
+        Stop index. Optional, if is not provided, will be set to the
+        number of rows of the first source.
     data_node : str
-        Parent data node in HDF5 file
+        Parent data node in HDF5 file, all path are relative to this node.
     sources_in_file : tuple of strings
         Names of nodes in HDF5 file which contain sources. Should the same
         length as `sources`.
         Optional, if not set will be equal to `sources`.
 
     """
-    def __init__(self, sources, start, stop, path, data_node='Data',
+    def __init__(self, path, sources, start=0, stop=None, data_node='Data',
                  sources_in_file=None):
         if sources_in_file is None:
             sources_in_file = sources
@@ -40,22 +47,26 @@ class Hdf5Dataset(Dataset):
         self.data_node = data_node
         self.start = start
         self.stop = stop
-        self.num_examples = self.stop - self.start
         self.nodes = None
-        self.open_file(self.path)
-        super(Hdf5Dataset, self).__init__(self.provides_sources)
+        self.open_file(path)
+        super(PytablesDataset, self).__init__(self.provides_sources)
 
     def open_file(self, path):
         self.h5file = tables.open_file(path, mode="r")
-        node = self.h5file.getNode('/', self.data_node)
+        node = self.h5file.get_node('/', self.data_node)
 
         self.nodes = [getattr(node, source) for source in self.sources_in_file]
+        if self.stop is None:
+            self.stop = self.nodes[0].nrows
+        self.num_examples = self.stop - self.start
 
     def load(self):
         self.open_file(self.path)
 
-    def close(self):
+    def close_file(self):
         self.h5file.close()
+        del self._h5file
+        del self._nodes
 
     def get_data(self, state=None, request=None):
         """ Returns data from HDF5 dataset.
@@ -63,16 +74,15 @@ class Hdf5Dataset(Dataset):
         .. note:: The best performance if `request` is a slice.
 
         """
-        if self.start:
-            if isinstance(request, slice):
-                request = slice(request.start + self.start,
-                                request.stop + self.start, request.step)
-                data = [node[request] for node in self.nodes]
-            elif isinstance(request, list):
-                request = [index + self.start for index in request]
-                data = [node[request, ...] for node in self.nodes]
-            else:
-                raise ValueError
+        if isinstance(request, slice):
+            request = slice(request.start + self.start,
+                            request.stop + self.start, request.step)
+            data = [node[request] for node in self.nodes]
+        elif isinstance(request, list):
+            request = [index + self.start for index in request]
+            data = [node[request, ...] for node in self.nodes]
+        else:
+            raise ValueError
         return data
 
 

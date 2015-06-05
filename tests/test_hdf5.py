@@ -6,11 +6,11 @@ import numpy
 from numpy.testing import assert_equal, assert_raises
 from six.moves import range, cPickle
 
-from fuel.datasets.hdf5 import Hdf5Dataset, H5PYDataset
+from fuel.datasets.hdf5 import PytablesDataset, H5PYDataset
 from fuel.streams import DataStream
 
 
-class TestHdf5Dataset(object):
+class TestPytablesDataset(object):
     def setUp(self):
         num_rows = 500
         filters = tables.Filters(complib='blosc', complevel=5)
@@ -24,11 +24,17 @@ class TestHdf5Dataset(object):
             y[i] = i
         h5file.flush()
         h5file.close()
-        self.dataset = Hdf5Dataset(['y'], 20, 500, 'tmp.h5')
+        self.dataset = PytablesDataset('tmp.h5', ('y',), 20, 500)
+        self.dataset_default = PytablesDataset('tmp.h5', ('y',))
 
     def tearDown(self):
-        self.dataset.close()
+        self.dataset.close_file()
+        self.dataset_default.close_file()
         os.remove('tmp.h5')
+
+    def test_dataset_default(self):
+        assert self.dataset_default.start == 0
+        assert self.dataset_default.stop == 500
 
     def test_get_data_slice_request(self):
         assert_equal(self.dataset.get_data(request=slice(0, 10))[0],
