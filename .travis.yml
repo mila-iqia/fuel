@@ -37,7 +37,7 @@ install:
       fi
 script:
   - pip install . -r requirements.txt
-  - ./.travis-data.sh mnist binarized_mnist cifar10
+  - ./.travis-data.sh mnist binarized_mnist cifar10 cifar100
   - function fail { export FAILED=1; }
   - |
       if [[ $TESTS == 'blocks' ]]; then
