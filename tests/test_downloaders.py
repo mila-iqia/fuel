@@ -7,7 +7,7 @@ from functools import wraps
 
 from numpy.testing import assert_equal, assert_raises
 
-from fuel.downloaders import mnist, binarized_mnist, cifar10
+from fuel.downloaders import mnist, binarized_mnist, cifar10, cifar100
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix)
 from picklable_itertools import chain
@@ -104,6 +104,18 @@ def test_cifar10():
     args = parser.parse_args(['cifar10'])
     filenames = ['cifar-10-python.tar.gz']
     urls = ['http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz']
+    assert_equal(args.filenames, filenames)
+    assert_equal(args.urls, urls)
+    assert args.func is default_downloader
+
+
+def test_cifar100():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    cifar100.fill_subparser(subparsers.add_parser('cifar100'))
+    args = parser.parse_args(['cifar100'])
+    filenames = ['cifar-100-python.tar.gz']
+    urls = ['http://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz']
     assert_equal(args.filenames, filenames)
     assert_equal(args.urls, urls)
     assert args.func is default_downloader
