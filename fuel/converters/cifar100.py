@@ -65,18 +65,20 @@ def convert_cifar100(directory, output_file):
     test_fine_labels = numpy.array(test['fine_labels'], dtype=numpy.uint8)
 
     data = (('train', 'features', train_features),
-            ('train', 'coarse_labels', train_coarse_labels),
-            ('train', 'fine_labels', train_fine_labels),
+            ('train', 'coarse_labels', train_coarse_labels.reshape((-1, 1))),
+            ('train', 'fine_labels', train_fine_labels.reshape((-1, 1))),
             ('test', 'features', test_features),
-            ('test', 'coarse_labels', test_coarse_labels),
-            ('test', 'fine_labels', test_fine_labels))
+            ('test', 'coarse_labels', test_coarse_labels.reshape((-1, 1))),
+            ('test', 'fine_labels', test_fine_labels.reshape((-1, 1))))
     fill_hdf5_file(h5file, data)
     h5file['features'].dims[0].label = 'batch'
     h5file['features'].dims[1].label = 'channel'
     h5file['features'].dims[2].label = 'height'
     h5file['features'].dims[3].label = 'width'
     h5file['coarse_labels'].dims[0].label = 'batch'
+    h5file['coarse_labels'].dims[1].label = 'index'
     h5file['fine_labels'].dims[0].label = 'batch'
+    h5file['fine_labels'].dims[1].label = 'index'
 
     h5file.flush()
     h5file.close()

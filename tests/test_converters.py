@@ -15,7 +15,7 @@ from six.moves import range, zip, cPickle
 
 from fuel.converters.base import (fill_hdf5_file, check_exists,
                                   MissingInputFiles)
-from fuel.converters import binarized_mnist, cifar10, mnist
+from fuel.converters import binarized_mnist, cifar10, mnist, cifar100
 
 if six.PY3:
     getbuffer = memoryview
@@ -276,7 +276,78 @@ class TestCIFAR10(object):
         assert_equal(str(h5file['targets'].dtype), 'uint8')
         assert_equal(tuple(dim.label for dim in h5file['features'].dims),
                      ('batch', 'channel', 'height', 'width'))
-        assert_equal(h5file['targets'].dims[0].label, 'batch')
+        assert_equal(tuple(dim.label for dim in h5file['targets'].dims),
+                     ('batch', 'index'))
+
+
+class TestCIFAR100(object):
+    def setUp(self):
+        numpy.random.seed(9 + 5 + 2015)
+        self.train_features_mock = numpy.random.randint(
+            0, 256, (10, 3, 32, 32)).astype('uint8')
+        self.train_fine_labels_mock = numpy.random.randint(
+            0, 100, (10,)).astype('uint8')
+        self.train_coarse_labels_mock = numpy.random.randint(
+            0, 20, (10,)).astype('uint8')
+        self.test_features_mock = numpy.random.randint(
+            0, 256, (10, 3, 32, 32)).astype('uint8')
+        self.test_fine_labels_mock = numpy.random.randint(
+            0, 100, (10,)).astype('uint8')
+        self.test_coarse_labels_mock = numpy.random.randint(
+            0, 20, (10,)).astype('uint8')
+        self.tempdir = tempfile.mkdtemp()
+        cwd = os.getcwd()
+        os.chdir(self.tempdir)
+        os.mkdir('cifar-100-python')
+        filename = os.path.join('cifar-100-python', 'train')
+        with open(filename, 'wb') as f:
+            cPickle.dump({'data': self.train_features_mock.reshape((10, -1)),
+                          'fine_labels': self.train_fine_labels_mock,
+                          'coarse_labels': self.train_coarse_labels_mock}, f)
+        filename = os.path.join('cifar-100-python', 'test')
+        with open(filename, 'wb') as f:
+            cPickle.dump({'data': self.test_features_mock.reshape((10, -1)),
+                          'fine_labels': self.test_fine_labels_mock,
+                          'coarse_labels': self.test_coarse_labels_mock}, f)
+        with tarfile.open('cifar-100-python.tar.gz', 'w:gz') as tar_file:
+            tar_file.add('cifar-100-python')
+        os.chdir(cwd)
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_converter(self):
+        filename = os.path.join(self.tempdir, 'mock_cifar100.hdf5')
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('cifar100')
+        subparser.set_defaults(directory=self.tempdir, output_file=filename)
+        cifar100.fill_subparser(subparser)
+        args = parser.parse_args(['cifar100'])
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        func(**args_dict)
+        h5file = h5py.File(filename, mode='r')
+        assert_equal(
+            h5file['features'][...],
+            numpy.vstack([self.train_features_mock, self.test_features_mock]))
+        assert_equal(
+            h5file['fine_labels'][...],
+            numpy.hstack([self.train_fine_labels_mock,
+                          self.test_fine_labels_mock]).reshape((-1, 1)))
+        assert_equal(
+            h5file['coarse_labels'][...],
+            numpy.hstack([self.train_coarse_labels_mock,
+                          self.test_coarse_labels_mock]).reshape((-1, 1)))
+        assert_equal(str(h5file['features'].dtype), 'uint8')
+        assert_equal(str(h5file['fine_labels'].dtype), 'uint8')
+        assert_equal(str(h5file['coarse_labels'].dtype), 'uint8')
+        assert_equal(tuple(dim.label for dim in h5file['features'].dims),
+                     ('batch', 'channel', 'height', 'width'))
+        assert_equal(tuple(dim.label for dim in h5file['fine_labels'].dims),
+                     ('batch', 'index'))
+        assert_equal(tuple(dim.label for dim in h5file['coarse_labels'].dims),
+                     ('batch', 'index'))
 
 
 def test_check_exists():
