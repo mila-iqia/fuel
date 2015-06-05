@@ -15,8 +15,8 @@ def test_cifar100():
                                                           slice(49990, 50000))
 
     assert features.shape == (10, 3, 32, 32)
-    assert coarse_labels.shape == (10,)
-    assert fine_labels.shape == (10,)
+    assert coarse_labels.shape == (10, 1)
+    assert fine_labels.shape == (10, 1)
     train.close(handle)
 
     test = CIFAR100('test', load_in_memory=False)
@@ -25,8 +25,8 @@ def test_cifar100():
                                                          slice(0, 10))
 
     assert features.shape == (10, 3, 32, 32)
-    assert coarse_labels.shape == (10,)
-    assert fine_labels.shape == (10,)
+    assert coarse_labels.shape == (10, 1)
+    assert fine_labels.shape == (10, 1)
 
     assert features.dtype == numpy.uint8
     assert coarse_labels.dtype == numpy.uint8
