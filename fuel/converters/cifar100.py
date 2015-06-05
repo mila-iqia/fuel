@@ -89,6 +89,6 @@ def fill_subparser(subparser):
     ----------
     subparser : :class:`argparse.ArgumentParser`
         Subparser handling the `cifar100` command.
+
     """
     subparser.set_defaults(func=convert_cifar100)
-
