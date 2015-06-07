@@ -9,7 +9,9 @@ from fuel.datasets import H5PYDataset, SVHN
 
 
 def test_svhn():
+    data_path = config.data_path
     try:
+        config.data_path = '.'
         f = h5py.File('svhn_format_2.hdf5', 'w')
         f['features'] = numpy.arange(100, dtype='uint8').reshape((10, 10))
         f['targets'] = numpy.arange(10, dtype='uint8').reshape((10, 1))
@@ -21,4 +23,5 @@ def test_svhn():
         assert_equal(dataset.data_path,
                      os.path.join(config.data_path, 'svhn_format_2.hdf5'))
     finally:
+        config.data_path = data_path
         os.remove('svhn_format_2.hdf5')
