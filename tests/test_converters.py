@@ -18,7 +18,9 @@ from six.moves import range, zip, cPickle
 
 from fuel.converters.base import (fill_hdf5_file, check_exists,
                                   MissingInputFiles)
-from fuel.converters import binarized_mnist, cifar10, mnist, cifar100, svhn
+from fuel.converters import (binarized_mnist, caltech101_silhouettes,
+                             cifar10, cifar100, mnist, svhn)
+from fuel.downloaders.caltech101_silhouettes import silhouettes_downloader
 
 if six.PY3:
     getbuffer = memoryview
@@ -380,6 +382,32 @@ class TestCIFAR100(object):
                      ('batch', 'index'))
         assert_equal(tuple(dim.label for dim in h5file['coarse_labels'].dims),
                      ('batch', 'index'))
+
+
+class TestCalTech101Silhouettes(object):
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_download_and_convert(self, size=16):
+        output_file = os.path.join(self.tempdir, 'silhouettes_{}.hdf5')
+        output_file = output_file.format(size)
+
+        cwd = os.getcwd()
+        os.chdir(self.tempdir)
+
+        silhouettes_downloader(size=size, directory=self.tempdir)
+        caltech101_silhouettes.convert_silhouettes(size=size,
+                                                   directory=self.tempdir,
+                                                   output_file=output_file)
+
+        os.chdir(cwd)
+
+        with h5py.File(output_file, 'r') as h5:
+            assert h5['features'].shape == (8641, 1, size, size)
+            assert h5['targets'].shape == (8641, 1)
 
 
 class TestSVHN(object):
