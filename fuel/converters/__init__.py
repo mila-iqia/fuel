@@ -14,10 +14,12 @@ from fuel.converters import binarized_mnist
 from fuel.converters import cifar10
 from fuel.converters import cifar100
 from fuel.converters import mnist
+from fuel.converters import svhn
 
 __version__ = '0.1'
 all_converters = (
     ('binarized_mnist', binarized_mnist.fill_subparser),
     ('cifar10', cifar10.fill_subparser),
     ('cifar100', cifar100.fill_subparser),
-    ('mnist', mnist.fill_subparser))
+    ('mnist', mnist.fill_subparser),
+    ('svhn', svhn.fill_subparser))

@@ -7,7 +7,7 @@ from functools import wraps
 
 from numpy.testing import assert_equal, assert_raises
 
-from fuel.downloaders import mnist, binarized_mnist, cifar10, cifar100
+from fuel.downloaders import mnist, binarized_mnist, cifar10, cifar100, svhn
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix)
 from picklable_itertools import chain
@@ -119,6 +119,46 @@ def test_cifar100():
     assert_equal(args.filenames, filenames)
     assert_equal(args.urls, urls)
     assert args.func is default_downloader
+
+
+class TestSVHNDownloader(object):
+    def setUp(self):
+        self.parser = argparse.ArgumentParser()
+        subparsers = self.parser.add_subparsers()
+        subparser = subparsers.add_parser('svhn')
+        subparser.set_defaults(directory='./', clear=False)
+        svhn.fill_subparser(subparser)
+
+    def test_fill_subparser(self):
+        args = self.parser.parse_args(['svhn', '1'])
+        assert_equal(args.which_format, 1)
+        assert args.func is svhn.svhn_downloader
+
+    @mock.patch('fuel.downloaders.svhn.default_downloader')
+    def test_svhn_downloader_format_1(self, mock_default_downloader):
+        args = self.parser.parse_args(['svhn', '1'])
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        func(**args_dict)
+        mock_default_downloader.assert_called_with(
+            directory='./',
+            urls=[None] * 3,
+            filenames=['train.tar.gz', 'test.tar.gz', 'extra.tar.gz'],
+            url_prefix='http://ufldl.stanford.edu/housenumbers/',
+            clear=False)
+
+    @mock.patch('fuel.downloaders.svhn.default_downloader')
+    def test_svhn_downloader_format_2(self, mock_default_downloader):
+        args = self.parser.parse_args(['svhn', '2'])
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        func(**args_dict)
+        mock_default_downloader.assert_called_with(
+            directory='./',
+            urls=[None] * 3,
+            filenames=['train_32x32.mat', 'test_32x32.mat', 'extra_32x32.mat'],
+            url_prefix='http://ufldl.stanford.edu/housenumbers/',
+            clear=False)
 
 
 class TestDefaultDownloader(object):

@@ -1,6 +1,7 @@
 from __future__ import print_function
 import argparse
 import gzip
+import mock
 import os
 import shutil
 import struct
@@ -11,11 +12,13 @@ import h5py
 import numpy
 import six
 from numpy.testing import assert_equal, assert_raises
+from PIL import Image
+from scipy.io import savemat
 from six.moves import range, zip, cPickle
 
 from fuel.converters.base import (fill_hdf5_file, check_exists,
                                   MissingInputFiles)
-from fuel.converters import binarized_mnist, cifar10, mnist, cifar100
+from fuel.converters import binarized_mnist, cifar10, mnist, cifar100, svhn
 
 if six.PY3:
     getbuffer = memoryview
@@ -348,6 +351,151 @@ class TestCIFAR100(object):
                      ('batch', 'index'))
         assert_equal(tuple(dim.label for dim in h5file['coarse_labels'].dims),
                      ('batch', 'index'))
+
+
+class TestSVHN(object):
+    def setUp(self):
+        numpy.random.seed(9 + 5 + 2015)
+
+        self.tempdir = tempfile.mkdtemp()
+        cwd = os.getcwd()
+        os.chdir(self.tempdir)
+
+        self.f1_mock = {}
+
+        def make_mock_format_1(split):
+            self.f1_mock[split] = {}
+            self.f1_mock[split]['image'] = [
+                numpy.random.randint(0, 256, (6, 6, 3)).astype('uint8'),
+                numpy.random.randint(0, 256, (5, 5, 3)).astype('uint8')]
+            other_sources = ('label', 'height', 'width', 'left', 'top')
+            for source in other_sources:
+                self.f1_mock[split][source] = [
+                    numpy.random.randint(0, 4, (2,)).astype('uint8'),
+                    # This ensures that label '10' is converted to label '1'.
+                    10 * numpy.ones((1,)).astype('uint8')]
+
+            with tarfile.open('{}.tar.gz'.format(split), 'w:gz') as tar_file:
+                os.mkdir(split)
+                for i, image in enumerate(self.f1_mock[split]['image']):
+                    Image.fromarray(image).save(
+                        os.path.join(split, '{}.png'.format(i + 1)))
+                struct_path = os.path.join(split, 'digitStruct.mat')
+                with h5py.File(struct_path, 'w') as f:
+                    for source in other_sources:
+                        suffixes = []
+                        for i in range(2):
+                            suffix = 'i1{}{}'.format(source, i)
+                            suffixes.append([suffix.encode('utf8')])
+                            name = 'digitStruct/{}'.format(suffix)
+                            f[name] = [[self.f1_mock[split][source][0][i]]]
+                        name = 'digitStruct/image_1/{}'.format(source)
+                        f[name] = suffixes
+                        name = 'digitStruct/image_2/{}'.format(source)
+                        f[name] = [[self.f1_mock[split][source][1][0]]]
+                    ref_dtype = h5py.special_dtype(ref=h5py.Reference)
+                    bbox = f.create_dataset(
+                        'digitStruct/bbox', (2, 1), dtype=ref_dtype)
+                    bbox[...] = [[f['digitStruct/image_1'].ref],
+                                 [f['digitStruct/image_2'].ref]]
+                tar_file.add(split)
+
+        for split in ('train', 'test', 'extra'):
+            make_mock_format_1(split)
+
+        self.f2_train_features_mock = numpy.random.randint(
+            0, 256, (32, 32, 3, 10)).astype('uint8')
+        self.f2_train_targets_mock = numpy.random.randint(
+            0, 10, (10, 1)).astype('uint8')
+        self.f2_test_features_mock = numpy.random.randint(
+            0, 256, (32, 32, 3, 10)).astype('uint8')
+        self.f2_test_targets_mock = numpy.random.randint(
+            0, 10, (10, 1)).astype('uint8')
+        self.f2_extra_features_mock = numpy.random.randint(
+            0, 256, (32, 32, 3, 10)).astype('uint8')
+        self.f2_extra_targets_mock = numpy.random.randint(
+            0, 10, (10, 1)).astype('uint8')
+        savemat('train_32x32.mat', {'X': self.f2_train_features_mock,
+                                    'y': self.f2_train_targets_mock})
+        savemat('test_32x32.mat', {'X': self.f2_test_features_mock,
+                                   'y': self.f2_test_targets_mock})
+        savemat('extra_32x32.mat', {'X': self.f2_extra_features_mock,
+                                    'y': self.f2_extra_targets_mock})
+        os.chdir(cwd)
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_format_1_converter(self):
+        filename = os.path.join(self.tempdir, 'svhn_format_1.hdf5')
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('svhn')
+        svhn.fill_subparser(subparser)
+        subparser.set_defaults(directory=self.tempdir, output_file=filename)
+        args = parser.parse_args(['svhn', '1'])
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        func(**args_dict)
+        h5file = h5py.File(filename, mode='r')
+
+        expected_features = sum((self.f1_mock[split]['image']
+                                 for split in ('train', 'test', 'extra')), [])
+        for val, truth in zip(h5file['features'][...], expected_features):
+            assert_equal(val, truth.transpose(2, 0, 1).flatten())
+
+        expected_labels = sum((self.f1_mock[split]['label']
+                               for split in ('train', 'test', 'extra')), [])
+        for val, truth in zip(h5file['bbox_labels'][...], expected_labels):
+            truth[truth == 10] = 0
+            assert_equal(val, truth)
+
+        expected_lefts = sum((self.f1_mock[split]['left']
+                              for split in ('train', 'test', 'extra')), [])
+        for val, truth in zip(h5file['bbox_lefts'][...], expected_lefts):
+            assert_equal(val, truth)
+
+    def test_format_2_converter(self):
+        filename = os.path.join(self.tempdir, 'svhn_format_2.hdf5')
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('svhn')
+        svhn.fill_subparser(subparser)
+        subparser.set_defaults(directory=self.tempdir, output_file=filename)
+        args = parser.parse_args(['svhn', '2'])
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        func(**args_dict)
+        h5file = h5py.File(filename, mode='r')
+        assert_equal(
+            h5file['features'][...],
+            numpy.vstack([self.f2_train_features_mock.transpose(3, 2, 0, 1),
+                          self.f2_test_features_mock.transpose(3, 2, 0, 1),
+                          self.f2_extra_features_mock.transpose(3, 2, 0, 1)]))
+        assert_equal(
+            h5file['targets'][...],
+            numpy.vstack([self.f2_train_targets_mock,
+                          self.f2_test_targets_mock,
+                          self.f2_extra_targets_mock]))
+        assert_equal(str(h5file['features'].dtype), 'uint8')
+        assert_equal(str(h5file['targets'].dtype), 'uint8')
+        assert_equal(tuple(dim.label for dim in h5file['features'].dims),
+                     ('batch', 'channel', 'height', 'width'))
+        assert_equal(tuple(dim.label for dim in h5file['targets'].dims),
+                     ('batch', 'index'))
+
+    @mock.patch('fuel.converters.svhn.convert_svhn_format_1')
+    def test_converter_call_format_1(self, mock_converter_format_1):
+        svhn.convert_svhn(1, './', 'svhn_format_{}.hdf5')
+        mock_converter_format_1.assert_called_with('./', 'svhn_format_1.hdf5')
+
+    @mock.patch('fuel.converters.svhn.convert_svhn_format_2')
+    def test_converter_call_format_2(self, mock_converter_format_2):
+        svhn.convert_svhn(2, './', 'svhn_format_{}.hdf5')
+        mock_converter_format_2.assert_called_with('./', 'svhn_format_2.hdf5')
+
+    def test_converter_error_wrong_format(self):
+        assert_raises(ValueError, svhn.convert_svhn, 3, './', 'mock.hdf5')
 
 
 def test_check_exists():
