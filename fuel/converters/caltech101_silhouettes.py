@@ -9,18 +9,19 @@ from fuel.converters.base import fill_hdf5_file, MissingInputFiles
 def convert_silhouettes(size, directory, output_file):
     """ Convert the CalTech 101 Silhouettes Datasets.
 
-    ToDo
-
     Parameters
     ----------
     size : int
-        Either of 16 or 28
+        Either of 16 or 28.
     directory : str
         Directory in which the required input files reside.
     output_file : str
         Where to save the converted dataset.
 
     """
+    if size not in (16, 28):
+        ValueError('size must be 16 or 28')
+
     input_file = 'caltech101_silhouettes_{}_split1.mat'.format(size)
     input_file = os.path.join(directory, input_file)
 
