@@ -7,7 +7,8 @@ from collections import namedtuple, OrderedDict
 import h5py
 import numpy
 from scipy.io import loadmat
-from six.moves import range
+from six import iteritems
+from six.moves import range, zip
 from PIL import Image
 
 from fuel.converters.base import fill_hdf5_file, check_exists, progress_bar
@@ -118,33 +119,26 @@ def convert_svhn_format_1(directory, output_file):
             path = split_structs[split]
             with h5py.File(path, 'r') as f, progress_bar_context as bar:
                 for image_number in range(num_ex):
-                    bbox_group = f['digitStruct']['bbox'][image_number, 0]
-                    bbox_height_refs = f['digitStruct'][bbox_group]['height']
-                    bbox_width_refs = f['digitStruct'][bbox_group]['width']
-                    bbox_left_refs = f['digitStruct'][bbox_group]['left']
-                    bbox_top_refs = f['digitStruct'][bbox_group]['top']
-                    bbox_label_refs = f['digitStruct'][bbox_group]['label']
+                    f_ds = f['digitStruct']
+                    group = f_ds['bbox'][image_number, 0]
+                    names = ('height', 'width', 'left', 'top')
+                    box_refs = dict(
+                        [(name, f_ds[group][name][:, 0]) for name in names])
+                    label_refs = f_ds[group]['label'][:, 0]
 
-                    num_boxes = len(bbox_height_refs)
+                    num_boxes = len(box_refs['height'])
                     if num_boxes > 1:
-                        bounding_boxes = BoundingBoxes(
-                            heights=[int(f['digitStruct'][ref][0, 0])
-                                     for ref in bbox_height_refs[:, 0]],
-                            widths=[int(f['digitStruct'][ref][0, 0])
-                                    for ref in bbox_width_refs[:, 0]],
-                            lefts=[int(f['digitStruct'][ref][0, 0])
-                                   for ref in bbox_left_refs[:, 0]],
-                            tops=[int(f['digitStruct'][ref][0, 0])
-                                  for ref in bbox_top_refs[:, 0]])
-                        labels = [int(f['digitStruct'][ref][0, 0])
-                                  for ref in bbox_label_refs[:, 0]]
+                        kwargs = dict(
+                            [(name + 's',
+                              [int(f_ds[ref][0, 0]) for ref in refs])
+                             for name, refs in iteritems(box_refs)])
+                        labels = [int(f_ds[ref][0, 0]) for ref in label_refs]
                     else:
-                        bounding_boxes = BoundingBoxes(
-                            heights=[int(bbox_height_refs[0, 0])],
-                            widths=[int(bbox_width_refs[0, 0])],
-                            lefts=[int(bbox_left_refs[0, 0])],
-                            tops=[int(bbox_top_refs[0, 0])])
-                        labels = [int(bbox_label_refs[0, 0])]
+                        kwargs = dict(
+                            [(name + 's', [int(refs[0])])
+                             for name, refs in iteritems(box_refs)])
+                        labels = [int(label_refs[0])]
+                    bounding_boxes = BoundingBoxes(**kwargs)
 
                     boxes_and_labels.append((bounding_boxes, labels))
                     if bar:
