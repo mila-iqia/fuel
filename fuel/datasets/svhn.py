@@ -30,11 +30,10 @@ class SVHN(H5PYDataset):
 
     Parameters
     ----------
-    which_format : 1 or 2
+    which_format : {1, 2}
         SVHN format 1 contains the full numbers, whereas SVHN format 2
-        contains cropped digits. **Note: at the moment, only format 2
-        is available through Fuel.**
-    which_set : 'train', 'test' or 'extra'
+        contains cropped digits.
+    which_set : {'train', 'test', 'extra'}
         Whether to load the training set (73,257 examples), the test
         set (26,032 examples) or the extra set (531,131 examples).
         Note that SVHN does not have a validation set; usually you
