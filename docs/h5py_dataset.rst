@@ -57,15 +57,15 @@ things if your data happens to meet these assumptions:
   names.
 * Data sources are not explicitly split into separate HDF5 datasets or separate
   HDF5 files. Instead, splits are defined in the ``split`` attribute of the root
-  group. It's expected to be a 1D numpy array of compound ``dtype`` with six
+  group. It's expected to be a 1D numpy array of compound ``dtype`` with seven
   fields, organized as follows:
 
   1. ``split`` : string identifier for the split name
   2. ``source`` : string identifier for the source name
   3. ``start`` : start index (inclusive) of the split in the source array
   4. ``stop`` : stop index (exclusive) of the split in the source array
-  5. ``available`` : boolean, ``False`` if this split is not available for this
-     source
+  4. ``indices`` : reference pointing to a dataset containing indices for this split/source pair
+  5. ``available`` : boolean, ``False`` if this split is not available for this source
   6. ``comment`` : comment string
 
 .. tip::
@@ -139,7 +139,9 @@ attribute of the root group.
 ...     dtype=numpy.dtype([
 ...         ('split', 'a', 5),
 ...         ('source', 'a', 15),
-...         ('start', numpy.int64, 1), ('stop', numpy.int64, 1),
+...         ('start', numpy.int64, 1),
+...         ('stop', numpy.int64, 1),
+...         ('indices', h5py.special_dtype(ref=h5py.Reference)),
 ...         ('available', numpy.bool, 1),
 ...         ('comment', 'a', 1)]))
 >>> split_array[0:3]['split'] = 'train'.encode('utf8')
@@ -151,18 +153,19 @@ attribute of the root group.
 >>> split_array[0:3]['stop'] = 90
 >>> split_array[3:6]['start'] = 90
 >>> split_array[3:6]['stop'] = 100
+>>> split_array[:]['indices'] = h5py.Reference()
 >>> split_array[:]['available'] = True
 >>> split_array[:]['comment'] = '.'.encode('utf8')
 >>> f.attrs['split'] = split_array
 
 We created a 1D numpy array with six elements. The ``dtype`` for this array
 is a compound type: every element of the array is a tuple of ``(str, str, int,
-int, bool, str)``. The length of each string element has been chosen to be the
-maximum length we needed to store: that's 5 for the ``split`` element
-(``'train'`` being the longest split name) and 15 for the ``source`` element
-(``'vector_features'`` being the longest source name). We didn't include any
-comment, so the length for that element was set to 1. Due to a quirk in pickling
-empty strings, we put ``'.'`` as the comment value.
+int, h5py.Reference, bool, str)``. The length of each string element has been
+chosen to be the maximum length we needed to store: that's 5 for the ``split``
+element (``'train'`` being the longest split name) and 15 for the ``source``
+element (``'vector_features'`` being the longest source name). We didn't
+include any comment, so the length for that element was set to 1. Due to a
+quirk in pickling empty strings, we put ``'.'`` as the comment value.
 
 .. warning::
 
@@ -176,6 +179,10 @@ data is available for some source/split combination: for instance, the test
 set may not be labeled, and the ``('test', 'targets')`` combination may not
 exist. In that case, you can set the ``available`` element for that combination
 to ``False``, and :class:`~.datasets.hdf5.H5PYDataset` will ignore it.
+
+Don't worry too much about ``indices``; we'll get back to that later. For the
+moment, all you need to know is that since our splits are congiguous, we don't
+need that feature and therefore put empty references.
 
 The method described above does the job, but it's not very convenient. An even
 simpler way of achieving the same result is to call
@@ -191,13 +198,14 @@ simpler way of achieving the same result is to call
 
 The :meth:`~.datasets.hdf5.H5PYDataset.create_split_array` method expects
 a dictionary mapping split names to dictionaries. Those dictionaries map source
-names to tuples of length 2 or 3: the first two elements correspond to the start
-and stop indexes and the last element is an optional comment for the
-split/source pair. The method will create the array behind the scenes,
-choose the string lengths automatically and populate it with the information
-in the split dictionary. If a particular split/source combination isn't present,
-its ``available`` attribute is set to ``False``, which allows us to specify
-only what's actually present in the HDF5 file we created.
+names to tuples of length 2, 3 or 4. The first two elements correspond to the
+start and stop indexes. The other two elements are optional and correspond to
+the ``indices`` reference and the comment, respectively. The method will create
+the array behind the scenes, choose the string lengths automatically and
+populate it with the information in the split dictionary. If a particular
+split/source combination isn't present, its ``available`` attribute is set to
+``False``, which allows us to specify only what's actually present in the HDF5
+file we created.
 
 .. tip::
 
@@ -298,6 +306,66 @@ what you requested, and nothing more.
 <... 'numpy.ndarray'>
 >>> print(data.shape)
 (80, 10)
+
+Non-contiguous splits
+---------------------
+
+Sometimes it's not possible to store the different splits contiguously. In that
+case, you'll want to use the ``indices`` field of the
+:class:`~.datasets.hdf5.H5PYDataset` split array. A non-empty reference in that
+field overrides the ``start`` and ``stop`` fields, and the dataset the
+reference points to is used to determine the indices for that split/source
+pair.
+
+Suppose that you'd like to use the even examples as your training set and the
+odd examples as your test set. We'll start with the HDF5 file we populated
+earlier and manipulate its ``split`` attribute.
+
+>>> f = h5py.File('dataset.hdf5', mode='a')
+>>> f['train_indices'] = numpy.arange(0, 100, 2)
+>>> train_ref = f['train_indices'].ref
+>>> f['test_indices'] = numpy.arange(1, 100, 2)
+>>> test_ref = f['test_indices'].ref
+>>> split_dict = {
+...     'train': {'vector_features': (-1, -1, train_ref),
+...               'image_features': (-1, -1, train_ref),
+...               'targets': (-1, -1, train_ref)},
+...     'test': {'vector_features': (-1, -1, test_ref),
+...              'image_features': (-1, -1, test_ref),
+...              'targets': (-1, -1, test_ref)}}
+>>> f.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+>>> f.flush()
+>>> f.close()
+
+We created two new datasets containing even and odd indices from 0 to 99,
+respectively, and passed references to these datasets in the split dict. In that
+case, the value we pass to ``start`` and ``stop`` really doesn't matter, so
+we arbitrarily chose ``-1`` for both.
+
+Let's check that the training and test set do contain even and odd examples:
+
+>>> train_set = H5PYDataset(
+...     'dataset.hdf5', which_set='train', sources=('vector_features',))
+>>> handle = train_set.open()
+>>> print(
+...     numpy.array_equal(
+...         train_set.get_data(handle, slice(0, 50))[0],
+...         numpy.vstack(
+...             [numpy.load('train_vector_features.npy'),
+...              numpy.load('test_vector_features.npy')])[::2]))
+True
+>>> train_set.close(handle)
+>>> test_set = H5PYDataset(
+...     'dataset.hdf5', which_set='test', sources=('vector_features',))
+>>> handle = test_set.open()
+>>> print(
+...     numpy.array_equal(
+...         test_set.get_data(handle, slice(0, 50))[0],
+...         numpy.vstack(
+...             [numpy.load('train_vector_features.npy'),
+...              numpy.load('test_vector_features.npy')])[1::2]))
+True
+>>> test_set.close(handle)
 
 Variable-length data
 --------------------
