@@ -75,19 +75,12 @@ def convert_svhn_format_1(directory, output_file):
                         bar.update(i)
             return num_examples
 
-        examples_per_split = {}
-        for split in splits:
-            examples_per_split[split] = extract_tar(split)
-
-        num_examples = sum(examples_per_split.values())
-        split_intervals = {}
-        split_intervals['train'] = (0, examples_per_split['train'])
-        split_intervals['test'] = (
-            examples_per_split['train'],
-            examples_per_split['train'] + examples_per_split['test'])
-        split_intervals['extra'] = (
-            examples_per_split['train'] + examples_per_split['test'],
-            num_examples)
+        num_examples_list = [extract_tar(split) for split in splits]
+        examples_per_split = dict(zip(splits, num_examples_list))
+        num_examples = sum(num_examples_list)
+        cumulative_examples = [0] + list(numpy.cumsum(num_examples_list))
+        intervals = zip(cumulative_examples[:-1], cumulative_examples[1:])
+        split_intervals = dict(zip(splits, intervals))
         split_dict = OrderedDict([
             (split, OrderedDict([(s, split_intervals[split])
                                  for s in sources]))
