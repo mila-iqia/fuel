@@ -443,9 +443,9 @@ class TestSVHN(object):
         for val, truth in zip(h5file['features'][...], expected_features):
             assert_equal(val, truth.transpose(2, 0, 1).flatten())
 
-        expected_targets = sum((self.f1_mock[split]['label']
-                                for split in ('train', 'test', 'extra')), [])
-        for val, truth in zip(h5file['targets'][...], expected_targets):
+        expected_labels = sum((self.f1_mock[split]['label']
+                               for split in ('train', 'test', 'extra')), [])
+        for val, truth in zip(h5file['bbox_labels'][...], expected_labels):
             assert_equal(val, truth)
 
         expected_lefts = sum((self.f1_mock[split]['left']

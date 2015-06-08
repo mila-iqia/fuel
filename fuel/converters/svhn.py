@@ -43,26 +43,46 @@ def convert_svhn_format_1(directory, output_file):
         h5file = h5py.File(output_file, mode='w')
         TMPDIR = tempfile.mkdtemp()
 
+        # Every image has three channels (RGB) and variable height and width.
+        # It features a variable number of bounding boxes that identify the
+        # location and label of digits. The bounding box location is specified
+        # using the x and y coordinates of its top left corner along with its
+        # width and height.
         BoundingBoxes = namedtuple(
-            'BoundingBoxes', ['heights', 'widths', 'lefts', 'tops'])
+            'BoundingBoxes', ['labels', 'heights', 'widths', 'lefts', 'tops'])
+        sources = ('features',) + tuple('bbox_{}'.format(field)
+                                        for field in BoundingBoxes._fields)
+        source_dtypes = dict([(source, 'uint8') for source in sources[:2]] +
+                             [(source, 'uint16') for source in sources[2:]])
+        source_axis_labels = {
+            'features': ('channel', 'height', 'width'),
+            'bbox_labels': ('bounding_box', 'index'),
+            'bbox_heights': ('bounding_box', 'height'),
+            'bbox_widths': ('bounding_box', 'width'),
+            'bbox_lefts': ('bounding_box', 'x'),
+            'bbox_tops': ('bounding_box', 'y')}
 
+        # The dataset is split into three sets: the training set, the test set
+        # and an extra set of examples that are somewhat less difficult but
+        # can be used as extra training data. These sets are stored separately
+        # as 'train.tar.gz', 'test.tar.gz' and 'extra.tar.gz'. Each file
+        # contains a directory named after the split it stores. The examples
+        # are stored in that directory as PNG images. The directory also
+        # contains a 'digitStruct.mat' file with all the bounding box and
+        # label information.
         splits = ('train', 'test', 'extra')
         file_paths = dict(zip(splits, FORMAT_1_FILES))
         for split, path in file_paths.items():
             file_paths[split] = os.path.join(directory, path)
-        split_structs = dict(
+        digit_struct_paths = dict(
             [(split, os.path.join(TMPDIR, split, 'digitStruct.mat'))
              for split in splits])
 
-        sources = ('features', 'targets', 'bbox_heights', 'bbox_widths',
-                   'bbox_lefts', 'bbox_tops')
-        source_dtypes = dict([(source, 'uint8') for source in sources[:2]] +
-                             [(source, 'uint16') for source in sources[2:]])
-        source_shape_labels = dict(
-            [('features', ('channel', 'height', 'width')),
-             ('targets', ('index',))] +
-            [(source, ('bounding_box',)) for source in sources[2:]])
-
+        # We first extract the data files in a temporary directory. While doing
+        # that, we also count the number of examples for each split. Files are
+        # extracted individually, which allows to display a progress bar. Since
+        # the splits will be concatenated in the HDF5 file, we also compute the
+        # start and stop intervals of each split within the concatenated array.
         def extract_tar(split):
             with tarfile.open(file_paths[split], 'r:gz') as f:
                 members = f.getmembers()
@@ -76,107 +96,144 @@ def convert_svhn_format_1(directory, output_file):
                         bar.update(i)
             return num_examples
 
-        num_examples_list = [extract_tar(split) for split in splits]
-        examples_per_split = dict(zip(splits, num_examples_list))
-        num_examples = sum(num_examples_list)
-        cumulative_examples = [0] + list(numpy.cumsum(num_examples_list))
-        intervals = zip(cumulative_examples[:-1], cumulative_examples[1:])
+        examples_per_split = OrderedDict(
+            [(split, extract_tar(split)) for split in splits])
+        cumulative_num_examples = numpy.cumsum(
+            [0] + list(examples_per_split.values()))
+        num_examples = cumulative_num_examples[-1]
+        intervals = zip(cumulative_num_examples[:-1],
+                        cumulative_num_examples[1:])
         split_intervals = dict(zip(splits, intervals))
+
+        # The start and stop indices are used to create a split dict that will
+        # be parsed into the split array required by the H5PYDataset interface.
+        # The split dict is organized as follows:
+        #
+        #     dict(split -> dict(source -> (start, stop)))
+        #
         split_dict = OrderedDict([
             (split, OrderedDict([(s, split_intervals[split])
                                  for s in sources]))
             for split in splits])
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
 
+        # We then prepare the HDF5 dataset. This involves creating datasets to
+        # store data sources and datasets to store auxiliary information
+        # (namely the shapes for variable-length axes, and labels to indicate
+        # what these variable-length axes represent).
         def make_vlen_dataset(source):
+            # Create a variable-length 1D dataset
             dtype = h5py.special_dtype(vlen=numpy.dtype(source_dtypes[source]))
             dataset = h5file.create_dataset(
                 source, (num_examples,), dtype=dtype)
-            dataset.dims[0].label = 'batch'
-            shape_labels = source_shape_labels[source]
+            # Create a dataset to store variable-length shapes.
+            axis_labels = source_axis_labels[source]
             dataset_shapes = h5file.create_dataset(
-                '{}_shapes'.format(source), (num_examples, len(shape_labels)),
+                '{}_shapes'.format(source), (num_examples, len(axis_labels)),
                 dtype='uint16')
+            # Create a dataset to store labels for variable-length axes.
+            dataset_vlen_axis_labels = h5file.create_dataset(
+                '{}_vlen_axis_labels'.format(source), (len(axis_labels),),
+                dtype='S{}'.format(
+                    numpy.max([len(label) for label in axis_labels])))
+            # Fill variable-length axis labels
+            dataset_vlen_axis_labels[...] = [
+                label.encode('utf8') for label in axis_labels]
+            # Attach auxiliary datasets as dimension scales of the
+            # variable-length 1D dataset. This is in accordance with the
+            # H5PYDataset interface.
             dataset.dims.create_scale(dataset_shapes, 'shapes')
             dataset.dims[0].attach_scale(dataset_shapes)
-            dataset_shape_labels = h5file.create_dataset(
-                '{}_shape_labels'.format(source), (len(shape_labels),),
-                dtype='S{}'.format(
-                    numpy.max([len(label) for label in shape_labels])))
-            dataset_shape_labels[...] = [
-                label.encode('utf8') for label in shape_labels]
-            dataset.dims.create_scale(dataset_shape_labels, 'shape_labels')
-            dataset.dims[0].attach_scale(dataset_shape_labels)
+            dataset.dims.create_scale(dataset_vlen_axis_labels, 'shape_labels')
+            dataset.dims[0].attach_scale(dataset_vlen_axis_labels)
+            # Tag fixed-length axis with its label
+            dataset.dims[0].label = 'batch'
 
         for source in sources:
             make_vlen_dataset(source)
 
-        def get_boxes_and_labels(split):
-            boxes_and_labels = []
-            num_ex = examples_per_split[split]
-            progress_bar_context = progress_bar(
-                '{} digitStruct'.format(split), num_ex)
-            path = split_structs[split]
-            with h5py.File(path, 'r') as f, progress_bar_context as bar:
-                for image_number in range(num_ex):
-                    f_ds = f['digitStruct']
-                    group = f_ds['bbox'][image_number, 0]
-                    names = ('height', 'width', 'left', 'top')
-                    box_refs = dict(
-                        [(name, f_ds[group][name][:, 0]) for name in names])
-                    label_refs = f_ds[group]['label'][:, 0]
+        # The "fun" part begins: we extract the bounding box and label
+        # information contained in 'digitStruct.mat'. This is a version 7.3
+        # Matlab file, which uses HDF5 under the hood, albeit with a very
+        # convoluted layout.
+        def get_boxes(split):
+            boxes = []
+            with h5py.File(digit_struct_paths[split], 'r') as f:
+                bar_name = '{} digitStruct'.format(split)
+                bar_maxval = examples_per_split[split]
+                with progress_bar(bar_name, bar_maxval) as bar:
+                    for image_number in range(examples_per_split[split]):
+                        # The 'digitStruct' group is the main group of the HDF5
+                        # file. It contains two datasets: 'bbox' and 'name'.
+                        # The 'name' dataset isn't of interest to us, as it
+                        # stores file names and there's already a one-to-one
+                        # mapping between row numbers and image names (e.g.
+                        # row 0 corresponds to '1.png', row 1 corresponds to
+                        # '2.png', and so on).
+                        main_group = f['digitStruct']
+                        # The 'bbox' dataset contains the bounding box and
+                        # label information we're after. It has as many rows
+                        # as there are images, and one column. Elements of the
+                        # 'bbox' dataset are object references that point to
+                        # (yet another) group that contains the information
+                        # for the corresponding image.
+                        image_reference = main_group['bbox'][image_number, 0]
 
-                    num_boxes = len(box_refs['height'])
-                    if num_boxes > 1:
+                        # There are five datasets contained in that group:
+                        # 'label', 'height', 'width', 'left' and 'top'. Each of
+                        # those datasets has as many rows as there are bounding
+                        # boxes in the corresponding image, and one column.
+                        def get_dataset(name):
+                            return main_group[image_reference][name][:, 0]
+                        names = ('label', 'height', 'width', 'left', 'top')
+                        datasets = dict(
+                            [(name, get_dataset(name)) for name in names])
+
+                        # If there is only one bounding box, the information is
+                        # stored directly in the datasets. If there are
+                        # multiple bounding boxes, elements of those datasets
+                        # are object references pointing to 1x1 datasets that
+                        # store the information (fortunately, it's the last
+                        # hop we need to make).
+                        def get_elements(dataset):
+                            if len(dataset) > 1:
+                                return [int(main_group[reference][0, 0])
+                                        for reference in dataset]
+                            else:
+                                return [int(dataset[0])]
+                        # Names are pluralized in the BoundingBox named tuple.
                         kwargs = dict(
-                            [(name + 's',
-                              [int(f_ds[ref][0, 0]) for ref in refs])
-                             for name, refs in iteritems(box_refs)])
-                        labels = [int(f_ds[ref][0, 0]) for ref in label_refs]
-                    else:
-                        kwargs = dict(
-                            [(name + 's', [int(refs[0])])
-                             for name, refs in iteritems(box_refs)])
-                        labels = [int(label_refs[0])]
-                    bounding_boxes = BoundingBoxes(**kwargs)
+                            [(name + 's', get_elements(dataset))
+                             for name, dataset in iteritems(datasets)])
+                        boxes.append(BoundingBoxes(**kwargs))
+                        if bar:
+                            bar.update(image_number)
+            return boxes
 
-                    boxes_and_labels.append((bounding_boxes, labels))
-                    if bar:
-                        bar.update(image_number)
-            return boxes_and_labels
+        split_boxes = dict([(split, get_boxes(split)) for split in splits])
 
-        split_boxes_and_labels = {}
-        for split in splits:
-            split_boxes_and_labels[split] = get_boxes_and_labels(split)
-
+        # The final step is to fill the HDF5 file.
         def fill_split(split, bar=None):
             for image_number in range(examples_per_split[split]):
                 image_path = os.path.join(
                     TMPDIR, split, '{}.png'.format(image_number + 1))
                 image = numpy.asarray(
                     Image.open(image_path)).transpose(2, 0, 1)
-                rval = split_boxes_and_labels[split][image_number]
-                bounding_boxes, labels = rval
-                num_boxes = len(labels)
-                i = image_number + split_intervals[split][0]
+                bounding_boxes = split_boxes[split][image_number]
+                num_boxes = len(bounding_boxes.labels)
+                index = image_number + split_intervals[split][0]
 
-                h5file['features'][i] = image.flatten()
-                h5file['features'].dims[0]['shapes'][i] = image.shape
-                h5file['targets'][i] = labels
-                h5file['targets'].dims[0]['shapes'][i] = len(labels)
-                h5file['bbox_heights'][i] = bounding_boxes.heights
-                h5file['bbox_heights'].dims[0]['shapes'][i] = num_boxes
-                h5file['bbox_widths'][i] = bounding_boxes.widths
-                h5file['bbox_widths'].dims[0]['shapes'][i] = num_boxes
-                h5file['bbox_lefts'][i] = bounding_boxes.lefts
-                h5file['bbox_lefts'].dims[0]['shapes'][i] = num_boxes
-                h5file['bbox_tops'][i] = bounding_boxes.tops
-                h5file['bbox_tops'].dims[0]['shapes'][i] = num_boxes
+                h5file['features'][index] = image.flatten()
+                h5file['features'].dims[0]['shapes'][index] = image.shape
+                for field in BoundingBoxes._fields:
+                    name = 'bbox_{}'.format(field)
+                    h5file[name][index] = getattr(bounding_boxes, field)
+                    h5file[name].dims[0]['shapes'][index] = [num_boxes, 1]
 
                 if image_number % 1000 == 0:
                     h5file.flush()
                 if bar:
-                    bar.update(i)
+                    bar.update(index)
 
         with progress_bar('SVHN format 1', num_examples) as bar:
             for split in splits:
