@@ -230,6 +230,11 @@ def convert_svhn_format_1(directory, output_file):
                     h5file[name][index] = getattr(bounding_boxes, field)
                     h5file[name].dims[0]['shapes'][index] = [num_boxes, 1]
 
+                # Replace label '10' with '0'.
+                labels = h5file['bbox_labels'][index]
+                labels[labels == 10] = 0
+                h5file['bbox_labels'][index] = labels
+
                 if image_number % 1000 == 0:
                     h5file.flush()
                 if bar:

@@ -372,7 +372,8 @@ class TestSVHN(object):
             for source in other_sources:
                 self.f1_mock[split][source] = [
                     numpy.random.randint(0, 4, (2,)).astype('uint8'),
-                    numpy.random.randint(0, 4, (1,)).astype('uint8')]
+                    # This ensures that label '10' is converted to label '1'.
+                    10 * numpy.ones((1,)).astype('uint8')]
 
             with tarfile.open('{}.tar.gz'.format(split), 'w:gz') as tar_file:
                 os.mkdir(split)
@@ -446,6 +447,7 @@ class TestSVHN(object):
         expected_labels = sum((self.f1_mock[split]['label']
                                for split in ('train', 'test', 'extra')), [])
         for val, truth in zip(h5file['bbox_labels'][...], expected_labels):
+            truth[truth == 10] = 0
             assert_equal(val, truth)
 
         expected_lefts = sum((self.f1_mock[split]['left']
