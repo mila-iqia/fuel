@@ -3,37 +3,41 @@ import h5py
 
 from scipy.io import loadmat
 
-from fuel.converters.base import fill_hdf5_file, check_exists
-
-ALL_FILES16 = ['caltech101_silhouettes_16_split1.mat'] #, 'caltech101_silhouettes_16_split1.mat']
-ALL_FILES28 = ['caltech101_silhouettes_28_split1.mat'] #, 'caltech101_silhouettes_28_split1.mat']
+from fuel.converters.base import fill_hdf5_file, MissingInputFiles
 
 
-# TODO: Handel 16x16 dataset
-
-@check_exists(required_files=ALL_FILES28)
-def convert_caltech101_silhouettes28(directory, output_file):
+def convert_silhouettes(size, directory, output_file):
     """ Convert the CalTech 101 Silhouettes Datasets.
 
     ToDo
 
     Parameters
     ----------
+    size : int
+        Either of 16 or 28
     directory : str
         Directory in which the required input files reside.
     output_file : str
         Where to save the converted dataset.
 
     """
-    with h5py.File(output_file, mode="w") as h5file:
-        tfd = loadmat(os.path.join(directory, 'caltech101_silhouettes_28_split1.mat'))
+    input_file = 'caltech101_silhouettes_{}_split1.mat'.format(size)
+    input_file = os.path.join(directory, input_file)
 
-        train_X = tfd['train_data'].reshape([-1., 1, 28, 28])
-        valid_X = tfd['val_data'].reshape([-1., 1, 28, 28])
-        test_X  = tfd['test_data'].reshape([-1., 1, 28, 28])
-        train_Y = tfd['train_labels']
-        valid_Y = tfd['val_labels']
-        test_Y  = tfd['test_labels']
+    if not os.path.isfile(input_file):
+        raise MissingInputFiles('Required files missing', [input_file])
+
+    output_file = output_file.format(size)
+
+    with h5py.File(output_file, mode="w") as h5file:
+        mat = loadmat(input_file)
+
+        train_X = mat['train_data'].reshape([-1, 1, size, size])
+        valid_X = mat['val_data'].reshape([-1, 1, size, size])
+        test_X  = mat['test_data'].reshape([-1, 1, size, size])
+        train_Y = mat['train_labels']
+        valid_Y = mat['val_labels']
+        test_Y  = mat['test_labels']
 
         data = (
             ('train', 'features', train_X),
@@ -53,7 +57,7 @@ def convert_caltech101_silhouettes28(directory, output_file):
 
 
 def fill_subparser(subparser):
-    """Sets up a subparser to convert Toronto Face Database files.
+    """Sets up a subparser to convert CalTech101 Silhouettes Database files.
 
     Parameters
     ----------
@@ -61,4 +65,9 @@ def fill_subparser(subparser):
         Subparser handling the `caltech101_silhouettes` command.
 
     """
-    subparser.set_defaults(func=convert_caltech101_silhouettes28)
+    subparser.add_argument(
+        "size", type=int, choices=(16, 28),
+        help="height/width of the datapoints")
+    subparser.set_defaults(
+        func=convert_silhouettes,
+        output_file=os.path.join(os.getcwd(), 'caltech101_silhouettes{}.hdf5'))
