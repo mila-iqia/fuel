@@ -32,20 +32,20 @@ def convert_silhouettes(size, directory, output_file):
     with h5py.File(output_file, mode="w") as h5file:
         mat = loadmat(input_file)
 
-        train_X = mat['train_data'].reshape([-1, 1, size, size])
-        valid_X = mat['val_data'].reshape([-1, 1, size, size])
-        test_X  = mat['test_data'].reshape([-1, 1, size, size])
-        train_Y = mat['train_labels']
-        valid_Y = mat['val_labels']
-        test_Y  = mat['test_labels']
+        train_features = mat['train_data'].reshape([-1, 1, size, size])
+        train_targets = mat['train_labels']
+        valid_features = mat['val_data'].reshape([-1, 1, size, size])
+        valid_targets = mat['val_labels']
+        test_features = mat['test_data'].reshape([-1, 1, size, size])
+        test_targets = mat['test_labels']
 
         data = (
-            ('train', 'features', train_X),
-            ('train', 'targets' , train_Y),
-            ('valid', 'features', valid_X),
-            ('valid', 'targets' , valid_Y),
-            ('test',  'features', test_X),
-            ('test',  'targets' , test_Y),
+            ('train', 'features', train_features),
+            ('train', 'targets', train_targets),
+            ('valid', 'features', valid_features),
+            ('valid', 'targets', valid_targets),
+            ('test', 'features', test_features),
+            ('test', 'targets', test_targets),
         )
         fill_hdf5_file(h5file, data)
 
