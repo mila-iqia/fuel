@@ -5,9 +5,9 @@ set -ev
 
 function download {
   if [ ! -f $FUEL_DATA_PATH/$1.hdf5 ]; then
-    fuel-download $1
-    fuel-convert $1
-    fuel-download $1 --clear
+    fuel-download $@
+    fuel-convert $@
+    fuel-download $@ --clear
   fi
 }
 

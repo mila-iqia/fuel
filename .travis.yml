@@ -38,7 +38,10 @@ install:
         pip install . -r requirements.txt
       fi
 script:
-  - ./.travis-data.sh mnist binarized_mnist cifar10 cifar100
+<<<<<<< HEAD
+=======
+  - pip install . -r requirements.txt
+  - ./.travis-data.sh mnist binarized_mnist "caltech_silhouettes 16" cifar10 cifar100
   - function fail { export FAILED=1; }
   - |
       if [[ $TESTS == 'blocks' ]]; then
