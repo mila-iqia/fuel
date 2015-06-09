@@ -7,7 +7,8 @@ from functools import wraps
 
 from numpy.testing import assert_equal, assert_raises
 
-from fuel.downloaders import mnist, binarized_mnist, cifar10, cifar100, svhn
+from fuel.downloaders import (binarized_mnist, caltech101_silhouettes,
+                              cifar10, cifar100, mnist, svhn)
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix,
                                    ensure_directory_exists)
@@ -115,6 +116,15 @@ def test_binarized_mnist():
     assert_equal(args.filenames, filenames)
     assert_equal(args.urls, urls)
     assert args.func is default_downloader
+
+
+def test_caltech101_silhouettes():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    caltech101_silhouettes.fill_subparser(subparsers.add_parser('caltech101_silhouettes'))
+    args = parser.parse_args(['caltech101_silhouettes', '16'])
+    assert_equal(args.size, 16)
+    assert args.func is caltech101_silhouettes.silhouettes_downloader
 
 
 def test_cifar10():
