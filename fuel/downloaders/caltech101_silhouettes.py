@@ -11,7 +11,7 @@ def silhouettes_downloader(size, **kwargs):
 
     actual_filename = FILENAME.format(size)
     actual_url = BASE_URL + actual_filename
-    default_downloader(urls=[actual_url], 
+    default_downloader(urls=[actual_url],
                        filenames=[actual_filename], **kwargs)
 
 

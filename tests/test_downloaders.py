@@ -121,7 +121,8 @@ def test_binarized_mnist():
 def test_caltech101_silhouettes():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
-    caltech101_silhouettes.fill_subparser(subparsers.add_parser('caltech101_silhouettes'))
+    caltech101_silhouettes.fill_subparser(
+        subparsers.add_parser('caltech101_silhouettes'))
     args = parser.parse_args(['caltech101_silhouettes', '16'])
     assert_equal(args.size, 16)
     assert args.func is caltech101_silhouettes.silhouettes_downloader

@@ -20,7 +20,7 @@ def convert_silhouettes(size, directory, output_file):
 
     """
     if size not in (16, 28):
-        ValueError('size must be 16 or 28')
+        raise ValueError('size must be 16 or 28')
 
     input_file = 'caltech101_silhouettes_{}_split1.mat'.format(size)
     input_file = os.path.join(directory, input_file)

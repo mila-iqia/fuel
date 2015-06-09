@@ -398,7 +398,18 @@ class TestCalTech101Silhouettes(object):
         cwd = os.getcwd()
         os.chdir(self.tempdir)
 
+        assert_raises(MissingInputFiles,
+                      caltech101_silhouettes.convert_silhouettes,
+                      size=16, directory=self.tempdir, output_file=output_file)
+        assert_raises(ValueError, silhouettes_downloader,
+                      size=10, directory=self.tempdir)
+
         silhouettes_downloader(size=size, directory=self.tempdir)
+
+        assert_raises(ValueError,
+                      caltech101_silhouettes.convert_silhouettes,
+                      size=10, directory=self.tempdir, output_file=output_file)
+
         caltech101_silhouettes.convert_silhouettes(size=size,
                                                    directory=self.tempdir,
                                                    output_file=output_file)

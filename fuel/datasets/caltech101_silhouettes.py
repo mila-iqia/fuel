@@ -8,8 +8,8 @@ from fuel.datasets import H5PYDataset
 class CalTech101Silhouettes(H5PYDataset):
     u"""CalTech 101 Silhouettes dataset.
 
-    This dataset provides `split1` train/validation/test split of the 
-    CalTech 101 Silhouette dataset prepared by Benjamin M. Marlin's [MARLIN].
+    This dataset provides the `split1` train/validation/test split of the
+    CalTech101 Silhouette dataset prepared by Benjamin M. Marlin [MARLIN].
 
     This class provides both the 16x16 and the 28x28 pixel sized version.
 
@@ -17,7 +17,6 @@ class CalTech101Silhouettes(H5PYDataset):
 
     Parameters
     ----------
-
     which_set : 'train' or 'valid' or 'test'
         Whether to load the training set (4,100 samples) or the validation
         set (2,264 samples) or the test set (2,307 samples).
