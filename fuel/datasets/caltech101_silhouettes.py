@@ -12,15 +12,18 @@ class CalTech101Silhouettes(H5PYDataset):
     CalTech101 Silhouette dataset prepared by Benjamin M. Marlin [MARLIN].
 
     This class provides both the 16x16 and the 28x28 pixel sized version.
+    The 16x16 version contains 4082 examples in the training set, 2257
+    examples in the validation set and 2302 examples in the test set. The
+    28x28 version contains 4100, 2264 and 2307 examples in the train, valid
+    and test set.
 
     .. [MARLIN] https://people.cs.umass.edu/~marlin/data.shtml
 
     Parameters
     ----------
-    which_set : 'train' or 'valid' or 'test'
-        Whether to load the training set (4,100 samples) or the validation
-        set (2,264 samples) or the test set (2,307 samples).
-    size : int
+    which_set : {'train', 'valid', 'test'}
+        Access the training, validation or test set.
+    size : {16, 28}
         Either 16 or 28 to select the 16x16 or 28x28 pixels version
         of the dataset (default: 28).
 

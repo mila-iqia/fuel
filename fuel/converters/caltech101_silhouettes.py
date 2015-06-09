@@ -11,8 +11,8 @@ def convert_silhouettes(size, directory, output_file):
 
     Parameters
     ----------
-    size : int
-        Either of 16 or 28.
+    size : {16, 28}
+        Convert either the 16x16 or 28x28 sized version of the dataset.
     directory : str
         Directory in which the required input files reside.
     output_file : str
