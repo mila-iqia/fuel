@@ -39,7 +39,6 @@ if __name__ == "__main__":
             "-o", "--output", dest="output_directory",
             help="where to save the dataset", type=str,
             default=os.getcwd(), action=SplitOutputAction)
-        subparser.set_defaults(output_filename=None)
         subparser_fn(subparser)
 
     args = parser.parse_args()
