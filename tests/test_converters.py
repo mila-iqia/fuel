@@ -132,17 +132,17 @@ class TestMNIST(object):
         shutil.rmtree(self.tempdir)
 
     def test_converter(self):
-        filename = os.path.join(self.tempdir, 'mock_mnist.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('mnist')
         subparser.set_defaults(
-            directory=self.tempdir, output_file=filename)
+            directory=self.tempdir, output_directory=self.tempdir,
+            output_filename='mock_mnist.hdf5')
         mnist.fill_subparser(subparser)
         args = parser.parse_args(['mnist'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        func(**args_dict)
+        filename = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
@@ -157,6 +157,32 @@ class TestMNIST(object):
                      ('batch', 'channel', 'height', 'width'))
         assert_equal(tuple(dim.label for dim in h5file['targets'].dims),
                      ('batch', 'index'))
+
+    def test_converter_no_filename_no_dtype(self):
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('mnist')
+        subparser.set_defaults(
+            directory=self.tempdir, output_directory=self.tempdir)
+        mnist.fill_subparser(subparser)
+        args = parser.parse_args(['mnist'])
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        filename = func(**args_dict)
+        assert_equal(os.path.basename(filename), 'mnist.hdf5')
+
+    def test_converter_no_filename(self):
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('mnist')
+        subparser.set_defaults(
+            directory=self.tempdir, output_directory=self.tempdir)
+        mnist.fill_subparser(subparser)
+        args = parser.parse_args(['mnist', '--dtype', 'bool'])
+        args_dict = vars(args)
+        func = args_dict.pop('func')
+        filename = func(**args_dict)
+        assert_equal(os.path.basename(filename), 'mnist_bool.hdf5')
 
     def test_wrong_image_magic(self):
         assert_raises(
@@ -201,16 +227,17 @@ class TestBinarizedMNIST(object):
         shutil.rmtree(self.tempdir)
 
     def test_converter(self):
-        filename = os.path.join(self.tempdir, 'mock_binarized_mnist.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('binarized_mnist')
-        subparser.set_defaults(directory=self.tempdir, output_file=filename)
+        subparser.set_defaults(
+            directory=self.tempdir, output_directory=self.tempdir,
+            output_filename='mock_binarized_mnist.hdf5')
         binarized_mnist.fill_subparser(subparser)
         args = parser.parse_args(['binarized_mnist'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        func(**args_dict)
+        filename = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(h5file['features'][...],
                      numpy.vstack([self.train_mock, self.valid_mock,
@@ -256,16 +283,17 @@ class TestCIFAR10(object):
         shutil.rmtree(self.tempdir)
 
     def test_converter(self):
-        filename = os.path.join(self.tempdir, 'mock_cifar10.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('cifar10')
-        subparser.set_defaults(directory=self.tempdir, output_file=filename)
+        subparser.set_defaults(
+            directory=self.tempdir, output_directory=self.tempdir,
+            output_filename='mock_cifar10.hdf5')
         cifar10.fill_subparser(subparser)
         args = parser.parse_args(['cifar10'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        func(**args_dict)
+        filename = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
@@ -320,16 +348,17 @@ class TestCIFAR100(object):
         shutil.rmtree(self.tempdir)
 
     def test_converter(self):
-        filename = os.path.join(self.tempdir, 'mock_cifar100.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('cifar100')
-        subparser.set_defaults(directory=self.tempdir, output_file=filename)
+        subparser.set_defaults(
+            directory=self.tempdir, output_directory=self.tempdir,
+            output_filename='mock_cifar100.hdf5')
         cifar100.fill_subparser(subparser)
         args = parser.parse_args(['cifar100'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        func(**args_dict)
+        filename = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
@@ -427,16 +456,17 @@ class TestSVHN(object):
         shutil.rmtree(self.tempdir)
 
     def test_format_1_converter(self):
-        filename = os.path.join(self.tempdir, 'svhn_format_1.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('svhn')
         svhn.fill_subparser(subparser)
-        subparser.set_defaults(directory=self.tempdir, output_file=filename)
+        subparser.set_defaults(
+            directory=self.tempdir, output_directory=self.tempdir,
+            output_filename='svhn_format_1.hdf5')
         args = parser.parse_args(['svhn', '1'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        func(**args_dict)
+        filename = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
 
         expected_features = sum((self.f1_mock[split]['image']
@@ -456,16 +486,17 @@ class TestSVHN(object):
             assert_equal(val, truth)
 
     def test_format_2_converter(self):
-        filename = os.path.join(self.tempdir, 'svhn_format_2.hdf5')
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('svhn')
         svhn.fill_subparser(subparser)
-        subparser.set_defaults(directory=self.tempdir, output_file=filename)
+        subparser.set_defaults(
+            directory=self.tempdir, output_directory=self.tempdir,
+            output_filename='svhn_format_2.hdf5')
         args = parser.parse_args(['svhn', '2'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        func(**args_dict)
+        filename = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
@@ -485,14 +516,10 @@ class TestSVHN(object):
                      ('batch', 'index'))
 
     @mock.patch('fuel.converters.svhn.convert_svhn_format_1')
-    def test_converter_call_format_1(self, mock_converter_format_1):
-        svhn.convert_svhn(1, './', 'svhn_format_{}.hdf5')
-        mock_converter_format_1.assert_called_with('./', 'svhn_format_1.hdf5')
-
-    @mock.patch('fuel.converters.svhn.convert_svhn_format_2')
-    def test_converter_call_format_2(self, mock_converter_format_2):
-        svhn.convert_svhn(2, './', 'svhn_format_{}.hdf5')
-        mock_converter_format_2.assert_called_with('./', 'svhn_format_2.hdf5')
+    def test_converter_default_filename(self, mock_converter_format_1):
+        svhn.convert_svhn(1, './', './')
+        mock_converter_format_1.assert_called_with(
+            './', './', 'svhn_format_1.hdf5')
 
     def test_converter_error_wrong_format(self):
         assert_raises(ValueError, svhn.convert_svhn, 3, './', 'mock.hdf5')
