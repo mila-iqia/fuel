@@ -12,7 +12,8 @@ DISTRIBUTION_FILE = 'cifar-10-python.tar.gz'
 
 
 @check_exists(required_files=[DISTRIBUTION_FILE])
-def convert_cifar10(directory, output_file):
+def convert_cifar10(directory, output_directory,
+                    output_filename='cifar10.hdf5'):
     """Converts the CIFAR-10 dataset to HDF5.
 
     Converts the CIFAR-10 dataset to an HDF5 dataset compatible with
@@ -27,11 +28,19 @@ def convert_cifar10(directory, output_file):
     ----------
     directory : str
         Directory in which input files reside.
-    output_file : str
-        Where to save the converted dataset.
+    output_directory : str
+        Directory in which to save the converted dataset.
+    output_filename : str, optional
+        Name of the saved dataset. Defaults to 'cifar10.hdf5'.
+
+    Returns
+    -------
+    output_path : str
+        Path to the converted dataset.
 
     """
-    h5file = h5py.File(output_file, mode='w')
+    output_path = os.path.join(output_directory, output_filename)
+    h5file = h5py.File(output_path, mode='w')
     input_file = os.path.join(directory, DISTRIBUTION_FILE)
     tar_file = tarfile.open(input_file, 'r:gz')
 
@@ -84,6 +93,8 @@ def convert_cifar10(directory, output_file):
 
     h5file.flush()
     h5file.close()
+
+    return output_path
 
 
 def fill_subparser(subparser):
