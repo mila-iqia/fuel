@@ -103,11 +103,12 @@ class H5PYDataset(Dataset):
       1. ``split`` : string identifier for the split name
       2. ``source`` : string identifier for the source name
       3. ``start`` : start index (inclusive) of the split in the source
-         array
+         array, used if ``indices`` is a null reference.
       4. ``stop`` : stop index (exclusive) of the split in the source
-         array
+         array, used if ``indices`` is a null reference.
       6. ``indices`` : h5py.Reference, reference to a dataset containing
-         subset indices for this split/source pair.
+         subset indices for this split/source pair. If it's a null
+         reference, ``start`` and ``stop`` are used.
       6. ``available`` : boolean, ``False`` is this split is not available
          for this source
       7. ``comment`` : comment string
