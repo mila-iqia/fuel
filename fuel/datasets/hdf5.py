@@ -131,11 +131,14 @@ class H5PYDataset(Dataset):
         Low-level driver to use. Defaults to `None`. See h5py
         documentation for a complete list of available options.
     sort_indices : bool, optional
-        Whether to explicitly sort requested indices when data is
-        requested in the form of a list of indices. Defaults to `True`.
-        This flag can be set to `False` for greater performance. In
-        that case, it is the user's responsibility to make sure that
-        indices are ordered.
+        HDF5 doesn't support fancy indexing with an unsorted list of
+        indices. In order to allow that, the dataset can sort the list
+        of indices, access the data in sorted order and shuffle back
+        the data in the unsorted order. Setting this flag to `True`
+        (the default) will activate this behaviour. For greater
+        performance, set this flag to `False`. Note that in that case,
+        it is the user's responsibility to make sure that indices are
+        ordered.
 
     Attributes
     ----------
