@@ -158,8 +158,7 @@ class Dataset(object):
         return self.reset(state)
 
     def close(self, state):
-        """
-        Cleanly close the dataset e.g. close file handles.
+        """Cleanly close the dataset e.g. close file handles.
 
         Parameters
         ----------
