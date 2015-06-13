@@ -23,6 +23,9 @@ class Dataset(object):
     sources : tuple of strings, optional
         The data sources to load and return by :meth:`get_data`. By default
         all data sources are returned.
+    axis_labels : dict, optional
+        Maps source names to tuples of strings describing axis semantics,
+        one per axis. Defaults to `None`, i.e. no information is available.
 
     Attributes
     ----------
@@ -115,6 +118,11 @@ class Dataset(object):
     def reset(self, state):
         """Resets the state.
 
+        Parameters
+        ----------
+        state : object
+            The current state.
+
         Returns
         -------
         state : object
@@ -136,6 +144,11 @@ class Dataset(object):
 
         The default implementation for this method is to reset the state.
 
+        Parameters
+        ----------
+        state : object
+            The current state.
+
         Returns
         -------
         state : object
@@ -145,7 +158,14 @@ class Dataset(object):
         return self.reset(state)
 
     def close(self, state):
-        """Cleanly close the dataset e.g. close file handles."""
+        """Cleanly close the dataset e.g. close file handles.
+
+        Parameters
+        ----------
+        state : object
+            The current state.
+
+        """
         pass
 
     @abstractmethod
@@ -191,6 +211,11 @@ class Dataset(object):
         data : tuple of objects
             The data from all the sources i.e. should be of the same length
             as :attr:`provides_sources`.
+
+        Returns
+        -------
+        tuple
+            A tuple of data matching :attr:`sources`.
 
         Examples
         --------

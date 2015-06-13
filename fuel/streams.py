@@ -25,6 +25,9 @@ class AbstractDataStream(object):
         wraps another data stream, the choice of supported iteration
         schemes is typically even more limited. Be sure to read the
         documentation of the dataset or data stream in question.
+    axis_labels : dict, optional
+        Maps source names to tuples of strings describing axis semantics,
+        one per axis. Defaults to `None`, i.e. no information is available.
 
     Attributes
     ----------
