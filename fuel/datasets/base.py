@@ -149,7 +149,7 @@ class Dataset(object):
         pass
 
     @abstractmethod
-    def get_data(self, state=None, request=None):
+    def get_data(self, state=None, request=None, sources=None):
         """Request data from the dataset.
 
         .. todo::
@@ -273,10 +273,16 @@ class IterableDataset(Dataset):
         iterators = [iter_(channel) for channel in self.iterables]
         return izip(*iterators)
 
-    def get_data(self, state=None, request=None):
+    def get_data(self, state=None, request=None, sources=None):
         if state is None or request is not None:
             raise ValueError
-        return next(state)
+
+        data = next(state)
+
+        if sources:
+            data = [data[self.sources.index(source)] for source in sources]
+
+        return data
 
 
 class IndexableDataset(Dataset):
@@ -339,7 +345,7 @@ class IndexableDataset(Dataset):
     def num_examples(self):
         return len(self.indexables[0])
 
-    def get_data(self, state=None, request=None):
+    def get_data(self, state=None, request=None, sources=None):
         if state is not None or request is None:
             raise ValueError
         if isinstance(request, collections.Iterable):
