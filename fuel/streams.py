@@ -100,8 +100,9 @@ class DataStream(AbstractDataStream):
         The dataset from which the data is fetched.
 
     """
-    def __init__(self, dataset, **kwargs):
+    def __init__(self, dataset, sources=None, **kwargs):
         kwargs.setdefault('axis_labels', dataset.axis_labels)
+        self.sources = sources
         super(DataStream, self).__init__(**kwargs)
         self.dataset = dataset
         self.data_state = self.dataset.open()
@@ -109,7 +110,7 @@ class DataStream(AbstractDataStream):
 
     @property
     def sources(self):
-        if hasattr(self, '_sources'):
+        if getattr(self, '_sources', None):
             return self._sources
         return self.dataset.sources
 
@@ -129,7 +130,7 @@ class DataStream(AbstractDataStream):
 
     def get_data(self, request=None):
         """Get data from the dataset."""
-        return self.dataset.get_data(self.data_state, request)
+        return self.dataset.get_data(self.data_state, request, self.sources)
 
     def get_epoch_iterator(self, **kwargs):
         """Get an epoch iterator for the data stream."""

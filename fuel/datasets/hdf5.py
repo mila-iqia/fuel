@@ -68,7 +68,7 @@ class PytablesDataset(Dataset):
         del self._h5file
         del self._nodes
 
-    def get_data(self, state=None, request=None):
+    def get_data(self, state=None, request=None, sources=None):
         """ Returns data from HDF5 dataset.
 
         .. note:: The best performance if `request` is a slice.
@@ -83,6 +83,10 @@ class PytablesDataset(Dataset):
             data = [node[request, ...] for node in self.nodes]
         else:
             raise ValueError
+
+        if sources:
+            data = [data[self.sources.index(source)] for source in sources]
+
         return data
 
 
@@ -391,7 +395,7 @@ class H5PYDataset(Dataset):
         else:
             raise IOError('no open handle for file {}'.format(self.path))
 
-    def get_data(self, state=None, request=None):
+    def get_data(self, state=None, request=None, sources=None):
         if self.load_in_memory:
             data, shapes = self._in_memory_get_data(state, request)
         else:
@@ -400,6 +404,10 @@ class H5PYDataset(Dataset):
             if shapes[i] is not None:
                 for j in range(len(data[i])):
                     data[i][j] = data[i][j].reshape(shapes[i][j])
+
+        if sources:
+            data = [data[self.sources.index(source)] for source in sources]
+
         return tuple(data)
 
     def _in_memory_get_data(self, state=None, request=None):
