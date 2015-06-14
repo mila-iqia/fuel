@@ -8,6 +8,7 @@ Welcome to Fuel's documentation!
    built_in_datasets
    h5py_dataset
    new_dataset
+   server
    api/index
 
 Fuel is a data pipeline framework which provides your machine learning models
