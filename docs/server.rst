@@ -33,6 +33,7 @@ associated with I/O operations and preprocessing. We'll create a transformer
 whose sole purpose is to wait some period of time before returning the requested
 data:
 
+>>> import time
 >>> from fuel.transformers import Transformer
 >>> class Bottleneck(Transformer):
 ...     def __init__(self, *args, **kwargs):
@@ -48,7 +49,6 @@ data:
 We'll also create a context manager to time a block of code and print the
 result:
 
->>> import time
 >>> from contextlib import contextmanager
 >>> @contextmanager
 ... def timer(name):
@@ -145,8 +145,8 @@ Here's those two files:
             Time (in seconds) to wait before returning data. Defaults to 0.
 
         """
-        def __init__(self, *args, slowdown=0, **kwargs):
-            self.slowdown = slowdown
+        def __init__(self, *args, **kwargs):
+            self.slowdown = kwargs.pop('slowdown', 0)
             super(Bottleneck, self).__init__(*args, **kwargs)
 
         def get_data(self, request=None):
