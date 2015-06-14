@@ -12,7 +12,7 @@ from fuel.streams import DataStream
 from fuel.transformers import (
     Transformer, Mapping, SortMapping, ForceFloatX, Filter, Cache, Batch,
     Padding, MultiProcessing, Unpack, Merge, SingleMapping, Flatten,
-    ScaleAndShift, Cast, Rename)
+    ScaleAndShift, Cast, Rename, FilterSources)
 
 
 class FlagDataStream(DataStream):
@@ -421,3 +421,29 @@ def test_rename():
          (numpy.ones((2, 2, 2)), numpy.array([0, 1]))])
     assert_raises(ValueError, transformer.get_data, [0, 1])
     assert_raises(KeyError, Rename, stream, {'Z': 'features'})
+
+
+def test_filter_sources():
+    stream = DataStream(
+        IndexableDataset(
+            OrderedDict([('features', numpy.ones((4, 2, 2))),
+                         ('targets', numpy.array([0, 1, 0, 1]))])),
+        iteration_scheme=SequentialScheme(4, 2))
+
+    transformer = FilterSources(stream, sources=("features",))
+
+    assert_equal(transformer.sources, ('features',))
+    assert len(next(transformer.get_epoch_iterator())) == 1
+
+    transformer = FilterSources(stream, sources=("features", "targets"))
+
+    assert_equal(transformer.sources, ('features', 'targets'))
+    assert len(next(transformer.get_epoch_iterator())) == 2
+
+    transformer = FilterSources(stream, sources=("targets", "features"))
+
+    assert_equal(transformer.sources, ('features', 'targets'))
+    assert len(next(transformer.get_epoch_iterator())) == 2
+
+    assert_raises(ValueError, transformer.get_data, [0, 1])
+    assert_raises(ValueError, FilterSources, stream, ['error', 'targets'])

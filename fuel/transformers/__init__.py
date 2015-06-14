@@ -619,3 +619,36 @@ class Rename(Transformer):
             raise ValueError
         data = next(self.child_epoch_iterator)
         return data
+
+
+class FilterSources(Transformer):
+    """Selects a subset of the stream sources.
+
+    Order of data stream's sources is maintained. The order of sources
+    given as parameter to FilterSources does not matter.
+
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream` or :class:`Transformer`.
+        The data stream.
+    sources : tuple of strings
+        The names of the data sources returned by this transformer.
+        Must be a subset of the sources given by the stream.
+
+    """
+    def __init__(self, data_stream, sources):
+        super(FilterSources, self).__init__(data_stream)
+        if any(source not in data_stream.sources for source in sources):
+            raise ValueError("sources must all be contained in "
+                             "data_stream.sources")
+
+        # keep order of data_stream.sources
+        self.sources = [s for s in data_stream.sources if s in sources]
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+
+        data = next(self.child_epoch_iterator)
+        return [d for d, s in izip(data, self.data_stream.sources)
+                if s in self.sources]
