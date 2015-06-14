@@ -54,8 +54,8 @@ def convert_mnist(directory, output_directory, output_filename=None,
 
     Returns
     -------
-    output_path : str
-        Path to the converted dataset.
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
 
     """
     if not output_filename:
@@ -89,7 +89,7 @@ def convert_mnist(directory, output_directory, output_filename=None,
     h5file.flush()
     h5file.close()
 
-    return output_path
+    return (output_path,)
 
 
 def fill_subparser(subparser):

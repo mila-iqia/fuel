@@ -45,8 +45,8 @@ def convert_binarized_mnist(directory, output_directory,
 
     Returns
     -------
-    output_path : str
-        Path to the converted dataset.
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
 
     """
     output_path = os.path.join(output_directory, output_filename)
@@ -71,7 +71,7 @@ def convert_binarized_mnist(directory, output_directory,
     h5file.flush()
     h5file.close()
 
-    return output_path
+    return (output_path,)
 
 
 def fill_subparser(subparser):

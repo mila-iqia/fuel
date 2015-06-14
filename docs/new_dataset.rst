@@ -115,7 +115,10 @@ very similar to ``fuel-download``. The arguments to be aware of in the subparser
 are
 
 * ``directory`` : in which directory the input files reside
-* ``output-file`` : where to save the converted dataset
+* ``output-directory`` : where to save the converted dataset
+
+The converter function should return a tuple containing path(s) to the converted
+dataset(s).
 
 Put the following piece of code inside the ``fuel.converters.iris``
 module (you'll have to create it):
@@ -131,8 +134,9 @@ module (you'll have to create it):
     from fuel.converters.base import fill_hdf5_file
 
 
-    def convert_iris(directory, output_file):
-        h5file = h5py.File(output_file, mode='w')
+    def convert_iris(directory, output_directory, output_filename='iris.hdf5'):
+        output_path = os.path.join(output_directory, output_filename)
+        h5file = h5py.File(output_path, mode='w')
         classes = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2}
         data = numpy.loadtxt(
             os.path.join(directory, 'iris.data'),
@@ -159,6 +163,8 @@ module (you'll have to create it):
 
         h5file.flush()
         h5file.close()
+
+        return (output_path,)
 
     def fill_subparser(subparser):
         subparser.set_defaults(func=convert_iris)
@@ -288,8 +294,9 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> import h5py
     >>> import numpy
     >>> from fuel.converters.base import fill_hdf5_file
-    >>> def iris_converter(directory, output_file):
-    ...     h5file = h5py.File(output_file, mode='w')
+    >>> def iris_converter(directory, output_directory, output_filename='iris.hdf5'):
+    ...     output_path = os.path.join(output_directory, output_filename)
+    ...     h5file = h5py.File(output_path, mode='w')
     ...     classes = {b'Iris-setosa': 0, b'Iris-versicolor': 1, b'Iris-virginica': 2}
     ...     data = numpy.loadtxt(
     ...         os.path.join(directory, 'iris.data'),
@@ -315,17 +322,19 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     ...     h5file['targets'].dims[1].label = 'index'
     ...     h5file.flush()
     ...     h5file.close()
+    ...     return (output_path,)
     >>> def fill_converter_subparser(subparser):
     ...     subparser.set_defaults(func=iris_converter)
     >>> parser = argparse.ArgumentParser()
     >>> __ = parser.add_argument("--directory", type=str, default=os.getcwd())
-    >>> __ = parser.add_argument("--output-file", type=str, default='iris.hdf5')
+    >>> __ = parser.add_argument("--output-directory", type=str,
+    ...                          default=os.getcwd())
     >>> subparsers = parser.add_subparsers()
     >>> fill_converter_subparser(subparsers.add_parser('iris'))
     >>> args = parser.parse_args(['iris'])
     >>> args_dict = vars(args)
     >>> func = args_dict.pop('func')
-    >>> func(**args_dict)
+    >>> output_paths = func(**args_dict)
     >>> os.remove('iris.data')
 
 .. doctest::

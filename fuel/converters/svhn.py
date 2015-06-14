@@ -43,8 +43,8 @@ def convert_svhn_format_1(directory, output_directory,
 
     Returns
     -------
-    output_path : str
-        Path to the converted dataset.
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
 
     """
     try:
@@ -258,7 +258,7 @@ def convert_svhn_format_1(directory, output_directory,
         h5file.flush()
         h5file.close()
 
-    return output_path
+    return (output_path,)
 
 
 @check_exists(required_files=FORMAT_2_FILES)
@@ -283,8 +283,8 @@ def convert_svhn_format_2(directory, output_directory,
 
     Returns
     -------
-    output_path : str
-        Path to the converted dataset.
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
 
     """
     output_path = os.path.join(output_directory, output_filename)
@@ -317,7 +317,7 @@ def convert_svhn_format_2(directory, output_directory,
     h5file.flush()
     h5file.close()
 
-    return output_path
+    return (output_path,)
 
 
 def convert_svhn(which_format, directory, output_directory,
@@ -349,8 +349,8 @@ def convert_svhn(which_format, directory, output_directory,
 
     Returns
     -------
-    output_path : str
-        Path to the converted dataset.
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
 
     """
     if which_format not in (1, 2):

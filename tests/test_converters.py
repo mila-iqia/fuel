@@ -142,7 +142,7 @@ class TestMNIST(object):
         args = parser.parse_args(['mnist'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        filename = func(**args_dict)
+        filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
@@ -168,7 +168,7 @@ class TestMNIST(object):
         args = parser.parse_args(['mnist'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        filename = func(**args_dict)
+        filename, = func(**args_dict)
         assert_equal(os.path.basename(filename), 'mnist.hdf5')
 
     def test_converter_no_filename(self):
@@ -181,7 +181,7 @@ class TestMNIST(object):
         args = parser.parse_args(['mnist', '--dtype', 'bool'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        filename = func(**args_dict)
+        filename, = func(**args_dict)
         assert_equal(os.path.basename(filename), 'mnist_bool.hdf5')
 
     def test_wrong_image_magic(self):
@@ -237,7 +237,7 @@ class TestBinarizedMNIST(object):
         args = parser.parse_args(['binarized_mnist'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        filename = func(**args_dict)
+        filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(h5file['features'][...],
                      numpy.vstack([self.train_mock, self.valid_mock,
@@ -293,7 +293,7 @@ class TestCIFAR10(object):
         args = parser.parse_args(['cifar10'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        filename = func(**args_dict)
+        filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
@@ -358,7 +358,7 @@ class TestCIFAR100(object):
         args = parser.parse_args(['cifar100'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        filename = func(**args_dict)
+        filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
@@ -466,7 +466,7 @@ class TestSVHN(object):
         args = parser.parse_args(['svhn', '1'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        filename = func(**args_dict)
+        filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
 
         expected_features = sum((self.f1_mock[split]['image']
@@ -496,7 +496,7 @@ class TestSVHN(object):
         args = parser.parse_args(['svhn', '2'])
         args_dict = vars(args)
         func = args_dict.pop('func')
-        filename = func(**args_dict)
+        filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
             h5file['features'][...],
