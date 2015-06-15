@@ -121,7 +121,9 @@ class H5PYDataset(Dataset):
     which_sets : iterable of str
         Which split(s) to use. If one than more split is requested,
         the provided sources will be the intersection of provided
-        sources for these splits.
+        sources for these splits. **Note: for all splits that are
+        specified as a list of indices, those indices will get sorted
+        no matter what.**
     subset : slice, optional
         A slice of data *within the context of the split* to use. Defaults
         to `None`, in which case the whole split is used. **Note:
