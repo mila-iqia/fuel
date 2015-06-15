@@ -107,7 +107,7 @@ class H5PYDataset(Dataset):
          array, used if ``indices`` is a null reference.
       4. ``stop`` : stop index (exclusive) of the split in the source
          array, used if ``indices`` is a null reference.
-      6. ``indices`` : h5py.Reference, reference to a dataset containing
+      5. ``indices`` : h5py.Reference, reference to a dataset containing
          subset indices for this split/source pair. If it's a null
          reference, ``start`` and ``stop`` are used.
       6. ``available`` : boolean, ``False`` is this split is not available
