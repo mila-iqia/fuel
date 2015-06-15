@@ -229,25 +229,29 @@ Playing with H5PYDataset datasets
 
 Let's explore what we can do with the dataset we just created.
 
-The simplest thing is to load it by giving its path and a split name:
+The simplest thing is to load it by giving its path and a tuple of split names:
 
->>> train_set = H5PYDataset('dataset.hdf5', which_set='train')
+>>> train_set = H5PYDataset('dataset.hdf5', which_set=('train',))
 >>> print(train_set.num_examples)
 90
->>> test_set = H5PYDataset('dataset.hdf5', which_set='test')
+>>> test_set = H5PYDataset('dataset.hdf5', which_set=('test',))
 >>> print(test_set.num_examples)
 10
+
+Passing more than one split name would cause the splits to be concatenated.
+The available data sources would be the intersection of the sources provided
+by each split.
 
 You can further restrict which examples are used by providing a ``slice`` object
 as the ``subset`` argument. *Make sure that its* ``step`` *is either 1 or*
 ``None`` *, as these are the only two options that are supported*.
 
 >>> train_set = H5PYDataset(
-...     'dataset.hdf5', which_set='train', subset=slice(0, 80))
+...     'dataset.hdf5', which_set=('train',), subset=slice(0, 80))
 >>> print(train_set.num_examples)
 80
 >>> valid_set = H5PYDataset(
-...     'dataset.hdf5', which_set='train', subset=slice(80, 90))
+...     'dataset.hdf5', which_set=('train',), subset=slice(80, 90))
 >>> print(valid_set.num_examples)
 10
 
@@ -279,7 +283,7 @@ We can request data as usual:
 We can also request just the vector features:
 
 >>> train_vector_features = H5PYDataset(
-...     'dataset.hdf5', which_set='train', subset=slice(0, 80),
+...     'dataset.hdf5', which_set=('train',), subset=slice(0, 80),
 ...     sources=['vector_features'])
 >>> handle = train_vector_features.open()
 >>> data, = train_vector_features.get_data(handle, slice(0, 10))
@@ -299,7 +303,7 @@ In :class:`~.datasets.hdf5.H5PYDataset`, this is accomplished via the
 what you requested, and nothing more.
 
 >>> in_memory_train_vector_features = H5PYDataset(
-...     'dataset.hdf5', which_set='train', subset=slice(0, 80),
+...     'dataset.hdf5', which_set=('train',), subset=slice(0, 80),
 ...     sources=['vector_features'], load_in_memory=True)
 >>> data, = in_memory_train_vector_features.data_sources
 >>> print(type(data)) # doctest: +ELLIPSIS
@@ -345,7 +349,7 @@ we arbitrarily chose ``-1`` for both.
 Let's check that the training and test set do contain even and odd examples:
 
 >>> train_set = H5PYDataset(
-...     'dataset.hdf5', which_set='train', sources=('vector_features',))
+...     'dataset.hdf5', which_set=('train',), sources=('vector_features',))
 >>> handle = train_set.open()
 >>> print(
 ...     numpy.array_equal(
@@ -356,7 +360,7 @@ Let's check that the training and test set do contain even and odd examples:
 True
 >>> train_set.close(handle)
 >>> test_set = H5PYDataset(
-...     'dataset.hdf5', which_set='test', sources=('vector_features',))
+...     'dataset.hdf5', which_set=('test',), sources=('vector_features',))
 >>> handle = test_set.open()
 >>> print(
 ...     numpy.array_equal(
@@ -463,7 +467,7 @@ That's it. Now let's kick the tires a little. The axis labels appear as they
 should:
 
 >>> train_set = H5PYDataset(
-...     'dataset.hdf5', which_set='train', sources=('image_features',))
+...     'dataset.hdf5', which_set=('train',), sources=('image_features',))
 >>> print(train_set.axis_labels['image_features'])
 ('batch', 'channel', 'height', 'width')
 

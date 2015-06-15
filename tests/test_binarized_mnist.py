@@ -11,7 +11,7 @@ from tests import skip_if_not_available
 def test_binarized_mnist_train():
     skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
-    dataset = BinarizedMNIST('train', load_in_memory=False)
+    dataset = BinarizedMNIST(('train',), load_in_memory=False)
     handle = dataset.open()
     data, = dataset.get_data(handle, slice(0, 10))
     assert data.dtype == 'uint8'
@@ -24,7 +24,7 @@ def test_binarized_mnist_train():
 def test_binarized_mnist_valid():
     skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
-    dataset = BinarizedMNIST('valid', load_in_memory=False)
+    dataset = BinarizedMNIST(('valid',), load_in_memory=False)
     handle = dataset.open()
     data, = dataset.get_data(handle, slice(0, 10))
     assert data.dtype == 'uint8'
@@ -37,7 +37,7 @@ def test_binarized_mnist_valid():
 def test_binarized_mnist_test():
     skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
-    dataset = BinarizedMNIST('test', load_in_memory=False)
+    dataset = BinarizedMNIST(('test',), load_in_memory=False)
     handle = dataset.open()
     data, = dataset.get_data(handle, slice(0, 10))
     assert data.dtype == 'uint8'
@@ -50,15 +50,15 @@ def test_binarized_mnist_test():
 def test_binarized_mnist_axes():
     skip_if_not_available(datasets=['binarized_mnist.hdf5'])
 
-    dataset = BinarizedMNIST('train', load_in_memory=False)
+    dataset = BinarizedMNIST(('train',), load_in_memory=False)
     assert_equal(dataset.axis_labels['features'],
                  ('batch', 'channel', 'height', 'width'))
 
 
 def test_binarized_mnist_invalid_split():
-    assert_raises(ValueError, BinarizedMNIST, 'dummy')
+    assert_raises(ValueError, BinarizedMNIST, ('dummy',))
 
 
 def test_binarized_mnist_data_path():
-    assert BinarizedMNIST('train').data_path == os.path.join(
+    assert BinarizedMNIST(('train',)).data_path == os.path.join(
         config.data_path, 'binarized_mnist.hdf5')

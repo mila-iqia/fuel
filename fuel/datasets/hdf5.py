@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import h5py
 import numpy
+import six
 import tables
 from six.moves import zip, range
 
@@ -117,7 +118,7 @@ class H5PYDataset(Dataset):
     ----------
     file_or_path : :class:`h5py.File` or str
         HDF5 file handle, or path to the HDF5 file.
-    which_set : str or tuple of str
+    which_set : iterable of str
         Which split(s) to use. If one than more split is requested,
         the provided sources will be the intersection of provided
         sources for these splits.
@@ -169,8 +170,11 @@ class H5PYDataset(Dataset):
         else:
             self.path = file_or_path
             self.external_file_handle = None
-        if not isinstance(which_set, (list, tuple)):
-            which_set = (which_set,)
+        which_set_invalid_value = (
+            isinstance(which_set, six.string_types) or
+            not all(isinstance(s, six.string_types) for s in which_set))
+        if which_set_invalid_value:
+            raise ValueError('`which_set` should be an iterable of strings')
         self.which_set = which_set
         subset = subset if subset else slice(None)
         if hasattr(subset, 'step') and subset.step not in (1, None):

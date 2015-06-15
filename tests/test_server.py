@@ -11,7 +11,7 @@ from fuel.streams import DataStream, ServerDataStream
 
 def get_stream():
     return DataStream(
-        MNIST('train'), iteration_scheme=SequentialScheme(1500, 500))
+        MNIST(('train',)), iteration_scheme=SequentialScheme(1500, 500))
 
 
 class TestServer(object):
