@@ -248,8 +248,7 @@ The available data sources would be the intersection of the sources provided
 by each split.
 
 You can further restrict which examples are used by providing a ``slice`` object
-as the ``subset`` argument. *Make sure that its* ``step`` *is either 1 or*
-``None`` *, as these are the only two options that are supported*.
+or a list of indices as the ``subset`` argument.
 
 >>> train_set = H5PYDataset(
 ...     'dataset.hdf5', which_sets=('train',), subset=slice(0, 80))

@@ -226,11 +226,14 @@ class TestH5PYDataset(object):
         assert_raises(TypeError, dataset.get_data, handle, [7, 4, 6, 2, 5])
         dataset.close(handle)
 
-    def test_value_error_on_subset_step_gt_1(self):
-        def instantiate_h5py_dataset():
-            return H5PYDataset(
-                self.h5file, which_sets=('train',), subset=slice(0, 10, 2))
-        assert_raises(ValueError, instantiate_h5py_dataset)
+    def test_subset_step_gt_1(self):
+        dataset = H5PYDataset(
+            self.h5file, which_sets=('train',), subset=slice(0, 10, 2))
+        handle = dataset.open()
+        assert_equal(dataset.get_data(handle, [0, 1, 2, 3, 4]),
+                     (self.features[slice(0, 10, 2)],
+                      self.targets[slice(0, 10, 2)]))
+        dataset.close(handle)
 
     def test_value_error_on_unequal_sources(self):
         def get_subsets():

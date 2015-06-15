@@ -124,10 +124,10 @@ class H5PYDataset(Dataset):
         sources for these splits. **Note: for all splits that are
         specified as a list of indices, those indices will get sorted
         no matter what.**
-    subset : slice, optional
-        A slice of data *within the context of the split* to use. Defaults
-        to `None`, in which case the whole split is used. **Note:
-        at the moment, `slice.step` must be either 1 or `None`.**
+    subset : {slice, list of int}, optional
+        Which subset of data to use *within the context of the split*.
+        Can be either a slice or a list of indices. Defaults to `None`,
+        in which case the whole split is used.
     load_in_memory : bool, optional
         Whether to load the data in main memory. Defaults to `False`.
     driver : str, optional
@@ -178,10 +178,7 @@ class H5PYDataset(Dataset):
         if which_sets_invalid_value:
             raise ValueError('`which_sets` should be an iterable of strings')
         self.which_sets = which_sets
-        subset = subset if subset else slice(None)
-        if hasattr(subset, 'step') and subset.step not in (1, None):
-            raise ValueError("subset.step must be either 1 or None")
-        self._subset_template = subset
+        self._subset_template = subset if subset else slice(None)
         self.load_in_memory = load_in_memory
         self.driver = driver
         self.sort_indices = sort_indices
@@ -518,6 +515,12 @@ class H5PYDataset(Dataset):
         num_examples = None
         for source_name in self.sources:
             subset = self._subset_template
+            # If subset has a step greater than 1, we convert it to a list,
+            # otherwise we won't be able to take that subset within the context
+            # of a split defined by a slice.
+            if hasattr(subset, 'step') and subset.step not in (1, None):
+                subset = list(range(len(handle[source_name])))[subset]
+            self._subset_template = subset
             if source_name in indices:
                 source_subset = indices[source_name]
             else:
