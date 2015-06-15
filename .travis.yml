@@ -24,6 +24,7 @@ before_install:
 install:
   # Install all Python dependencies
   - |
+  - pip install . -r requirements.txt
       if [[ $TESTS == 'blocks' ]]; then
         curl -O https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-conda.txt
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl --file req-travis-conda.txt
@@ -36,7 +37,6 @@ install:
         pip install -r req-travis-pip.txt
       fi
 script:
-  - pip install . -r requirements.txt
   - ./.travis-data.sh mnist binarized_mnist cifar10 cifar100
   - function fail { export FAILED=1; }
   - |
