@@ -34,16 +34,17 @@ class BinarizedMNIST(H5PYDataset):
 
     Parameters
     ----------
-    which_set : 'train' or 'valid' or 'test'
-        Whether to load the training set (50,000 samples) or the validation
-        set (10,000 samples) or the test set (10,000 samples).
+    which_sets : tuple of str
+        Which split to load. Valid values are 'train', 'valid' and 'test',
+        corresponding to the training set (50,000 examples), the validation
+        set (10,000 samples) and the test set (10,000 examples).
 
     """
     filename = 'binarized_mnist.hdf5'
 
-    def __init__(self, which_set, load_in_memory=True, **kwargs):
+    def __init__(self, which_sets, load_in_memory=True, **kwargs):
         super(BinarizedMNIST, self).__init__(
-            self.data_path, which_set=which_set,
+            self.data_path, which_sets=which_sets,
             load_in_memory=load_in_memory, **kwargs)
 
     @property

@@ -110,7 +110,7 @@ def fill_hdf5_file(h5file, data):
         dataset[...] = numpy.concatenate([s[2] for s in splits], axis=0)
         for i, j, s in zip(indices[:-1], indices[1:], splits):
             if len(s) == 4:
-                split_dict[s[0]][name] = (i, j, s[3])
+                split_dict[s[0]][name] = (i, j, None, s[3])
             else:
                 split_dict[s[0]][name] = (i, j)
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)

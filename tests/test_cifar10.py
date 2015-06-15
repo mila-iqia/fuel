@@ -8,7 +8,7 @@ from fuel.schemes import SequentialScheme
 
 
 def test_cifar10():
-    train = CIFAR10('train', load_in_memory=False)
+    train = CIFAR10(('train',), load_in_memory=False)
     assert train.num_examples == 50000
     handle = train.open()
     features, targets = train.get_data(handle, slice(49990, 50000))
@@ -16,7 +16,7 @@ def test_cifar10():
     assert targets.shape == (10, 1)
     train.close(handle)
 
-    test = CIFAR10('test', load_in_memory=False)
+    test = CIFAR10(('test',), load_in_memory=False)
     handle = test.open()
     features, targets = test.get_data(handle, slice(0, 10))
     assert features.shape == (10, 3, 32, 32)
@@ -31,4 +31,4 @@ def test_cifar10():
     assert data.min() >= 0.0 and data.max() <= 1.0
     assert data.dtype == config.floatX
 
-    assert_raises(ValueError, CIFAR10, 'valid')
+    assert_raises(ValueError, CIFAR10, ('valid',))

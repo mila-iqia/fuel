@@ -23,19 +23,20 @@ class CIFAR10(H5PYDataset):
 
     Parameters
     ----------
-    which_set : 'train' or 'test'
-        Whether to load the training set (50,000 samples) or the test set
-        (10,000 samples). Note that CIFAR10 does not have a validation
-        set; usually you will create your own training/validation split
-        using the `subset` argument.
+    which_sets : tuple of str
+        Which split to load. Valid values are 'train' and 'test',
+        corresponding to the training set (50,000 examples) and the test
+        set (10,000 examples). Note that CIFAR10 does not have a
+        validation set; usually you will create your own
+        training/validation split using the `subset` argument.
 
     """
     filename = 'cifar10.hdf5'
     default_transformers = uint8_pixels_to_floatX(('features',))
 
-    def __init__(self, which_set, **kwargs):
+    def __init__(self, which_sets, **kwargs):
         kwargs.setdefault('load_in_memory', True)
-        super(CIFAR10, self).__init__(self.data_path, which_set, **kwargs)
+        super(CIFAR10, self).__init__(self.data_path, which_sets, **kwargs)
 
     @property
     def data_path(self):

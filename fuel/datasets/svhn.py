@@ -33,20 +33,21 @@ class SVHN(H5PYDataset):
     which_format : {1, 2}
         SVHN format 1 contains the full numbers, whereas SVHN format 2
         contains cropped digits.
-    which_set : {'train', 'test', 'extra'}
-        Whether to load the training set (73,257 examples), the test
-        set (26,032 examples) or the extra set (531,131 examples).
-        Note that SVHN does not have a validation set; usually you
-        will create your own training/validation split
-        using the `subset` argument.
+    which_sets : tuple of str
+        Which split to load. Valid values are 'train', 'test' and 'extra',
+        corresponding to the training set (73,257 examples), the test
+        set (26,032 examples) and the extra set (531,131 examples).
+        Note that SVHN does not have a validation set; usually you will
+        create your own training/validation split using the `subset`
+        argument.
 
     """
     filename = 'svhn_format_{}.hdf5'
     default_transformers = uint8_pixels_to_floatX(('features',))
 
-    def __init__(self, which_format, which_set, **kwargs):
+    def __init__(self, which_format, which_sets, **kwargs):
         self.which_format = which_format
-        super(SVHN, self).__init__(self.data_path, which_set, **kwargs)
+        super(SVHN, self).__init__(self.data_path, which_sets, **kwargs)
 
     @property
     def data_path(self):

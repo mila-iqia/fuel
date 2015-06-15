@@ -54,7 +54,7 @@ class TestPytablesDataset(object):
 
 class TestH5PYDataset(object):
     def setUp(self):
-        self.features = numpy.arange(3600, dtype='uint8').reshape((100, 36))
+        self.features = numpy.arange(3600, dtype='uint16').reshape((100, 36))
         self.targets = numpy.arange(30, dtype='uint8').reshape((30, 1))
         h5file = h5py.File(
             'file.hdf5', mode='w', driver='core', backing_store=False)
@@ -64,9 +64,9 @@ class TestH5PYDataset(object):
         h5file['targets'] = self.targets
         h5file['targets'].dims[0].label = 'batch'
         h5file['targets'].dims[1].label = 'index'
-        split_dict = {'train': {'features': (0, 20, '.'), 'targets': (0, 20)},
-                      'test': {'features': (20, 30, ''), 'targets': (20, 30)},
-                      'unlabeled': {'features': (30, 100)}}
+        split_dict = {'train': {'features': (0, 20, None), 'targets': (0, 20)},
+                      'test': {'features': (20, 30), 'targets': (20, 30)},
+                      'unlabeled': {'features': (30, 100, None, '.')}}
         h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         self.h5file = h5file
 
@@ -107,40 +107,64 @@ class TestH5PYDataset(object):
         self.h5file.close()
         self.vlen_h5file.close()
 
+    def test_raises_value_error_when_which_sets_is_string(self):
+        assert_raises(ValueError, H5PYDataset, self.h5file, 'train')
+
     def test_split_parsing(self):
-        train_set = H5PYDataset(self.h5file, which_set='train')
+        train_set = H5PYDataset(self.h5file, which_sets=('train',))
         assert train_set.provides_sources == ('features', 'targets')
-        test_set = H5PYDataset(self.h5file, which_set='test')
+        test_set = H5PYDataset(self.h5file, which_sets=('test',))
         assert test_set.provides_sources == ('features', 'targets')
-        unlabeled_set = H5PYDataset(self.h5file, which_set='unlabeled')
+        unlabeled_set = H5PYDataset(self.h5file, which_sets=('unlabeled',))
         assert unlabeled_set.provides_sources == ('features',)
 
+    def test_get_all_splits(self):
+        splits = ('train', 'test', 'unlabeled')
+        available_splits = H5PYDataset.get_all_splits(self.h5file)
+        assert (all(split in available_splits for split in splits) and
+                all(split in splits for split in available_splits))
+
+    def test_get_all_sources(self):
+        sources = ('features', 'targets')
+        all_sources = H5PYDataset.get_all_sources(self.h5file)
+        assert (all(source in all_sources for source in sources) and
+                all(source in sources for source in all_sources))
+
+    def test_unsorted_fancy_index_1(self):
+        indexable = numpy.arange(10)
+        assert_equal(H5PYDataset.unsorted_fancy_index([0], indexable), [0])
+
+    def test_unsorted_fancy_index_gt_1(self):
+        indexable = numpy.arange(10)
+        assert_equal(H5PYDataset.unsorted_fancy_index([0, 5, 2], indexable),
+                     [0, 5, 2])
+
     def test_axis_labels(self):
-        dataset = H5PYDataset(self.h5file, which_set='train')
+        dataset = H5PYDataset(self.h5file, which_sets=('train',))
         assert dataset.axis_labels == {'features': ('batch', 'feature'),
                                        'targets': ('batch', 'index')}
 
     def test_pickling(self):
         try:
-            features = numpy.arange(360, dtype='uint8').reshape((10, 36))
+            features = numpy.arange(360, dtype='uint16').reshape((10, 36))
             h5file = h5py.File('file.hdf5', mode='w')
             h5file['features'] = features
-            split_dict = {'train': {'features': (0, 10, '.')}}
+            split_dict = {'train': {'features': (0, 10, None, '.')}}
             h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
             dataset = cPickle.loads(
-                cPickle.dumps(H5PYDataset(h5file, which_set='train')))
+                cPickle.dumps(H5PYDataset(h5file, which_sets=('train',))))
             assert dataset.data_sources is None
         finally:
             os.remove('file.hdf5')
 
     def test_data_stream_pickling(self):
-        stream = DataStream(H5PYDataset(self.h5file, which_set='train'))
+        stream = DataStream(H5PYDataset(self.h5file, which_sets=('train',)))
         cPickle.loads(cPickle.dumps(stream))
         stream.close()
 
     def test_multiple_instances(self):
-        dataset_1 = H5PYDataset(self.h5file, which_set='train')
-        dataset_2 = H5PYDataset(self.h5file, which_set='train')
+        dataset_1 = H5PYDataset(self.h5file, which_sets=('train',))
+        dataset_2 = H5PYDataset(self.h5file, which_sets=('train',))
         handle_1 = dataset_1.open()
         handle_2 = dataset_2.open()
         dataset_1.get_data(state=handle_1, request=slice(0, 10))
@@ -148,9 +172,9 @@ class TestH5PYDataset(object):
         dataset_1.close(handle_1)
         dataset_2.close(handle_2)
 
-    def test_split(self):
-        train_set = H5PYDataset(self.h5file, which_set='train')
-        test_set = H5PYDataset(self.h5file, which_set='test')
+    def test_single_split(self):
+        train_set = H5PYDataset(self.h5file, which_sets=('train',))
+        test_set = H5PYDataset(self.h5file, which_sets=('test',))
         train_handle = train_set.open()
         test_handle = test_set.open()
         assert_equal(train_set.get_data(train_handle, slice(0, 8)),
@@ -160,9 +184,16 @@ class TestH5PYDataset(object):
         train_set.close(train_handle)
         test_set.close(test_handle)
 
+    def test_multiple_split(self):
+        dataset = H5PYDataset(self.h5file, which_sets=('train', 'test'))
+        handle = dataset.open()
+        assert_equal(dataset.get_data(handle, slice(0, 30)),
+                     (self.features[:30], self.targets[:30]))
+        dataset.close(handle)
+
     def test_out_of_memory(self):
         dataset = H5PYDataset(
-            self.h5file, which_set='test', load_in_memory=False)
+            self.h5file, which_sets=('test',), load_in_memory=False)
         handle = dataset.open()
         assert_equal(dataset.get_data(handle, slice(3, 5)),
                      (self.features[23:25], self.targets[23:25]))
@@ -170,7 +201,7 @@ class TestH5PYDataset(object):
 
     def test_in_memory(self):
         dataset = H5PYDataset(
-            self.h5file, which_set='train', load_in_memory=True)
+            self.h5file, which_sets=('train',), load_in_memory=True)
         handle = dataset.open()
         request = slice(0, 10)
         assert_equal(dataset.get_data(handle, request),
@@ -179,7 +210,7 @@ class TestH5PYDataset(object):
 
     def test_out_of_memory_sorted_indices(self):
         dataset = H5PYDataset(
-            self.h5file, which_set='train', load_in_memory=False,
+            self.h5file, which_sets=('train',), load_in_memory=False,
             sort_indices=True)
         handle = dataset.open()
         request = [7, 4, 6, 2, 5]
@@ -189,45 +220,112 @@ class TestH5PYDataset(object):
 
     def test_out_of_memory_unsorted_indices(self):
         dataset = H5PYDataset(
-            self.h5file, which_set='train', load_in_memory=False,
+            self.h5file, which_sets=('train',), load_in_memory=False,
             sort_indices=False)
         handle = dataset.open()
         assert_raises(TypeError, dataset.get_data, handle, [7, 4, 6, 2, 5])
         dataset.close(handle)
 
-    def test_value_error_on_subset_step_gt_1(self):
-        def instantiate_h5py_dataset():
-            return H5PYDataset(
-                self.h5file, which_set='train', subset=slice(0, 10, 2))
-        assert_raises(ValueError, instantiate_h5py_dataset)
+    def test_subset_step_gt_1(self):
+        dataset = H5PYDataset(
+            self.h5file, which_sets=('train',), subset=slice(0, 10, 2))
+        handle = dataset.open()
+        assert_equal(dataset.get_data(handle, [0, 1, 2, 3, 4]),
+                     (self.features[slice(0, 10, 2)],
+                      self.targets[slice(0, 10, 2)]))
+        dataset.close(handle)
 
     def test_value_error_on_unequal_sources(self):
         def get_subsets():
-            return H5PYDataset(self.h5file, which_set='train').subsets
-        split_dict = {'train': {'features': (0, 20, '.'), 'targets': (0, 15)},
-                      'test': {'features': (20, 30, ''), 'targets': (20, 30)},
-                      'unlabeled': {'features': (30, 100)}}
+            return H5PYDataset(self.h5file, which_sets=('train',)).subsets
+        split_dict = {'train': {'features': (0, 20), 'targets': (0, 15)},
+                      'test': {'features': (20, 30), 'targets': (20, 30)},
+                      'unlabeled': {'features': (30, 100, None, '.')}}
         self.h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         assert_raises(ValueError, get_subsets)
 
     def test_io_error_on_unopened_file_handle(self):
         def get_file_handle():
-            dataset = H5PYDataset(self.h5file, which_set='train')
+            dataset = H5PYDataset(self.h5file, which_sets=('train',))
             dataset._external_file_handle = None
             return dataset._file_handle
         assert_raises(IOError, get_file_handle)
 
     def test_value_error_in_memory_get_data(self):
-        dataset = H5PYDataset(self.h5file, which_set='train')
+        dataset = H5PYDataset(self.h5file, which_sets=('train',))
         assert_raises(ValueError, dataset._in_memory_get_data, None, None)
         assert_raises(ValueError, dataset._in_memory_get_data, True, None)
 
     def test_value_error_out_of_memory_get_data(self):
-        dataset = H5PYDataset(self.h5file, which_set='train')
+        dataset = H5PYDataset(self.h5file, which_sets=('train',))
         assert_raises(ValueError, dataset._out_of_memory_get_data, None, True)
 
+    def test_index_split_out_of_memory(self):
+        features = numpy.arange(50, dtype='uint8').reshape((10, 5))
+        h5file = h5py.File(
+            'index_split.hdf5', mode='w', driver='core', backing_store=False)
+        h5file['features'] = features
+        h5file['features'].dims[0].label = 'batch'
+        h5file['features'].dims[1].label = 'feature'
+        h5file['train_features_subset'] = numpy.arange(0, 10, 2)
+        h5file['test_features_subset'] = numpy.arange(1, 10, 2)
+        train_ref = h5file['train_features_subset'].ref
+        test_ref = h5file['test_features_subset'].ref
+        split_dict = {'train': {'features': (-1, -1, train_ref, '.')},
+                      'test': {'features': (-1, -1, test_ref, '')}}
+        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+        dataset = H5PYDataset(
+            h5file, which_sets=('train',), load_in_memory=False)
+        handle = dataset.open()
+        request = slice(0, 5)
+        assert_equal(
+            dataset.get_data(handle, request)[0], features[0:10:2])
+        assert_equal(dataset.num_examples, 5)
+        dataset.close(handle)
+
+    def test_index_split_in_memory(self):
+        features = numpy.arange(50, dtype='uint8').reshape((10, 5))
+        h5file = h5py.File(
+            'index_split.hdf5', mode='w', driver='core', backing_store=False)
+        h5file['features'] = features
+        h5file['features'].dims[0].label = 'batch'
+        h5file['features'].dims[1].label = 'feature'
+        h5file['train_features_subset'] = numpy.arange(0, 10, 2)
+        h5file['test_features_subset'] = numpy.arange(1, 10, 2)
+        train_ref = h5file['train_features_subset'].ref
+        test_ref = h5file['test_features_subset'].ref
+        split_dict = {'train': {'features': (-1, -1, train_ref, '.')},
+                      'test': {'features': (-1, -1, test_ref, '')}}
+        h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+        dataset = H5PYDataset(
+            h5file, which_sets=('train',), load_in_memory=True)
+        handle = dataset.open()
+        request = slice(0, 5)
+        assert_equal(
+            dataset.get_data(handle, request)[0], features[0:10:2])
+        assert_equal(dataset.num_examples, 5)
+        dataset.close(handle)
+
+    def test_index_subset_sorted(self):
+        dataset = H5PYDataset(
+            self.h5file, which_sets=('train',), subset=[0, 2, 4])
+        handle = dataset.open()
+        request = slice(0, 3)
+        assert_equal(dataset.get_data(handle, request),
+                     (self.features[[0, 2, 4]], self.targets[[0, 2, 4]]))
+        dataset.close(handle)
+
+    def test_index_subset_unsorted(self):
+        dataset = H5PYDataset(
+            self.h5file, which_sets=('train',), subset=[0, 4, 2])
+        handle = dataset.open()
+        request = slice(0, 3)
+        assert_equal(dataset.get_data(handle, request),
+                     (self.features[[0, 4, 2]], self.targets[[0, 4, 2]]))
+        dataset.close(handle)
+
     def test_vlen_axis_labels(self):
-        dataset = H5PYDataset(self.vlen_h5file, which_set='train')
+        dataset = H5PYDataset(self.vlen_h5file, which_sets=('train',))
         assert_equal(dataset.axis_labels['features'],
                      ('batch', 'channel', 'height', 'width'))
         assert_equal(dataset.axis_labels['targets'], ('batch', 'index'))
@@ -242,7 +340,7 @@ class TestH5PYDataset(object):
 
     def test_vlen_reshape_in_memory(self):
         dataset = H5PYDataset(
-            self.vlen_h5file, which_set='train', subset=slice(1, 3),
+            self.vlen_h5file, which_sets=('train',), subset=slice(1, 3),
             load_in_memory=True)
         expected_features = numpy.empty((2,), dtype=numpy.object)
         for i, f in enumerate(self.vlen_features[1:3]):
@@ -257,7 +355,7 @@ class TestH5PYDataset(object):
 
     def test_vlen_reshape_out_of_memory(self):
         dataset = H5PYDataset(
-            self.vlen_h5file, which_set='train', subset=slice(1, 3),
+            self.vlen_h5file, which_sets=('train',), subset=slice(1, 3),
             load_in_memory=False)
         expected_features = numpy.empty((2,), dtype=numpy.object)
         for i, f in enumerate(self.vlen_features[1:3]):
@@ -272,7 +370,7 @@ class TestH5PYDataset(object):
 
     def test_vlen_reshape_out_of_memory_unordered(self):
         dataset = H5PYDataset(
-            self.vlen_h5file, which_set='train', load_in_memory=False)
+            self.vlen_h5file, which_sets=('train',), load_in_memory=False)
         expected_features = numpy.empty((4,), dtype=numpy.object)
         for i, j in enumerate([0, 3, 1, 2]):
             expected_features[i] = self.vlen_features[j]
@@ -286,7 +384,7 @@ class TestH5PYDataset(object):
 
     def test_vlen_reshape_out_of_memory_unordered_no_check(self):
         dataset = H5PYDataset(
-            self.vlen_h5file, which_set='train', load_in_memory=False,
+            self.vlen_h5file, which_sets=('train',), load_in_memory=False,
             sort_indices=False)
         expected_features = numpy.empty((4,), dtype=numpy.object)
         for i, j in enumerate([0, 1, 2, 3]):
