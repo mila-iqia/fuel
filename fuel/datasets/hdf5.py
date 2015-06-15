@@ -631,7 +631,7 @@ class H5PYDataset(Dataset):
         handle = self._file_handle
         for source_name, subset in zip(self.sources, self.subsets):
             if hasattr(subset, 'step'):
-                if isinstance(request, slice):
+                if hasattr(request, 'step'):
                     req = slice(request.start + subset.start,
                                 request.stop + subset.start, request.step)
                 else:
