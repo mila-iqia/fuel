@@ -23,17 +23,18 @@ class MNIST(H5PYDataset):
 
     Parameters
     ----------
-    which_set : 'train' or 'test'
-        Whether to load the training set (60,000 samples) or the test set
-        (10,000 samples).
+    which_sets : tuple of str
+        Which split to load. Valid values are 'train' and 'test',
+        corresponding to the training set (50,000 examples) and the test
+        set (10,000 examples).
 
     """
     filename = 'mnist.hdf5'
     default_transformers = uint8_pixels_to_floatX(('features',))
 
-    def __init__(self, which_set, **kwargs):
+    def __init__(self, which_sets, **kwargs):
         kwargs.setdefault('load_in_memory', True)
-        super(MNIST, self).__init__(self.data_path, which_set, **kwargs)
+        super(MNIST, self).__init__(self.data_path, which_sets, **kwargs)
 
     @property
     def data_path(self):

@@ -19,7 +19,7 @@ def test_svhn():
                       'test': {'features': (8, 10), 'targets': (8, 10)}}
         f.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         f.close()
-        dataset = SVHN(which_format=2, which_set=('train',))
+        dataset = SVHN(which_format=2, which_sets=('train',))
         assert_equal(dataset.data_path,
                      os.path.join(config.data_path, 'svhn_format_2.hdf5'))
     finally:

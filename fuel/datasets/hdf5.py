@@ -118,7 +118,7 @@ class H5PYDataset(Dataset):
     ----------
     file_or_path : :class:`h5py.File` or str
         HDF5 file handle, or path to the HDF5 file.
-    which_set : iterable of str
+    which_sets : iterable of str
         Which split(s) to use. If one than more split is requested,
         the provided sources will be the intersection of provided
         sources for these splits.
@@ -161,7 +161,7 @@ class H5PYDataset(Dataset):
     _ref_counts = defaultdict(int)
     _file_handles = {}
 
-    def __init__(self, file_or_path, which_set, subset=None,
+    def __init__(self, file_or_path, which_sets, subset=None,
                  load_in_memory=False, driver=None, sort_indices=True,
                  **kwargs):
         if isinstance(file_or_path, h5py.File):
@@ -170,12 +170,12 @@ class H5PYDataset(Dataset):
         else:
             self.path = file_or_path
             self.external_file_handle = None
-        which_set_invalid_value = (
-            isinstance(which_set, six.string_types) or
-            not all(isinstance(s, six.string_types) for s in which_set))
-        if which_set_invalid_value:
-            raise ValueError('`which_set` should be an iterable of strings')
-        self.which_set = which_set
+        which_sets_invalid_value = (
+            isinstance(which_sets, six.string_types) or
+            not all(isinstance(s, six.string_types) for s in which_sets))
+        if which_sets_invalid_value:
+            raise ValueError('`which_sets` should be an iterable of strings')
+        self.which_sets = which_sets
         subset = subset if subset else slice(None)
         if hasattr(subset, 'step') and subset.step not in (1, None):
             raise ValueError("subset.step must be either 1 or None")
@@ -192,7 +192,7 @@ class H5PYDataset(Dataset):
     def _parse_dataset_info(self):
         """Parses information related to the HDF5 interface.
 
-        In addition to verifying that the `self.which_set` split is
+        In addition to verifying that the `self.which_sets` split is
         available, this method sets the following attributes:
 
         * `provides_sources`
@@ -203,9 +203,9 @@ class H5PYDataset(Dataset):
         self._out_of_memory_open()
         handle = self._file_handle
         available_splits = self.get_all_splits(handle)
-        which_set = self.which_set
+        which_sets = self.which_sets
         provides_sources = None
-        for split in which_set:
+        for split in which_sets:
             if split not in available_splits:
                 raise ValueError(
                     "'{}' split is not provided by this ".format(split) +
@@ -498,9 +498,9 @@ class H5PYDataset(Dataset):
 
         # Load subset slices / indices
         subsets = []
-        if len(self.which_set) > 1:
+        if len(self.which_sets) > 1:
             indices = defaultdict(list)
-            for split in self.which_set:
+            for split in self.which_sets:
                 split_start_stop = self.get_start_stop(handle, split)
                 split_indices = self.get_indices(handle, split)
                 for source_name in self.sources:
@@ -511,8 +511,8 @@ class H5PYDataset(Dataset):
                     indices[source_name] = sorted(
                         set(indices[source_name] + ind))
         else:
-            start_stop = self.get_start_stop(handle, self.which_set[0])
-            indices = self.get_indices(handle, self.which_set[0])
+            start_stop = self.get_start_stop(handle, self.which_sets[0])
+            indices = self.get_indices(handle, self.which_sets[0])
         num_examples = None
         for source_name in self.sources:
             subset = self._subset_template
