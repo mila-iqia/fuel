@@ -23,8 +23,8 @@ before_install:
   - export FUEL_DATA_PATH=$TRAVIS_BUILD_DIR/data
 install:
   # Install all Python dependencies
-  - |
   - pip install . -r requirements.txt
+  - |
       if [[ $TESTS == 'blocks' ]]; then
         curl -O https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-conda.txt
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl --file req-travis-conda.txt
