@@ -1,5 +1,3 @@
-import os
-
 import numpy
 
 from numpy.testing import assert_raises, assert_equal, assert_allclose

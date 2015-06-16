@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import os
-
 from fuel.datasets import H5PYDataset
 from fuel.utils import find_in_data_path
 

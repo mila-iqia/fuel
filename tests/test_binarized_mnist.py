@@ -1,9 +1,7 @@
 import hashlib
-import os
 
 from numpy.testing import assert_raises, assert_equal
 
-from fuel import config
 from fuel.datasets import BinarizedMNIST
 from tests import skip_if_not_available
 
