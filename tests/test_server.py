@@ -39,7 +39,7 @@ class TestServer(object):
         expected_data = get_stream().get_epoch_iterator()
         for _, s, e in zip(range(3), server_data, expected_data):
             for data in zip(s, e):
-                assert_allclose(*data)
+                assert_allclose(*data, rtol=1e-5)
         assert_raises(StopIteration, next, server_data)
 
     def test_value_error_on_request(self):
