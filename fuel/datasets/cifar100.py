@@ -1,8 +1,8 @@
 import os
 
-from fuel import config
 from fuel.datasets import H5PYDataset
 from fuel.transformers.defaults import uint8_pixels_to_floatX
+from fuel.utils import find_in_data_path
 
 
 class CIFAR100(H5PYDataset):
@@ -42,8 +42,6 @@ class CIFAR100(H5PYDataset):
 
     def __init__(self, which_sets, **kwargs):
         kwargs.setdefault('load_in_memory', True)
-        super(CIFAR100, self).__init__(self.data_path, which_sets, **kwargs)
-
-    @property
-    def data_path(self):
-        return os.path.join(config.data_path, self.filename)
+        super(CIFAR100, self).__init__(
+            file_or_path=find_in_data_path(self.filename),
+            which_sets=which_sets, **kwargs)

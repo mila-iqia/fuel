@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
 
-from fuel import config
 from fuel.datasets import H5PYDataset
 from fuel.transformers.defaults import uint8_pixels_to_floatX
+from fuel.utils import find_in_data_path
 
 
 class SVHN(H5PYDataset):
@@ -42,14 +42,15 @@ class SVHN(H5PYDataset):
         argument.
 
     """
-    filename = 'svhn_format_{}.hdf5'
+    _filename = 'svhn_format_{}.hdf5'
     default_transformers = uint8_pixels_to_floatX(('features',))
 
     def __init__(self, which_format, which_sets, **kwargs):
         self.which_format = which_format
-        super(SVHN, self).__init__(self.data_path, which_sets, **kwargs)
+        super(SVHN, self).__init__(
+            file_or_path=find_in_data_path(self.filename),
+            which_sets=which_sets, **kwargs)
 
     @property
-    def data_path(self):
-        return os.path.join(
-            config.data_path, self.filename.format(self.which_format))
+    def filename(self):
+        return self._filename.format(self.which_format)

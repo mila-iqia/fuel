@@ -70,10 +70,3 @@ def test_mnist_invalid_split():
     skip_if_not_available(datasets=['mnist.hdf5'])
 
     assert_raises(ValueError, MNIST, ('dummy',))
-
-
-def test_mnist_data_path():
-    skip_if_not_available(datasets=['mnist.hdf5'])
-
-    assert MNIST(('train',)).data_path == os.path.join(config.data_path,
-                                                       'mnist.hdf5')
