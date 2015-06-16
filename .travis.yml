@@ -23,18 +23,19 @@ before_install:
   - export FUEL_DATA_PATH=$TRAVIS_BUILD_DIR/data
 install:
   # Install all Python dependencies
-  - pip install . -r requirements.txt
   - |
       if [[ $TESTS == 'blocks' ]]; then
         curl -O https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-conda.txt
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl --file req-travis-conda.txt
         pip install -r https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-pip.txt
+        pip install . -r requirements.txt
         pip install -e git+git://github.com/mila-udem/blocks.git@$TRAVIS_BRANCH#egg=blocks --src=$HOME -r https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/requirements.txt
       fi
   - |
       if [[ $TESTS == 'fuel' ]]; then
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl --file req-travis-conda.txt
         pip install -r req-travis-pip.txt
+        pip install . -r requirements.txt
       fi
 script:
   - ./.travis-data.sh mnist binarized_mnist cifar10 cifar100
