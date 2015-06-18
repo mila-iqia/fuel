@@ -18,6 +18,9 @@ Which could be overwritten by using environment variables:
 
    $ FUEL_DATA_PATH=/home/users/other_datasets python
 
+This data path is a sequence of paths separated by an os-specific
+delimiter (':' for Linux and OSX, ';' for Windows).
+
 If a setting is not configured and does not provide a default, a
 :class:`~.ConfigurationError` is raised when it is
 accessed.
@@ -34,7 +37,9 @@ The following configurations are supported:
 .. option:: data_path
 
    The path where dataset files are stored. Can also be set using the
-   environment variable ``FUEL_DATA_PATH``.
+   environment variable ``FUEL_DATA_PATH``. Expected to be a sequence
+   of paths separated by an os-specific delimiter (':' for Linux and
+   OSX, ';' for Windows).
 
 
 .. todo::

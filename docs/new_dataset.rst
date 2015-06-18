@@ -204,22 +204,18 @@ amount of code to write is very minimal:
 
 .. code-block:: python
 
-    import os
-
-    from fuel import config
     from fuel.datasets import H5PYDataset
+    from fuel.utils import find_in_data_path
 
 
     class Iris(H5PYDataset):
         filename = 'iris.hdf5'
 
-        def __init__(self, which_set, **kwargs):
+        def __init__(self, which_sets=which_sets, **kwargs):
             kwargs.setdefault('load_in_memory', True)
-            super(Iris, self).__init__(self.data_path, which_set, **kwargs)
-
-        @property
-        def data_path(self):
-            return os.path.join(config.data_path, self.filename)
+            super(Iris, self).__init__(
+                file_or_path=find_in_data_path(self.filename),
+                which_sets=which_sets, **kwargs)
 
 Our subclass is just a thin wrapper around the
 :class:`~.datasets.hdf5.H5PYDataset` class that defines the data path and
@@ -344,9 +340,9 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     >>> from fuel import config
     >>> from fuel.datasets import H5PYDataset
     >>> class Iris(H5PYDataset):
-    ...    def __init__(self, which_set, **kwargs):
+    ...    def __init__(self, which_sets, **kwargs):
     ...        kwargs.setdefault('load_in_memory', True)
-    ...        super(Iris, self).__init__('iris.hdf5', which_set, **kwargs)
+    ...        super(Iris, self).__init__('iris.hdf5', which_sets, **kwargs)
 
 .. doctest::
 

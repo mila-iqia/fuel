@@ -71,6 +71,9 @@ or by setting the environment variable ``FUEL_DATA_PATH``
 
    export FUEL_DATA_PATH=/home/your_data
 
+This data path is a sequence of paths separated by an os-specific delimiter
+(':' for Linux and OSX, ';' for Windows).
+
 For example, after downloading the MNIST data to ``/home/your_data/mnist`` we
 construct a handle to the data.
 

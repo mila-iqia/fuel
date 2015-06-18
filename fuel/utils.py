@@ -1,6 +1,9 @@
 import collections
+import os
 
 import six
+
+from fuel import config
 
 
 # See http://python3porting.com/differences.html#buffer
@@ -8,6 +11,37 @@ if six.PY3:
     buffer_ = memoryview
 else:
     buffer_ = buffer  # noqa
+
+
+def find_in_data_path(filename):
+    """Searches for a file within Fuel's data path.
+
+    This function loops over all paths defined in Fuel's data path and
+    returns the first path in which the file is found.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the file to find.
+
+    Returns
+    -------
+    file_path : str
+        Path to the first file matching `filename` found in Fuel's
+        data path.
+
+    Raises
+    ------
+    IOError
+        If the file doesn't appear in Fuel's data path.
+
+    """
+    for path in config.data_path.split(os.path.pathsep):
+        path = os.path.expanduser(os.path.expandvars(path))
+        file_path = os.path.join(path, filename)
+        if os.path.isfile(file_path):
+            return file_path
+    raise IOError("{} not found in Fuel's data path".format(filename))
 
 
 def lazy_property_factory(lazy_property):

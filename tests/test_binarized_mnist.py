@@ -1,9 +1,7 @@
 import hashlib
-import os
 
 from numpy.testing import assert_raises, assert_equal
 
-from fuel import config
 from fuel.datasets import BinarizedMNIST
 from tests import skip_if_not_available
 
@@ -57,8 +55,3 @@ def test_binarized_mnist_axes():
 
 def test_binarized_mnist_invalid_split():
     assert_raises(ValueError, BinarizedMNIST, ('dummy',))
-
-
-def test_binarized_mnist_data_path():
-    assert BinarizedMNIST(('train',)).data_path == os.path.join(
-        config.data_path, 'binarized_mnist.hdf5')

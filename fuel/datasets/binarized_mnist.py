@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import os
-
-from fuel import config
 from fuel.datasets import H5PYDataset
+from fuel.utils import find_in_data_path
 
 
 class BinarizedMNIST(H5PYDataset):
@@ -44,9 +42,6 @@ class BinarizedMNIST(H5PYDataset):
 
     def __init__(self, which_sets, load_in_memory=True, **kwargs):
         super(BinarizedMNIST, self).__init__(
-            self.data_path, which_sets=which_sets,
+            file_or_path=find_in_data_path(self.filename),
+            which_sets=which_sets,
             load_in_memory=load_in_memory, **kwargs)
-
-    @property
-    def data_path(self):
-        return os.path.join(config.data_path, self.filename)

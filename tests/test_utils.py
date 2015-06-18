@@ -1,8 +1,13 @@
+import os
+import shutil
+import tempfile
+
 from numpy.testing import assert_raises, assert_equal
 from six.moves import range, cPickle
 
+from fuel import config
 from fuel.iterator import DataIterator
-from fuel.utils import do_not_pickle_attributes
+from fuel.utils import do_not_pickle_attributes, find_in_data_path
 
 
 @do_not_pickle_attributes("non_picklable", "bulky_attr")
@@ -32,6 +37,38 @@ class UnpicklableClass(object):
 class NonLoadingClass(object):
     def load(self):
         pass
+
+
+class TestFindInDataPath(object):
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+        os.mkdir(os.path.join(self.tempdir, 'dir1'))
+        os.mkdir(os.path.join(self.tempdir, 'dir2'))
+        self.original_data_path = config.data_path
+        config.data_path = os.path.pathsep.join(
+            [os.path.join(self.tempdir, 'dir1'),
+             os.path.join(self.tempdir, 'dir2')])
+        with open(os.path.join(self.tempdir, 'dir1', 'file_1.txt'), 'w'):
+            pass
+        with open(os.path.join(self.tempdir, 'dir2', 'file_1.txt'), 'w'):
+            pass
+        with open(os.path.join(self.tempdir, 'dir2', 'file_2.txt'), 'w'):
+            pass
+
+    def tearDown(self):
+        config.data_path = self.original_data_path
+        shutil.rmtree(self.tempdir)
+
+    def test_returns_file_path(self):
+        assert_equal(find_in_data_path('file_2.txt'),
+                     os.path.join(self.tempdir, 'dir2', 'file_2.txt'))
+
+    def test_returns_first_file_found(self):
+        assert_equal(find_in_data_path('file_1.txt'),
+                     os.path.join(self.tempdir, 'dir1', 'file_1.txt'))
+
+    def test_raises_error_on_file_not_found(self):
+        assert_raises(IOError, find_in_data_path, 'dummy.txt')
 
 
 class TestDoNotPickleAttributes(object):
