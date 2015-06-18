@@ -6,7 +6,8 @@ from scipy.io import loadmat
 from fuel.converters.base import fill_hdf5_file, MissingInputFiles
 
 
-def convert_silhouettes(size, directory, output_file):
+def convert_silhouettes(size, directory, output_directory,
+                        output_file=None):
     """ Convert the CalTech 101 Silhouettes Datasets.
 
     Parameters
@@ -22,13 +23,15 @@ def convert_silhouettes(size, directory, output_file):
     if size not in (16, 28):
         raise ValueError('size must be 16 or 28')
 
+    if output_file is None:
+        output_file = 'caltech101_silhouettes{}.hdf5'.format(size)
+    output_file = os.path.join(output_directory, output_file)
+
     input_file = 'caltech101_silhouettes_{}_split1.mat'.format(size)
     input_file = os.path.join(directory, input_file)
 
     if not os.path.isfile(input_file):
         raise MissingInputFiles('Required files missing', [input_file])
-
-    output_file = output_file.format(size)
 
     with h5py.File(output_file, mode="w") as h5file:
         mat = loadmat(input_file)
@@ -55,6 +58,7 @@ def convert_silhouettes(size, directory, output_file):
 
         for i, label in enumerate(('batch', 'index')):
             h5file['targets'].dims[i].label = label
+    return (output_file,)
 
 
 def fill_subparser(subparser):
@@ -69,6 +73,4 @@ def fill_subparser(subparser):
     subparser.add_argument(
         "size", type=int, choices=(16, 28),
         help="height/width of the datapoints")
-    subparser.set_defaults(
-        func=convert_silhouettes,
-        output_file=os.path.join(os.getcwd(), 'caltech101_silhouettes{}.hdf5'))
+    subparser.set_defaults(func=convert_silhouettes)

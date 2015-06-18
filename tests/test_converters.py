@@ -392,30 +392,33 @@ class TestCalTech101Silhouettes(object):
         shutil.rmtree(self.tempdir)
 
     def test_download_and_convert(self, size=16):
-        output_file = os.path.join(self.tempdir, 'silhouettes_{}.hdf5')
-        output_file = output_file.format(size)
+        tempdir = self.tempdir
 
         cwd = os.getcwd()
-        os.chdir(self.tempdir)
+        os.chdir(tempdir)
 
         assert_raises(MissingInputFiles,
                       caltech101_silhouettes.convert_silhouettes,
-                      size=16, directory=self.tempdir, output_file=output_file)
+                      size=16, directory=tempdir,
+                      output_directory=tempdir)
         assert_raises(ValueError, silhouettes_downloader,
-                      size=10, directory=self.tempdir)
+                      size=10, directory=tempdir)
 
-        silhouettes_downloader(size=size, directory=self.tempdir)
+        silhouettes_downloader(size=size, directory=tempdir)
 
         assert_raises(ValueError,
                       caltech101_silhouettes.convert_silhouettes,
-                      size=10, directory=self.tempdir, output_file=output_file)
+                      size=10, directory=tempdir,
+                      output_directory=tempdir)
 
         caltech101_silhouettes.convert_silhouettes(size=size,
-                                                   directory=self.tempdir,
-                                                   output_file=output_file)
+                                                   directory=tempdir,
+                                                   output_directory=tempdir)
 
         os.chdir(cwd)
 
+        output_file = "caltech101_silhouettes{}.hdf5".format(size)
+        output_file = os.path.join(tempdir, output_file)
         with h5py.File(output_file, 'r') as h5:
             assert h5['features'].shape == (8641, 1, size, size)
             assert h5['targets'].shape == (8641, 1)
