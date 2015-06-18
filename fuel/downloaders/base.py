@@ -81,6 +81,22 @@ def download(url, file_handle, chunk_size=1024):
             file_handle.write(chunk)
 
 
+def ensure_directory_exists(directory):
+    """Create directory (with parents) if does not exist, raise on failure.
+
+    Parameters
+    ----------
+    directory : str
+        The directory to create
+
+    """
+    try:
+        os.makedirs(directory)
+    except OSError as e:
+        if e.errno != os.errno.EEXIST:
+            raise
+
+
 def default_downloader(directory, urls, filenames, url_prefix=None,
                        clear=False):
     """Downloads or clears files from URLs and filenames.
@@ -117,6 +133,8 @@ def default_downloader(directory, urls, filenames, url_prefix=None,
                 os.remove(f)
     else:
         print('Downloading ' + ', '.join(filenames) + '\n')
+        ensure_directory_exists(directory)
+
         for url, f, n in zip(urls, files, filenames):
             if not url:
                 if url_prefix is None:

@@ -9,7 +9,8 @@ from numpy.testing import assert_equal, assert_raises
 
 from fuel.downloaders import mnist, binarized_mnist, cifar10, cifar100, svhn
 from fuel.downloaders.base import (download, default_downloader,
-                                   filename_from_url, NeedURLPrefix)
+                                   filename_from_url, NeedURLPrefix,
+                                   ensure_directory_exists)
 from picklable_itertools import chain
 from six.moves import range
 
@@ -68,6 +69,25 @@ class TestDownload(object):
             download(mock_url, f)
             f.seek(0)
             assert_equal(f.read(), mock_content)
+
+
+def test_ensure_directory_exists():
+    parent = tempfile.mkdtemp()
+    dirpath = os.path.join(parent, 'a', 'b')
+    filepath = os.path.join(dirpath, 'f')
+
+    # multiple checks for the same dir are fine
+    ensure_directory_exists(dirpath)
+    ensure_directory_exists(dirpath)
+
+    assert os.path.exists(dirpath)
+
+    with open(filepath, 'w') as f:
+        f.write(' ')
+
+    assert_raises(ensure_directory_exists(filepath))
+
+    shutil.rmtree(dirpath, ignore_errors=True)
 
 
 def test_mnist():
