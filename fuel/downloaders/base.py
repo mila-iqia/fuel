@@ -117,6 +117,13 @@ def default_downloader(directory, urls, filenames, url_prefix=None,
                 os.remove(f)
     else:
         print('Downloading ' + ', '.join(filenames) + '\n')
+        try:
+            os.makedirs(directory)
+        except OSError as e:
+            #errno 17 means dir already exists, so we can silently discard it
+            if e.errno != 17:
+                raise
+
         for url, f, n in zip(urls, files, filenames):
             if not url:
                 if url_prefix is None:
