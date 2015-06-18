@@ -9,7 +9,7 @@ def test_caltech101_silhouettes16():
     skip_if_not_available(datasets=['caltech101_silhouettes16.hdf5'])
     for which_set, size, num_examples in (
             ('train', 16, 4082), ('valid', 16, 2257), ('test', 16, 2302)):
-        ds = CalTech101Silhouettes(which_set=which_set, size=size,
+        ds = CalTech101Silhouettes(which_sets=[which_set], size=size,
                                    load_in_memory=False)
 
         assert ds.num_examples == num_examples
@@ -23,15 +23,17 @@ def test_caltech101_silhouettes16():
         assert features.dtype == numpy.uint8
         assert targets.dtype == numpy.uint8
 
+
+def test_caltech101_silhouettes_unkn_size():
     assert_raises(ValueError, CalTech101Silhouettes,
-                  which_set='test', size=10)
+                  which_sets=['test'], size=10)
 
 
 def test_caltech101_silhouettes28():
     skip_if_not_available(datasets=['caltech101_silhouettes28.hdf5'])
     for which_set, size, num_examples in (
             ('train', 28, 4100), ('valid', 28, 2264), ('test', 28, 2307)):
-        ds = CalTech101Silhouettes(which_set=which_set, size=size,
+        ds = CalTech101Silhouettes(which_sets=[which_set], size=size,
                                    load_in_memory=False)
 
         assert ds.num_examples == num_examples
@@ -44,6 +46,3 @@ def test_caltech101_silhouettes28():
 
         assert features.dtype == numpy.uint8
         assert targets.dtype == numpy.uint8
-
-    assert_raises(ValueError, CalTech101Silhouettes,
-                  which_set='test', size=10)

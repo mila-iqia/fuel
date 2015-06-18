@@ -21,20 +21,20 @@ class CalTech101Silhouettes(H5PYDataset):
 
     Parameters
     ----------
-    which_set : {'train', 'valid', 'test'}
-        Access the training, validation or test set.
+    which_sets : tuple of str
+        Which split to load. Valid values are 'train', 'valid' and 'test'.
     size : {16, 28}
         Either 16 or 28 to select the 16x16 or 28x28 pixels version
         of the dataset (default: 28).
 
     """
-    def __init__(self, which_set, size=28, load_in_memory=True, **kwargs):
+    def __init__(self, which_sets, size=28, load_in_memory=True, **kwargs):
         if size not in (16, 28):
             raise ValueError('size must be 16 or 28')
 
         self.filename = 'caltech101_silhouettes{}.hdf5'.format(size)
         super(CalTech101Silhouettes, self).__init__(
-            self.data_path, which_set=which_set,
+            self.data_path, which_sets=which_sets,
             load_in_memory=load_in_memory, **kwargs)
 
     @property
