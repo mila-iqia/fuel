@@ -22,7 +22,8 @@ FORMAT_2_TRAIN_FILE, FORMAT_2_TEST_FILE, FORMAT_2_EXTRA_FILE = FORMAT_2_FILES
 
 
 @check_exists(required_files=FORMAT_1_FILES)
-def convert_svhn_format_1(directory, output_file):
+def convert_svhn_format_1(directory, output_directory,
+                          output_filename='svhn_format_1.hdf5'):
     """Converts the SVHN dataset (format 1) to HDF5.
 
     This method assumes the existence of the files
@@ -35,12 +36,20 @@ def convert_svhn_format_1(directory, output_file):
     ----------
     directory : str
         Directory in which input files reside.
-    output_file : str
-        Where to save the converted dataset.
+    output_directory : str
+        Directory in which to save the converted dataset.
+    output_filename : str, optional
+        Name of the saved dataset. Defaults to 'svhn_format_1.hdf5'.
+
+    Returns
+    -------
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
 
     """
     try:
-        h5file = h5py.File(output_file, mode='w')
+        output_path = os.path.join(output_directory, output_filename)
+        h5file = h5py.File(output_path, mode='w')
         TMPDIR = tempfile.mkdtemp()
 
         # Every image has three channels (RGB) and variable height and width.
@@ -249,9 +258,12 @@ def convert_svhn_format_1(directory, output_file):
         h5file.flush()
         h5file.close()
 
+    return (output_path,)
+
 
 @check_exists(required_files=FORMAT_2_FILES)
-def convert_svhn_format_2(directory, output_file):
+def convert_svhn_format_2(directory, output_directory,
+                          output_filename='svhn_format_2.hdf5'):
     """Converts the SVHN dataset (format 2) to HDF5.
 
     This method assumes the existence of the files
@@ -264,11 +276,19 @@ def convert_svhn_format_2(directory, output_file):
     ----------
     directory : str
         Directory in which input files reside.
-    output_file : str
-        Where to save the converted dataset.
+    output_directory : str
+        Directory in which to save the converted dataset.
+    output_filename : str, optional
+        Name of the saved dataset. Defaults to 'svhn_format_2.hdf5'.
+
+    Returns
+    -------
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
 
     """
-    h5file = h5py.File(output_file, mode='w')
+    output_path = os.path.join(output_directory, output_filename)
+    h5file = h5py.File(output_path, mode='w')
 
     train_set = loadmat(os.path.join(directory, FORMAT_2_TRAIN_FILE))
     train_features = train_set['X'].transpose(3, 2, 0, 1)
@@ -297,8 +317,11 @@ def convert_svhn_format_2(directory, output_file):
     h5file.flush()
     h5file.close()
 
+    return (output_path,)
 
-def convert_svhn(which_format, directory, output_file):
+
+def convert_svhn(which_format, directory, output_directory,
+                 output_filename=None):
     """Converts the SVHN dataset to HDF5.
 
     Converts the SVHN dataset [SVHN] to an HDF5 dataset compatible
@@ -318,17 +341,28 @@ def convert_svhn(which_format, directory, output_file):
         or format 2: cropped digits) to convert.
     directory : str
         Directory in which input files reside.
-    output_file : str
-        Where to save the converted dataset.
+    output_directory : str
+        Directory in which to save the converted dataset.
+    output_filename : str, optional
+        Name of the saved dataset. Defaults to 'svhn_format_1.hdf5' or
+        'svhn_format_2.hdf5', depending on `which_format`.
+
+    Returns
+    -------
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
 
     """
     if which_format not in (1, 2):
         raise ValueError("SVHN format needs to be either 1 or 2.")
-    output_file = output_file.format(which_format)
+    if not output_filename:
+        output_filename = 'svhn_format_{}.hdf5'.format(which_format)
     if which_format == 1:
-        convert_svhn_format_1(directory, output_file)
+        return convert_svhn_format_1(
+            directory, output_directory, output_filename)
     else:
-        convert_svhn_format_2(directory, output_file)
+        return convert_svhn_format_2(
+            directory, output_directory, output_filename)
 
 
 def fill_subparser(subparser):
@@ -342,6 +376,4 @@ def fill_subparser(subparser):
     """
     subparser.add_argument(
         "which_format", help="which dataset format", type=int, choices=(1, 2))
-    subparser.set_defaults(
-        func=convert_svhn,
-        output_file=os.path.join(os.getcwd(), 'svhn_format_{}.hdf5'))
+    subparser.set_defaults(func=convert_svhn)

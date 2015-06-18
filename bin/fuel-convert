@@ -10,6 +10,14 @@ from fuel.converters.base import MissingInputFiles
 from fuel.datasets import H5PYDataset
 
 
+class CheckDirectoryAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if os.path.isdir(values):
+            setattr(namespace, self.dest, values)
+        else:
+            raise ValueError('{} is not a existing directory'.format(values))
+
+
 if __name__ == "__main__":
     built_in_datasets = dict(converters.all_converters)
     parser = argparse.ArgumentParser(
@@ -24,9 +32,10 @@ if __name__ == "__main__":
             name, parents=[parent_parser],
             help='Convert the {} dataset'.format(name))
         subparser.add_argument(
-            "-o", "--output-file", help="where to save the dataset", type=str,
-            default=os.path.join(os.getcwd(), '{}.hdf5'.format(name)))
+            "-o", "--output-directory", help="where to save the dataset",
+            type=str, default=os.getcwd(), action=CheckDirectoryAction)
         subparser_fn(subparser)
+
     args = parser.parse_args()
     args_dict = vars(args)
     try:
@@ -35,21 +44,22 @@ if __name__ == "__main__":
         parser.print_usage()
         parser.exit()
     try:
-        func(**args_dict)
+        output_paths = func(**args_dict)
     except MissingInputFiles as e:
         intro = "The following required files were not found:\n"
         message = "\n".join([intro] + ["   * " + f for f in e.filenames])
         message += "\n\nDid you forget to run fuel-download?"
         parser.error(message)
 
-    # Tag the newly-created file with H5PYDataset version and command-line
+    # Tag the newly-created file(s) with H5PYDataset version and command-line
     # options
-    h5file = h5py.File(args.output_file, 'a')
-    interface_version = H5PYDataset.interface_version.encode('utf-8')
-    h5file.attrs['h5py_interface_version'] = interface_version
-    fuel_convert_version = converters.__version__.encode('utf-8')
-    h5file.attrs['fuel_convert_version'] = fuel_convert_version
-    command = [os.path.basename(sys.argv[0])] + sys.argv[1:]
-    h5file.attrs['fuel_convert_command'] = ' '.join(command).encode('utf-8')
-    h5file.flush()
-    h5file.close()
+    for output_path in output_paths:
+        h5file = h5py.File(output_path, 'a')
+        interface_version = H5PYDataset.interface_version.encode('utf-8')
+        h5file.attrs['h5py_interface_version'] = interface_version
+        fuel_convert_version = converters.__version__.encode('utf-8')
+        h5file.attrs['fuel_convert_version'] = fuel_convert_version
+        command = [os.path.basename(sys.argv[0])] + sys.argv[1:]
+        h5file.attrs['fuel_convert_command'] = ' '.join(command).encode('utf-8')
+        h5file.flush()
+        h5file.close()

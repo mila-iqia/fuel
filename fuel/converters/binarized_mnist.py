@@ -14,7 +14,8 @@ ALL_FILES = [TRAIN_FILE, VALID_FILE, TEST_FILE]
 
 
 @check_exists(required_files=ALL_FILES)
-def convert_binarized_mnist(directory, output_file):
+def convert_binarized_mnist(directory, output_directory,
+                            output_filename='binarized_mnist.hdf5'):
     """Converts the binarized MNIST dataset to HDF5.
 
     Converts the binarized MNIST dataset used in R. Salakhutdinov's DBN
@@ -37,11 +38,19 @@ def convert_binarized_mnist(directory, output_file):
     ----------
     directory : str
         Directory in which input files reside.
-    output_file : str
-        Where to save the converted dataset.
+    output_directory : str
+        Directory in which to save the converted dataset.
+    output_filename : str, optional
+        Name of the saved dataset. Defaults to 'binarized_mnist.hdf5'.
+
+    Returns
+    -------
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
 
     """
-    h5file = h5py.File(output_file, mode='w')
+    output_path = os.path.join(output_directory, output_filename)
+    h5file = h5py.File(output_path, mode='w')
 
     train_set = numpy.loadtxt(
         os.path.join(directory, TRAIN_FILE)).reshape(
@@ -61,6 +70,8 @@ def convert_binarized_mnist(directory, output_file):
 
     h5file.flush()
     h5file.close()
+
+    return (output_path,)
 
 
 def fill_subparser(subparser):

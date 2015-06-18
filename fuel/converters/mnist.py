@@ -19,7 +19,8 @@ ALL_FILES = [TRAIN_IMAGES, TRAIN_LABELS, TEST_IMAGES, TEST_LABELS]
 
 
 @check_exists(required_files=ALL_FILES)
-def convert_mnist(directory, output_file, dtype=None):
+def convert_mnist(directory, output_directory, output_filename=None,
+                  dtype=None):
     """Converts the MNIST dataset to HDF5.
 
     Converts the MNIST dataset to an HDF5 dataset compatible with
@@ -41,15 +42,29 @@ def convert_mnist(directory, output_file, dtype=None):
     ----------
     directory : str
         Directory in which input files reside.
-    output_file : str
-        Where to save the converted dataset.
+    output_directory : str
+        Directory in which to save the converted dataset.
+    output_filename : str, optional
+        Name of the saved dataset. Defaults to `None`, in which case a name
+        based on `dtype` will be used.
     dtype : str, optional
         Either 'float32', 'float64', or 'bool'. Defaults to `None`,
         in which case images will be returned in their original
         unsigned byte format.
 
+    Returns
+    -------
+    output_paths : tuple of str
+        Single-element tuple containing the path to the converted dataset.
+
     """
-    h5file = h5py.File(output_file, mode='w')
+    if not output_filename:
+        if dtype:
+            output_filename = 'mnist_{}.hdf5'.format(dtype)
+        else:
+            output_filename = 'mnist.hdf5'
+    output_path = os.path.join(output_directory, output_filename)
+    h5file = h5py.File(output_path, mode='w')
 
     train_feat_path = os.path.join(directory, TRAIN_IMAGES)
     train_features = read_mnist_images(train_feat_path, dtype)
@@ -73,6 +88,8 @@ def convert_mnist(directory, output_file, dtype=None):
 
     h5file.flush()
     h5file.close()
+
+    return (output_path,)
 
 
 def fill_subparser(subparser):
