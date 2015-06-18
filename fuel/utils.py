@@ -19,6 +19,11 @@ def find_in_data_path(filename):
     This function loops over all paths defined in Fuel's data path and
     returns the first path in which the file is found.
 
+    Parameters
+    ----------
+    filename : str
+        Name of the file to find.
+
     Returns
     -------
     file_path : str
