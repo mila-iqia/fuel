@@ -18,7 +18,9 @@ from six.moves import range, zip, cPickle
 
 from fuel.converters.base import (fill_hdf5_file, check_exists,
                                   MissingInputFiles)
-from fuel.converters import binarized_mnist, cifar10, mnist, cifar100, svhn
+from fuel.converters import (binarized_mnist, caltech101_silhouettes,
+                             cifar10, cifar100, mnist, svhn)
+from fuel.downloaders.caltech101_silhouettes import silhouettes_downloader
 
 if six.PY3:
     getbuffer = memoryview
@@ -380,6 +382,46 @@ class TestCIFAR100(object):
                      ('batch', 'index'))
         assert_equal(tuple(dim.label for dim in h5file['coarse_labels'].dims),
                      ('batch', 'index'))
+
+
+class TestCalTech101Silhouettes(object):
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_download_and_convert(self, size=16):
+        tempdir = self.tempdir
+
+        cwd = os.getcwd()
+        os.chdir(tempdir)
+
+        assert_raises(MissingInputFiles,
+                      caltech101_silhouettes.convert_silhouettes,
+                      size=16, directory=tempdir,
+                      output_directory=tempdir)
+        assert_raises(ValueError, silhouettes_downloader,
+                      size=10, directory=tempdir)
+
+        silhouettes_downloader(size=size, directory=tempdir)
+
+        assert_raises(ValueError,
+                      caltech101_silhouettes.convert_silhouettes,
+                      size=10, directory=tempdir,
+                      output_directory=tempdir)
+
+        caltech101_silhouettes.convert_silhouettes(size=size,
+                                                   directory=tempdir,
+                                                   output_directory=tempdir)
+
+        os.chdir(cwd)
+
+        output_file = "caltech101_silhouettes{}.hdf5".format(size)
+        output_file = os.path.join(tempdir, output_file)
+        with h5py.File(output_file, 'r') as h5:
+            assert h5['features'].shape == (8641, 1, size, size)
+            assert h5['targets'].shape == (8641, 1)
 
 
 class TestSVHN(object):
