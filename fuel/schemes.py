@@ -234,12 +234,12 @@ class ShuffledExampleScheme(IndexScheme):
         return iter_(indices)
 
 
-def k_fold_cross_validation(n, k):
+def k_fold_cross_validation(num_examples, k):
     """Return pairs of schemes to be used for cross-validation.
 
     Parameters
     ----------
-    n : int
+    num_examples : int
         The number of examples in the datastream.
     k : int
         The number of folds to return.
@@ -252,9 +252,9 @@ def k_fold_cross_validation(n, k):
 
     """
     for i in xrange(k):
-        begin = n * i // k
-        end = n * (i+1) // k
+        begin = num_examples * i // k
+        end = num_examples * (i+1) // k
         train = SequentialExampleScheme(chain(xrange(0, begin),
-                                              xrange(end, n)))
+                                              xrange(end, num_examples)))
         valid = SequentialExampleScheme(xrange(begin, end))
         yield (train, valid)
