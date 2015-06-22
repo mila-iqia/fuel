@@ -232,3 +232,29 @@ class ShuffledExampleScheme(IndexScheme):
         indices = list(self.indices)
         self.rng.shuffle(indices)
         return iter_(indices)
+
+
+def k_fold_cross_validation(n, k):
+    """Return pairs of schemes to be used for cross-validation.
+
+    Parameters
+    ----------
+    n : int
+        The number of examples in the datastream.
+    k : int
+        The number of folds to return.
+
+    Returns
+    -------
+    folds : generator of pair of :class:`SequentialExampleScheme`
+        The generator returns `k` pairs, for each pair, the first element
+        is the training set, the second element is the validation set.
+
+    """
+    for i in xrange(k):
+        begin = n * i // k
+        end = n * (i+1) // k
+        train = SequentialExampleScheme(chain(xrange(0, begin),
+                                              xrange(end, n)))
+        valid = SequentialExampleScheme(xrange(begin, end))
+        yield (train, valid)
