@@ -102,6 +102,7 @@ def test_concatenated_scheme():
     sch = ConcatenatedScheme(schemes=[ConstantScheme(batch_size=10, times=5),
                                       ConstantScheme(batch_size=20, times=3),
                                       ConstantScheme(batch_size=30, times=1)])
+
     assert (list(sch.get_request_iterator()) ==
             ([10] * 5) + ([20] * 3) + [30])
 
