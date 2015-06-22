@@ -107,21 +107,28 @@ def test_concatenated_scheme():
 
 
 def test_k_fold_cross_validation():
-    # test BatchScheme
+    # test raise when strict=True
     cross = k_fold_cross_validation(SequentialExampleScheme, 10, 3)
+    assert_raises(ValueError, next, cross)
 
-    (train, valid) = next(cross)
+    # test BatchScheme when strict=False
+    cross = k_fold_cross_validation(SequentialExampleScheme, 10, 3, False)
+
+    (train, valid, valid_size) = next(cross)
     assert list(train.get_request_iterator()) == list(range(3, 10))
     assert list(valid.get_request_iterator()) == list(range(0, 3))
+    assert valid_size == 3
 
-    (train, valid) = next(cross)
+    (train, valid, valid_size) = next(cross)
     assert (list(train.get_request_iterator()) ==
             list(range(0, 3)) + list(range(6, 10)))
     assert list(valid.get_request_iterator()) == list(range(3, 6))
+    assert valid_size == 3
 
-    (train, valid) = next(cross)
+    (train, valid, valid_size) = next(cross)
     assert list(train.get_request_iterator()) == list(range(0, 6))
     assert list(valid.get_request_iterator()) == list(range(6, 10))
+    assert valid_size == 4
 
     assert_raises(StopIteration, next, cross)
 

@@ -234,7 +234,8 @@ class ShuffledExampleScheme(IndexScheme):
         return iter_(indices)
 
 
-def k_fold_cross_validation(scheme_class, num_examples, k, **kwargs):
+def k_fold_cross_validation(scheme_class, num_examples, k, strict=True,
+                            **kwargs):
     """Return pairs of schemes to be used for cross-validation.
 
     Parameters
@@ -246,14 +247,24 @@ def k_fold_cross_validation(scheme_class, num_examples, k, **kwargs):
         The number of examples in the datastream.
     k : int
         The number of folds to return.
+    strict : bool, optional
+        If `True`, enforce that `num_examples` is divisible by `k` and so,
+        that all validation sets have the same size. Defaults to `True`.
 
     Returns
     -------
-    folds : generator of pair of `scheme_class`
-        The generator returns `k` pairs, for each pair, the first element
+    folds : generator
+        The generator returns `k` tuples, for each tuple, the first element
         is the training set, the second element is the validation set.
+        If `strict` is set to `False`, the tuple has a third element: the
+        size of the validation set.
 
     """
+    if strict and num_examples % k != 0:
+        raise ValueError("Trying to cross validate a dataset which size is " +
+                         "not a multiple of the number of folds while " +
+                         "strict is set to True.")
+
     for i in xrange(k):
         begin = num_examples * i // k
         end = num_examples * (i+1) // k
@@ -261,4 +272,8 @@ def k_fold_cross_validation(scheme_class, num_examples, k, **kwargs):
                                    xrange(end, num_examples)),
                              **kwargs)
         valid = scheme_class(xrange(begin, end), **kwargs)
-        yield (train, valid)
+
+        if strict:
+            yield (train, valid)
+        else:
+            yield (train, valid, end - begin)
