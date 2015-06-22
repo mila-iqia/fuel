@@ -107,7 +107,8 @@ def test_concatenated_scheme():
 
 
 def test_k_fold_cross_validation():
-    cross = k_fold_cross_validation(10, 3)
+    # test BatchScheme
+    cross = k_fold_cross_validation(SequentialExampleScheme, 10, 3)
 
     (train, valid) = next(cross)
     assert list(train.get_request_iterator()) == list(range(3, 10))
@@ -121,5 +122,18 @@ def test_k_fold_cross_validation():
     (train, valid) = next(cross)
     assert list(train.get_request_iterator()) == list(range(0, 6))
     assert list(valid.get_request_iterator()) == list(range(6, 10))
+
+    assert_raises(StopIteration, next, cross)
+
+    # test IndexScheme
+    cross = k_fold_cross_validation(SequentialScheme, 8, 2, batch_size=2)
+
+    (train, valid) = next(cross)
+    assert list(train.get_request_iterator()) == [[4, 5], [6, 7]]
+    assert list(valid.get_request_iterator()) == [[0, 1], [2, 3]]
+
+    (train, valid) = next(cross)
+    assert list(train.get_request_iterator()) == [[0, 1], [2, 3]]
+    assert list(valid.get_request_iterator()) == [[4, 5], [6, 7]]
 
     assert_raises(StopIteration, next, cross)
