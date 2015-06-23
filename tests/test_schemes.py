@@ -4,7 +4,7 @@ from numpy.testing import assert_raises
 from fuel.schemes import (ConstantScheme, SequentialExampleScheme,
                           SequentialScheme, ShuffledExampleScheme,
                           ShuffledScheme, ConcatenatedScheme,
-                          k_fold_cross_validation)
+                          cross_validation)
 
 
 def iterator_requester(scheme):
@@ -106,13 +106,13 @@ def test_concatenated_scheme():
             ([10] * 5) + ([20] * 3) + [30])
 
 
-def test_k_fold_cross_validation():
+def test_cross_validation():
     # test raise when strict=True
-    cross = k_fold_cross_validation(SequentialExampleScheme, 10, 3)
+    cross = cross_validation(SequentialExampleScheme, 10, 3)
     assert_raises(ValueError, next, cross)
 
-    # test BatchScheme when strict=False
-    cross = k_fold_cross_validation(SequentialExampleScheme, 10, 3, False)
+    # test IndexScheme when strict=False
+    cross = cross_validation(SequentialExampleScheme, 10, 3, False)
 
     (train, valid, valid_size) = next(cross)
     assert list(train.get_request_iterator()) == list(range(3, 10))
@@ -132,8 +132,8 @@ def test_k_fold_cross_validation():
 
     assert_raises(StopIteration, next, cross)
 
-    # test IndexScheme
-    cross = k_fold_cross_validation(SequentialScheme, 8, 2, batch_size=2)
+    # test BatchScheme
+    cross = cross_validation(SequentialScheme, 8, 2, batch_size=2)
 
     (train, valid) = next(cross)
     assert list(train.get_request_iterator()) == [[4, 5], [6, 7]]
