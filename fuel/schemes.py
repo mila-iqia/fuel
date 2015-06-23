@@ -232,3 +232,51 @@ class ShuffledExampleScheme(IndexScheme):
         indices = list(self.indices)
         self.rng.shuffle(indices)
         return iter_(indices)
+
+
+def cross_validation(scheme_class, num_examples, num_folds, strict=True,
+                     **kwargs):
+    """Return pairs of schemes to be used for cross-validation.
+
+    Parameters
+    ----------
+    scheme_class : subclass of :class:`IndexScheme` or :class:`BatchScheme`
+        The type of the returned schemes. The constructor is called with an
+        iterator and `**kwargs` as arguments.
+    num_examples : int
+        The number of examples in the datastream.
+    num_folds : int
+        The number of folds to return.
+    strict : bool, optional
+        If `True`, enforce that `num_examples` is divisible by `num_folds`
+        and so, that all validation sets have the same size. If `False`,
+        the size of the validation set is returned along the iteration
+        schemes. Defaults to `True`.
+
+    Yields
+    ------
+    fold : tuple
+        The generator returns `num_folds` tuples. The first two elements of
+        the tuple are the training and validation iteration schemes. If
+        `strict` is set to `False`, the tuple has a third element
+        corresponding to the size of the validation set.
+
+    """
+    if strict and num_examples % num_folds != 0:
+        raise ValueError(("{} examples are not divisible in {} evenly-sized " +
+                          "folds. To allow this, have a look at the " +
+                          "`strict` argument.").format(num_examples,
+                                                       num_folds))
+
+    for i in xrange(num_folds):
+        begin = num_examples * i // num_folds
+        end = num_examples * (i+1) // num_folds
+        train = scheme_class(chain(xrange(0, begin),
+                                   xrange(end, num_examples)),
+                             **kwargs)
+        valid = scheme_class(xrange(begin, end), **kwargs)
+
+        if strict:
+            yield (train, valid)
+        else:
+            yield (train, valid, end - begin)

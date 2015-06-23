@@ -3,7 +3,8 @@ from numpy.testing import assert_raises
 
 from fuel.schemes import (ConstantScheme, SequentialExampleScheme,
                           SequentialScheme, ShuffledExampleScheme,
-                          ShuffledScheme, ConcatenatedScheme)
+                          ShuffledScheme, ConcatenatedScheme,
+                          cross_validation)
 
 
 def iterator_requester(scheme):
@@ -103,3 +104,43 @@ def test_concatenated_scheme():
                                       ConstantScheme(batch_size=30, times=1)])
     assert (list(sch.get_request_iterator()) ==
             ([10] * 5) + ([20] * 3) + [30])
+
+
+def test_cross_validation():
+    # test raise when strict=True
+    cross = cross_validation(SequentialExampleScheme, 10, 3)
+    assert_raises(ValueError, next, cross)
+
+    # test IndexScheme when strict=False
+    cross = cross_validation(SequentialExampleScheme, 10, 3, False)
+
+    (train, valid, valid_size) = next(cross)
+    assert list(train.get_request_iterator()) == list(range(3, 10))
+    assert list(valid.get_request_iterator()) == list(range(0, 3))
+    assert valid_size == 3
+
+    (train, valid, valid_size) = next(cross)
+    assert (list(train.get_request_iterator()) ==
+            list(range(0, 3)) + list(range(6, 10)))
+    assert list(valid.get_request_iterator()) == list(range(3, 6))
+    assert valid_size == 3
+
+    (train, valid, valid_size) = next(cross)
+    assert list(train.get_request_iterator()) == list(range(0, 6))
+    assert list(valid.get_request_iterator()) == list(range(6, 10))
+    assert valid_size == 4
+
+    assert_raises(StopIteration, next, cross)
+
+    # test BatchScheme
+    cross = cross_validation(SequentialScheme, 8, 2, batch_size=2)
+
+    (train, valid) = next(cross)
+    assert list(train.get_request_iterator()) == [[4, 5], [6, 7]]
+    assert list(valid.get_request_iterator()) == [[0, 1], [2, 3]]
+
+    (train, valid) = next(cross)
+    assert list(train.get_request_iterator()) == [[0, 1], [2, 3]]
+    assert list(valid.get_request_iterator()) == [[4, 5], [6, 7]]
+
+    assert_raises(StopIteration, next, cross)
