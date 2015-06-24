@@ -284,9 +284,9 @@ def cross_validation(scheme_class, num_examples, num_folds, strict=True,
 
 @add_metaclass(ABCMeta)
 class TruncatedEpochScheme(IterationScheme):
-    """limiting the number of excursion in an iterator
+    """limiting the number of excursion in an iterator.
 
-    Returns elements from an iterator with an early stopping
+    Returns elements from an iterator with an early stopping.
     """
     def __init__(self, iteration_scheme, times):
         self.iteration_scheme = iteration_scheme
