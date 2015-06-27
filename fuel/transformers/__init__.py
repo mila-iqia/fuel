@@ -643,7 +643,7 @@ class FilterSources(Transformer):
                              "data_stream.sources")
 
         # keep order of data_stream.sources
-        self.sources = [s for s in data_stream.sources if s in sources]
+        self.sources = tuple([s for s in data_stream.sources if s in sources])
 
     def get_data(self, request=None):
         if request is not None:
