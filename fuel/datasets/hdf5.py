@@ -186,11 +186,11 @@ class H5PYDataset(Dataset):
         self.sort_indices = sort_indices
 
         self._parse_dataset_info()
-        self.example_iteration_scheme = SequentialExampleScheme(self.num_examples)
+        self.example_iteration_scheme = SequentialExampleScheme(
+            self.num_examples)
 
         kwargs.setdefault('axis_labels', self.default_axis_labels)
         super(H5PYDataset, self).__init__(**kwargs)
-
 
     def _parse_dataset_info(self):
         """Parses information related to the HDF5 interface.
@@ -646,6 +646,8 @@ class H5PYDataset(Dataset):
                 if hasattr(request, 'step'):
                     req = slice(request.start + subset.start,
                                 request.stop + subset.start, request.step)
+                elif isinstance(request, numbers.Integral):
+                    req = subset.start + request
                 else:
                     req = [index + subset.start for index in request]
             else:
@@ -658,7 +660,7 @@ class H5PYDataset(Dataset):
                     shape = None
             else:
                 if (not self.sort_indices
-                    or isinstance(request, numbers.Integral)):
+                        or isinstance(request, numbers.Integral)):
                     val = handle[source_name][req]
                     if source_name in self.vlen_sources:
                         shape = handle[source_name].dims[0]['shapes'][req]
