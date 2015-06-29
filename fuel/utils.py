@@ -2,6 +2,7 @@ import collections
 import os
 
 import six
+import numpy
 
 from fuel import config
 
@@ -11,6 +12,13 @@ if six.PY3:
     buffer_ = memoryview
 else:
     buffer_ = buffer  # noqa
+
+
+def iterable_fancy_indexing(iterable, request):
+    if isinstance(iterable, numpy.ndarray):
+        return iterable[request]
+    else:
+        return [iterable[r] for r in request]
 
 
 def find_in_data_path(filename):

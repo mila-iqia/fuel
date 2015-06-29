@@ -8,7 +8,7 @@ import tables
 from six.moves import zip, range
 
 from fuel.datasets import Dataset
-from fuel.utils import do_not_pickle_attributes
+from fuel.utils import do_not_pickle_attributes, iterable_fancy_indexing
 
 
 @do_not_pickle_attributes('nodes', 'h5file')
@@ -642,7 +642,7 @@ class H5PYDataset(Dataset):
                 else:
                     req = [index + subset.start for index in request]
             else:
-                req = subset[request]
+                req = iterable_fancy_indexing(subset, request)
             if hasattr(req, 'step'):
                 val = handle[source_name][req]
                 if source_name in self.vlen_sources:

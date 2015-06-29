@@ -8,6 +8,7 @@ from picklable_itertools import iter_, izip
 
 from fuel.schemes import SequentialExampleScheme
 from fuel.streams import DataStream
+from fuel.utils import iterable_fancy_indexing
 
 
 @add_metaclass(ABCMeta)
@@ -368,12 +369,7 @@ class IndexableDataset(Dataset):
         if state is not None or request is None:
             raise ValueError
         if isinstance(request, collections.Iterable):
-            returned = []
-            for indexable in self.indexables:
-                if isinstance(indexable, numpy.ndarray):
-                    returned.append(indexable[request])
-                else:
-                    returned.append([indexable[r] for r in request])
-            return tuple(returned)
+            return tuple(iterable_fancy_indexing(indexable, request)
+                         for indexable in self.indexables)
         else:
             return tuple(indexable[request] for indexable in self.indexables)
