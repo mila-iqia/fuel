@@ -1,7 +1,6 @@
 import collections
 from abc import ABCMeta, abstractmethod
 
-import numpy
 from six import add_metaclass
 
 from picklable_itertools import iter_, izip
@@ -220,6 +219,7 @@ class Dataset(object):
 
         Examples
         --------
+        >>> import numpy
         >>> class Random(Dataset):
         ...     provides_sources = ('features', 'targets')
         ...     def get_data(self, state=None, request=None):
