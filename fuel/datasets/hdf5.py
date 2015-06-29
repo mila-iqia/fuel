@@ -1,3 +1,4 @@
+import numbers
 from itertools import product
 from collections import defaultdict
 
@@ -619,7 +620,7 @@ class H5PYDataset(Dataset):
             data, shapes = self._out_of_memory_get_data(state, request)
         for i in range(len(data)):
             if shapes[i] is not None:
-                if isinstance(request, int):
+                if isinstance(request, numbers.Integral):
                     data[i] = data[i].reshape(shapes[i])
                 else:
                     for j in range(len(data[i])):
@@ -635,7 +636,7 @@ class H5PYDataset(Dataset):
         return data, shapes
 
     def _out_of_memory_get_data(self, state=None, request=None):
-        if not isinstance(request, (slice, list, int)):
+        if not isinstance(request, (slice, list, numbers.Integral)):
             raise ValueError()
         data = []
         shapes = []
@@ -656,17 +657,18 @@ class H5PYDataset(Dataset):
                 else:
                     shape = None
             else:
-                if self.sort_indices and not isinstance(request, int):
+                if (not self.sort_indices
+                    or isinstance(request, numbers.Integral)):
+                    val = handle[source_name][req]
+                    if source_name in self.vlen_sources:
+                        shape = handle[source_name].dims[0]['shapes'][req]
+                    else:
+                        shape = None
+                else:
                     val = self.unsorted_fancy_index(req, handle[source_name])
                     if source_name in self.vlen_sources:
                         shape = self.unsorted_fancy_index(
                             req, handle[source_name].dims[0]['shapes'])
-                    else:
-                        shape = None
-                else:
-                    val = handle[source_name][req]
-                    if source_name in self.vlen_sources:
-                        shape = handle[source_name].dims[0]['shapes'][req]
                     else:
                         shape = None
             data.append(val)
