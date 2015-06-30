@@ -120,12 +120,19 @@ def test_concatenated_scheme():
             ([10] * 5) + ([20] * 3) + [30])
 
 
-def test_concatenated_scheme_uncertain_what_it_produces():
-    assert_raises(AttributeError, getattr,
-                  ConcatenatedScheme(schemes=[
-                      ConstantScheme(batch_size=10, times=5),
-                      ConstantScheme(batch_size=20, times=3)]),
-                  'produces_batches')
+def test_concatenated_scheme_raises_value_error_on_different_request_types():
+    assert_raises(ValueError, ConcatenatedScheme,
+                  [ConstantScheme(batch_size=10, times=5),
+                   SequentialExampleScheme(examples=3)])
+
+
+def test_concatenated_scheme_infers_request_type():
+    assert ConcatenatedScheme(
+        schemes=[ConstantScheme(batch_size=10, times=5),
+                 ConstantScheme(batch_size=10, times=5)]).produces_batches
+    assert not ConcatenatedScheme(
+        schemes=[SequentialExampleScheme(examples=10),
+                 SequentialExampleScheme(examples=10)]).produces_batches
 
 
 def test_cross_validation():

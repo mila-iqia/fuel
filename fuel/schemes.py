@@ -31,19 +31,15 @@ class IterationScheme(object):
     .. _iterator protocol:
        https://docs.python.org/3.3/library/stdtypes.html#iterator-types
 
+    Attributes
+    ----------
+    produces_batches : bool
+        Whether requests produced by this scheme are batches.
+
     """
     @abstractmethod
     def get_request_iterator(self):
         """Returns an iterator type."""
-
-    @property
-    def produces_batches(self):
-        """Whether requests produced by this scheme are batches."""
-        if not hasattr(self, '_produces_batches'):
-            raise AttributeError("the {} scheme ".format(self.__class__) +
-                                 "can't tell what type of requests it " +
-                                 "produces (examples or batches)")
-        return self._produces_batches
 
 
 @add_metaclass(ABCMeta)
@@ -56,7 +52,7 @@ class BatchSizeScheme(IterationScheme):
     that only provide the number of examples that should be in a batch.
 
     """
-    _produces_batches = True
+    produces_batches = True
 
 
 @add_metaclass(ABCMeta)
@@ -85,7 +81,7 @@ class BatchScheme(IterationScheme):
         multiple of `batch_size`.
 
     """
-    _produces_batches = True
+    produces_batches = True
 
     def __init__(self, examples, batch_size):
         if isinstance(examples, Iterable):
@@ -107,12 +103,25 @@ class ConcatenatedScheme(IterationScheme):
         A list of :class:`IterationSchemes`, whose request iterators
         are to be concatenated in the order given.
 
+    Notes
+    -----
+    All schemes must produce the same type of requests (batches or
+    examples).
+
     """
     def __init__(self, schemes):
+        if not all(scheme.produces_batches == schemes[0].produces_batches
+                   for scheme in schemes):
+            raise ValueError('all schemes must produce the same type of '
+                             'requests (batches or examples)')
         self.schemes = schemes
 
     def get_request_iterator(self):
         return chain(*[sch.get_request_iterator() for sch in self.schemes])
+
+    @property
+    def produces_batches(self):
+        return self.schemes[0].produces_batches
 
 
 @add_metaclass(ABCMeta)
@@ -123,7 +132,7 @@ class IndexScheme(IterationScheme):
     but where we want to return single examples instead of batches.
 
     """
-    _produces_batches = False
+    produces_batches = False
 
     def __init__(self, examples):
         if isinstance(examples, Iterable):
