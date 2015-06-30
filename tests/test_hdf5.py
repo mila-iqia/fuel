@@ -184,10 +184,19 @@ class TestH5PYDataset(object):
         train_set.close(train_handle)
         test_set.close(test_handle)
 
-    def test_multiple_split(self):
-        dataset = H5PYDataset(self.h5file, which_sets=('train', 'test'))
+    def test_multiple_split_in_memory(self):
+        dataset = H5PYDataset(self.h5file, which_sets=('train', 'test'),
+                              load_in_memory=True)
         handle = dataset.open()
         assert_equal(dataset.get_data(handle, slice(0, 30)),
+                     (self.features[:30], self.targets[:30]))
+        dataset.close(handle)
+
+    def test_multiple_split_out_of_memory_list_request(self):
+        dataset = H5PYDataset(self.h5file, which_sets=('train', 'test'),
+                              load_in_memory=False)
+        handle = dataset.open()
+        assert_equal(dataset.get_data(handle, list(range(30))),
                      (self.features[:30], self.targets[:30]))
         dataset.close(handle)
 
