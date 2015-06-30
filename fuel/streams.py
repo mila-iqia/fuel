@@ -37,11 +37,16 @@ class AbstractDataStream(object):
     sources : tuple of strings
         The names of the data sources returned by this data stream, as
         given by the dataset.
+    produces_examples : bool
+        Whether this data stream produces examples (as opposed to batches
+        of examples).
 
     """
     def __init__(self, iteration_scheme=None, axis_labels=None):
         self.iteration_scheme = iteration_scheme
         self.axis_labels = axis_labels
+        if self.iteration_scheme:
+            self.produces_examples = iteration_scheme.requests_examples
 
     def get_data(self, request=None):
         """Request data from the dataset or the wrapped stream.
@@ -150,6 +155,11 @@ class ServerDataStream(AbstractDataStream):
 
     Parameters
     ----------
+    sources : tuple of strings
+        The names of the data sources returned by this data stream.
+    produces_examples : bool
+        Whether this data stream produces examples (as opposed to batches
+        of examples).
     host : str, optional
         The host to connect to. Defaults to ``localhost``.
     port : int, optional
@@ -163,11 +173,16 @@ class ServerDataStream(AbstractDataStream):
         tell how many batches will actually be queued with a particular
         HWM. Defaults to 10. Be sure to set the corresponding HWM on the
         server's end as well.
+    axis_labels : dict, optional
+        Maps source names to tuples of strings describing axis semantics,
+        one per axis. Defaults to `None`, i.e. no information is available.
 
     """
-    def __init__(self, sources, host='localhost', port=5557, hwm=10):
-        super(ServerDataStream, self).__init__()
+    def __init__(self, sources, produces_examples, host='localhost', port=5557,
+                 hwm=10, axis_labels=None):
+        super(ServerDataStream, self).__init__(axis_labels=axis_labels)
         self.sources = sources
+        self.produces_examples = produces_examples
         self.host = host
         self.port = port
         self.hwm = hwm

@@ -2,6 +2,7 @@ import numpy
 from numpy.testing import assert_equal
 
 from fuel.datasets import IterableDataset
+from fuel.schemes import SequentialExampleScheme
 from fuel.streams import DataStream
 
 
@@ -23,3 +24,8 @@ class TestDataStream(object):
         self.dataset.axis_labels = axis_labels
         stream = DataStream(self.dataset)
         assert_equal(stream.axis_labels, axis_labels)
+
+    def test_produces_examples(self):
+        stream = DataStream(self.dataset,
+                            iteration_scheme=SequentialExampleScheme(2))
+        assert stream.produces_examples
