@@ -4,7 +4,7 @@ from fuel.downloaders.base import default_downloader
 def fill_subparser(subparser):
     """Sets up a subparser to download the MNIST dataset files.
 
-    The following MNIST dataset files are downoladed from Yann LeCun's
+    The following MNIST dataset files are downloaded from Yann LeCun's
     website [LECUN]:
     `train-images-idx3-ubyte.gz`, `train-labels-idx1-ubyte.gz`,
     `t10k-images-idx3-ubyte.gz`, `t10k-labels-idx1-ubyte.gz`.

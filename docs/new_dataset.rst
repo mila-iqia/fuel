@@ -235,7 +235,7 @@ Try downloading and converting the data file:
     cd $FUEL_DATA_PATH
     fuel-download iris
     fuel-convert iris
-    fuel-download --clear iris
+    fuel-download iris --clear
     cd -
 
 You can now use the Iris dataset like you would use any other built-in dataset:
@@ -300,7 +300,7 @@ You can now use the Iris dataset like you would use any other built-in dataset:
     ...         delimiter=',')
     ...     numpy.random.shuffle(data)
     ...     features = data[:, :-1].astype('float32')
-    ...     targets = data[:, -1:].astype('uint8')
+    ...     targets = data[:, -1:].astype('uint8').reshape((-1, 1))
     ...     train_features = features[:100]
     ...     train_targets = targets[:100]
     ...     valid_features = features[100:120]

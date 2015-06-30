@@ -19,8 +19,9 @@ from six.moves import range, zip, cPickle
 from fuel.converters.base import (fill_hdf5_file, check_exists,
                                   MissingInputFiles)
 from fuel.converters import (binarized_mnist, caltech101_silhouettes,
-                             cifar10, cifar100, mnist, svhn)
+                             iris, cifar10, cifar100, mnist, svhn)
 from fuel.downloaders.caltech101_silhouettes import silhouettes_downloader
+from fuel.downloaders.base import default_downloader
 
 if six.PY3:
     getbuffer = memoryview
@@ -422,6 +423,50 @@ class TestCalTech101Silhouettes(object):
         with h5py.File(output_file, 'r') as h5:
             assert h5['features'].shape == (8641, 1, size, size)
             assert h5['targets'].shape == (8641, 1)
+
+
+class TestIris(object):
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_download_and_convert(self):
+        tempdir = self.tempdir
+
+        cwd = os.getcwd()
+        os.chdir(tempdir)
+
+        assert_raises(IOError,
+                      iris.convert_iris,
+                      directory=tempdir,
+                      output_directory=tempdir)
+
+        default_downloader(
+            directory=tempdir,
+            urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
+                  'iris/iris.data'],
+            filenames=['iris.data'])
+
+        classes = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2}
+        data = numpy.loadtxt(
+            os.path.join(tempdir, 'iris.data'),
+            converters={4: lambda x: classes[x]},
+            delimiter=',')
+        features = data[:, :-1].astype('float32')
+        targets = data[:, -1].astype('uint8').reshape((-1, 1))
+
+        iris.convert_iris(directory=tempdir,
+                          output_directory=tempdir)
+
+        os.chdir(cwd)
+
+        output_file = "iris.hdf5"
+        output_file = os.path.join(tempdir, output_file)
+        with h5py.File(output_file, 'r') as h5:
+            assert numpy.allclose(h5['features'], features)
+            assert numpy.allclose(h5['targets'], targets)
 
 
 class TestSVHN(object):
