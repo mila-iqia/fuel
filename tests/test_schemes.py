@@ -24,7 +24,7 @@ def test_constant_scheme():
     it = get_request_iterator(3)
     assert [next(it) == 3 for _ in range(10)]
     assert_raises(ValueError, get_request_iterator, 10, 2, 2)
-    assert ConstantScheme(3, 3).produces_batches
+    assert not ConstantScheme(3, 3).requests_examples
 
 
 def test_sequential_scheme():
@@ -35,7 +35,7 @@ def test_sequential_scheme():
         [4, 3, 2, 1, 0], 3)) == [[4, 3, 2], [1, 0]]
     assert list(get_request_iterator(
         [3, 2, 1, 0], 2)) == [[3, 2], [1, 0]]
-    assert SequentialScheme(3, 3).produces_batches
+    assert not SequentialScheme(3, 3).requests_examples
 
 
 def test_shuffled_scheme_sorted_indices():
@@ -80,8 +80,8 @@ def test_shuffled_scheme_unsorted_indices():
             [expected[:3], expected[3:6]])
 
 
-def test_shuffled_scheme_produces_batches():
-    assert ShuffledScheme(3, 3).produces_batches
+def test_shuffled_scheme_requests_batches():
+    assert not ShuffledScheme(3, 3).requests_examples
 
 
 def test_shuffled_example_scheme():
@@ -98,8 +98,8 @@ def test_shuffled_example_scheme_no_rng():
     assert scheme.rng is not None
 
 
-def test_shuffled_example_scheme_produces_examples():
-    assert not ShuffledExampleScheme(3).produces_batches
+def test_shuffled_example_scheme_requests_examples():
+    assert ShuffledExampleScheme(3).requests_examples
 
 
 def test_sequential_example_scheme():
@@ -108,8 +108,8 @@ def test_sequential_example_scheme():
     assert list(get_request_iterator(range(7)[::-1])) == list(range(7)[::-1])
 
 
-def test_sequential_example_scheme_produces_examples():
-    assert not SequentialExampleScheme(3).produces_batches
+def test_sequential_example_scheme_requests_examples():
+    assert SequentialExampleScheme(3).requests_examples
 
 
 def test_concatenated_scheme():
@@ -127,12 +127,12 @@ def test_concatenated_scheme_raises_value_error_on_different_request_types():
 
 
 def test_concatenated_scheme_infers_request_type():
-    assert ConcatenatedScheme(
-        schemes=[ConstantScheme(batch_size=10, times=5),
-                 ConstantScheme(batch_size=10, times=5)]).produces_batches
     assert not ConcatenatedScheme(
+        schemes=[ConstantScheme(batch_size=10, times=5),
+                 ConstantScheme(batch_size=10, times=5)]).requests_examples
+    assert ConcatenatedScheme(
         schemes=[SequentialExampleScheme(examples=10),
-                 SequentialExampleScheme(examples=10)]).produces_batches
+                 SequentialExampleScheme(examples=10)]).requests_examples
 
 
 def test_cross_validation():

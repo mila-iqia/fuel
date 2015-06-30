@@ -33,8 +33,9 @@ class IterationScheme(object):
 
     Attributes
     ----------
-    produces_batches : bool
-        Whether requests produced by this scheme are batches.
+    requests_examples : bool
+        Whether requests produced by this scheme correspond to single
+        examples (as opposed to batches).
 
     """
     @abstractmethod
@@ -52,7 +53,7 @@ class BatchSizeScheme(IterationScheme):
     that only provide the number of examples that should be in a batch.
 
     """
-    produces_batches = True
+    requests_examples = False
 
 
 @add_metaclass(ABCMeta)
@@ -81,7 +82,7 @@ class BatchScheme(IterationScheme):
         multiple of `batch_size`.
 
     """
-    produces_batches = True
+    requests_examples = False
 
     def __init__(self, examples, batch_size):
         if isinstance(examples, Iterable):
@@ -110,7 +111,7 @@ class ConcatenatedScheme(IterationScheme):
 
     """
     def __init__(self, schemes):
-        if not all(scheme.produces_batches == schemes[0].produces_batches
+        if not all(scheme.requests_examples == schemes[0].requests_examples
                    for scheme in schemes):
             raise ValueError('all schemes must produce the same type of '
                              'requests (batches or examples)')
@@ -120,8 +121,8 @@ class ConcatenatedScheme(IterationScheme):
         return chain(*[sch.get_request_iterator() for sch in self.schemes])
 
     @property
-    def produces_batches(self):
-        return self.schemes[0].produces_batches
+    def requests_examples(self):
+        return self.schemes[0].requests_examples
 
 
 @add_metaclass(ABCMeta)
@@ -132,7 +133,7 @@ class IndexScheme(IterationScheme):
     but where we want to return single examples instead of batches.
 
     """
-    produces_batches = False
+    requests_examples = True
 
     def __init__(self, examples):
         if isinstance(examples, Iterable):
