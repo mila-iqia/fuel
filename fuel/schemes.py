@@ -36,6 +36,15 @@ class IterationScheme(object):
     def get_request_iterator(self):
         """Returns an iterator type."""
 
+    @property
+    def produces_batches(self):
+        """Whether requests produced by this scheme are batches."""
+        if not hasattr(self, '_produces_batches'):
+            raise AttributeError("the {} scheme ".format(self.__class__) +
+                                 "can't tell what type of requests it " +
+                                 "produces (examples or batches)")
+        return self._produces_batches
+
 
 @add_metaclass(ABCMeta)
 class BatchSizeScheme(IterationScheme):
@@ -47,6 +56,7 @@ class BatchSizeScheme(IterationScheme):
     that only provide the number of examples that should be in a batch.
 
     """
+    _produces_batches = True
 
 
 @add_metaclass(ABCMeta)
@@ -75,6 +85,8 @@ class BatchScheme(IterationScheme):
         multiple of `batch_size`.
 
     """
+    _produces_batches = True
+
     def __init__(self, examples, batch_size):
         if isinstance(examples, Iterable):
             self.indices = examples
@@ -111,6 +123,8 @@ class IndexScheme(IterationScheme):
     but where we want to return single examples instead of batches.
 
     """
+    _produces_batches = False
+
     def __init__(self, examples):
         if isinstance(examples, Iterable):
             self.indices = examples
