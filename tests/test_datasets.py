@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy
 from numpy.testing import assert_raises, assert_equal
 from picklable_itertools import repeat
-from six.moves import zip, range
+from six.moves import zip, range, cPickle
 
 from fuel.datasets import Dataset, IterableDataset, IndexableDataset
 from fuel.streams import DataStream
@@ -116,6 +116,9 @@ class TestIndexableDataset(object):
     def test_value_error_get_data_none_request(self):
         assert_raises(
             ValueError, IndexableDataset([1, 2, 3]).get_data, None, None)
+
+    def test_pickling(self):
+        cPickle.loads(cPickle.dumps(IndexableDataset({'a': (1, 2)})))
 
     def test_batch_iteration_scheme_with_lists(self):
         """Batch schemes should work with more than ndarrays."""

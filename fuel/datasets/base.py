@@ -361,6 +361,13 @@ class IndexableDataset(Dataset):
             return self.indexables[self.sources.index(attr)]
         raise AttributeError
 
+    # Without explicitly defining a trivial __setstate__ method,
+    # the __getattribute__ method would call the __getattr__ method,
+    # which would raise an AttributeError. This causes problems
+    # when unpickling.
+    def __setstate__(self, dict):
+        self.__dict__ = dict
+
     @property
     def num_examples(self):
         return len(self.indexables[0])
