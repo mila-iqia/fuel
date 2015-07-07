@@ -277,25 +277,26 @@ class Cast(SourcewiseTransformer):
         return self.cast(source_batch)
 
 
-class ForceFloatX(Transformer):
+class ForceFloatX(SourcewiseTransformer):
     """Force all floating point numpy arrays to be floatX."""
-    def __init__(self, data_stream):
+    def __init__(self, data_stream, **kwargs):
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
         super(ForceFloatX, self).__init__(
-            data_stream, axis_labels=data_stream.axis_labels)
+            data_stream, data_stream.produces_examples, **kwargs)
 
-    def get_data(self, request=None):
-        if request is not None:
-            raise ValueError
-        data = next(self.child_epoch_iterator)
-        result = []
-        for piece in data:
-            if (isinstance(piece, numpy.ndarray) and
-                    piece.dtype.kind == "f" and
-                    piece.dtype != config.floatX):
-                result.append(piece.astype(config.floatX))
-            else:
-                result.append(piece)
-        return tuple(result)
+    def force_floatx(self, source):
+        source_needs_casting = (isinstance(source, numpy.ndarray) and
+                                source.dtype.kind == "f" and
+                                source.dtype != config.floatX)
+        if source_needs_casting:
+            source = source.astype(config.floatX)
+        return source
+
+    def transform_source_example(self, source_example):
+        return self.force_floatx(source_example)
+
+    def transform_source_batch(self, source_batch):
+        return self.force_floatx(source_batch)
 
 
 class Filter(Transformer):

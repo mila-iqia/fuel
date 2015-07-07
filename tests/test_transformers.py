@@ -195,11 +195,7 @@ class TestForceFloatX(object):
         assert_equal(str(data[0].dtype), config.floatX)
         assert_equal(str(data[1].dtype), 'int64')
 
-    def test_value_error_on_request(self):
-        transformer = ForceFloatX(DataStream(self.dataset))
-        assert_raises(ValueError, transformer.get_data, [0, 1])
-
-    def test_axis_labels(self):
+    def test_axis_labels_are_passed_through(self):
         axis_labels = {'x': ('batch', 'feature'), 'y': ('batch', 'index')}
         self.dataset.axis_labels = axis_labels
         transformer = ForceFloatX(DataStream(self.dataset))
