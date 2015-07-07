@@ -429,43 +429,70 @@ class TestMultiprocessing(object):
         assert_raises(ValueError, background.get_data, [0, 1])
 
 
-def test_rename():
-    stream = DataStream(
-        IndexableDataset(
-            OrderedDict([('X', numpy.ones((4, 2, 2))),
-                         ('y', numpy.array([0, 1, 0, 1]))])),
-        iteration_scheme=SequentialScheme(4, 2))
-    transformer = Rename(stream, {'X': 'features', 'y': 'targets'})
-    assert_equal(transformer.sources, ('features', 'targets'))
-    assert_equal(
-        list(transformer.get_epoch_iterator()),
-        [(numpy.ones((2, 2, 2)), numpy.array([0, 1])),
-         (numpy.ones((2, 2, 2)), numpy.array([0, 1]))])
-    assert_raises(ValueError, transformer.get_data, [0, 1])
-    assert_raises(KeyError, Rename, stream, {'Z': 'features'})
+class TestRename(object):
+    def setUp(self):
+        self.stream = DataStream(
+            IndexableDataset(
+                OrderedDict([('X', numpy.ones((4, 2, 2))),
+                             ('y', numpy.array([0, 1, 0, 1]))]),
+                axis_labels={'X': ('batch', 'width', 'height'),
+                             'y': ('batch',)}),
+            iteration_scheme=SequentialScheme(4, 2))
+        self.transformer = Rename(
+            self.stream, {'X': 'features', 'y': 'targets'})
+
+    def test_renames_sources(self):
+        assert_equal(self.transformer.sources, ('features', 'targets'))
+
+    def test_leaves_data_unchanged(self):
+        assert_equal(
+            list(self.transformer.get_epoch_iterator()),
+            [(numpy.ones((2, 2, 2)), numpy.array([0, 1])),
+             (numpy.ones((2, 2, 2)), numpy.array([0, 1]))])
+
+    def test_raises_error_on_nonexistent_source_name(self):
+        assert_raises(KeyError, Rename, self.stream, {'Z': 'features'})
+
+    def test_renames_axis_labels(self):
+        assert_equal(self.transformer.axis_labels,
+                     {'features': ('batch', 'width', 'height'),
+                      'targets': ('batch',)})
 
 
-def test_filter_sources():
-    stream = DataStream(
-        IndexableDataset(
-            OrderedDict([('features', numpy.ones((4, 2, 2))),
-                         ('targets', numpy.array([0, 1, 0, 1]))])),
-        iteration_scheme=SequentialScheme(4, 2))
+class TestFilterSources(object):
+    def setUp(self):
+        self.stream = DataStream(
+            IndexableDataset(
+                OrderedDict([('features', numpy.ones((4, 2, 2))),
+                             ('targets', numpy.array([0, 1, 0, 1]))]),
+                axis_labels={'features': ('batch', 'width', 'height'),
+                             'targets': ('batch',)}),
+            iteration_scheme=SequentialScheme(4, 2))
 
-    transformer = FilterSources(stream, sources=("features",))
+    def test_works_on_sourcessubset(self):
+        transformer = FilterSources(self.stream, sources=("features",))
+        assert_equal(transformer.sources, ('features',))
+        assert_equal(list(transformer.get_epoch_iterator()),
+                     [(numpy.ones((2, 2, 2)),), (numpy.ones((2, 2, 2)),)])
 
-    assert_equal(transformer.sources, ('features',))
-    assert len(next(transformer.get_epoch_iterator())) == 1
+    def test_works_on_all_sources(self):
+        transformer = FilterSources(
+            self.stream, sources=("features", "targets"))
+        assert_equal(transformer.sources, ('features', 'targets'))
+        assert_equal(list(transformer.get_epoch_iterator()),
+                     [(numpy.ones((2, 2, 2)), numpy.array([0, 1])),
+                      (numpy.ones((2, 2, 2)), numpy.array([0, 1]))])
 
-    transformer = FilterSources(stream, sources=("features", "targets"))
+    def test_works_on_unsorted_sources(self):
+        transformer = FilterSources(
+            self.stream, sources=("targets", "features"))
+        assert_equal(transformer.sources, ('features', 'targets'))
 
-    assert_equal(transformer.sources, ('features', 'targets'))
-    assert len(next(transformer.get_epoch_iterator())) == 2
+    def test_raises_value_error_on_nonexistent_sources(self):
+        assert_raises(
+            ValueError, FilterSources, self.stream, ['error', 'targets'])
 
-    transformer = FilterSources(stream, sources=("targets", "features"))
-
-    assert_equal(transformer.sources, ('features', 'targets'))
-    assert len(next(transformer.get_epoch_iterator())) == 2
-
-    assert_raises(ValueError, transformer.get_data, [0, 1])
-    assert_raises(ValueError, FilterSources, stream, ['error', 'targets'])
+    def test_filters_axis_labels(self):
+        transformer = FilterSources(self.stream, sources=("features",))
+        assert_equal(transformer.axis_labels,
+                     {'features': ('batch', 'width', 'height')})

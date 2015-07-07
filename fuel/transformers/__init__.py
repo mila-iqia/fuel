@@ -691,8 +691,9 @@ class MultiProcessing(Transformer):
     robust approach might need to be considered.
 
     """
-    def __init__(self, data_stream, max_store=100):
-        super(MultiProcessing, self).__init__(data_stream)
+    def __init__(self, data_stream, max_store=100, **kwargs):
+        super(MultiProcessing, self).__init__(
+            data_stream, data_stream.produces_examples, **kwargs)
         self.background = BackgroundProcess(data_stream, max_store)
         self.proc = Process(target=self.background.main)
         self.proc.daemon = True
@@ -719,21 +720,28 @@ class Rename(Transformer):
         to rename.
 
     """
-    def __init__(self, data_stream, names):
-        super(Rename, self).__init__(data_stream)
-        sources = list(self.data_stream.sources)
+    def __init__(self, data_stream, names, **kwargs):
+        sources = list(data_stream.sources)
         for old, new in iteritems(names):
             if old not in sources:
                 raise KeyError("%s not in the sources of the stream" % old)
             else:
                 sources[sources.index(old)] = new
         self.sources = tuple(sources)
+        if data_stream.axis_labels:
+            kwargs.setdefault(
+                'axis_labels',
+                dict([(names[source] if source in names else source, labels)
+                      for (source, labels) in
+                      iteritems(data_stream.axis_labels)]))
+        super(Rename, self).__init__(
+            data_stream, data_stream.produces_examples, **kwargs)
 
-    def get_data(self, request=None):
-        if request is not None:
-            raise ValueError
-        data = next(self.child_epoch_iterator)
-        return data
+    def transform_example(self, example):
+        return example
+
+    def transform_batch(self, batch):
+        return batch
 
 
 class FilterSources(Transformer):
@@ -751,19 +759,27 @@ class FilterSources(Transformer):
         Must be a subset of the sources given by the stream.
 
     """
-    def __init__(self, data_stream, sources):
-        super(FilterSources, self).__init__(data_stream)
+    def __init__(self, data_stream, sources, **kwargs):
         if any(source not in data_stream.sources for source in sources):
             raise ValueError("sources must all be contained in "
                              "data_stream.sources")
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels',
+                              dict([(source, labels) for (source, labels)
+                                    in iteritems(data_stream.axis_labels)
+                                    if source in sources]))
+        super(FilterSources, self).__init__(
+            data_stream, data_stream.produces_examples, **kwargs)
 
         # keep order of data_stream.sources
         self.sources = tuple(s for s in data_stream.sources if s in sources)
 
-    def get_data(self, request=None):
-        if request is not None:
-            raise ValueError
-
-        data = next(self.child_epoch_iterator)
+    def filter_sources(self, data):
         return [d for d, s in izip(data, self.data_stream.sources)
                 if s in self.sources]
+
+    def transform_example(self, example):
+        return self.filter_sources(example)
+
+    def transform_batch(self, batch):
+        return self.filter_sources(batch)
