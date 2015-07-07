@@ -36,7 +36,8 @@ class FlagDataStream(DataStream):
 class TestTransformer(object):
     def setUp(self):
         self.data_stream = FlagDataStream(IterableDataset([1, 2, 3]))
-        self.transformer = Transformer(self.data_stream)
+        self.transformer = Transformer(
+            self.data_stream, produces_examples=True)
 
     def test_close(self):
         # Transformer.close should call its wrapped stream's close method
@@ -54,13 +55,8 @@ class TestTransformer(object):
         self.transformer.next_epoch()
         assert self.data_stream.next_epoch_called
 
-    def test_get_data_from_example_not_implemented(self):
-        self.transformer.batch_input = False
-        assert_raises(NotImplementedError, self.transformer.get_data)
-
-    def test_get_data_from_batch_not_implemented(self):
-        self.transformer.batch_input = True
-        assert_raises(NotImplementedError, self.transformer.get_data)
+    def test_value_error_on_request(self):
+        assert_raises(ValueError, self.transformer.get_data, [0, 1])
 
 
 class TestMapping(object):

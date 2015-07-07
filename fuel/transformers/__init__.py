@@ -21,15 +21,26 @@ class Transformer(AbstractDataStream):
         automatically requested from the wrapped data stream and stored in
         this attribute. Use it to access data from the wrapped data stream
         by calling ``next(self.child_epoch_iterator)``.
-    batch_input : boolean
-        Specification whether the input stream
-        is working on example or batch
+    produces_examples : bool
+        Whether this transformer produces examples (as opposed to batches
+        of examples).
 
     """
-    def __init__(self, data_stream, batch_input=False, **kwargs):
+    def __init__(self, data_stream, produces_examples=None, **kwargs):
+        if 'iteration_scheme' not in kwargs and produces_examples is None:
+            raise ValueError("a transformer must either explicitly define "
+                             "its output type or have its own iteration "
+                             "scheme.")
+        if 'iteration_scheme' in kwargs and produces_examples is not None:
+            raise ValueError("a transformer can't have its own iteration "
+                             "scheme while explicitly defining whether it "
+                             "produces examples")
         super(Transformer, self).__init__(**kwargs)
+        if produces_examples is not None:
+            self.produces_examples = produces_examples
+        else:
+            self.produces_examples = self.iteration_scheme.requests_examples
         self.data_stream = data_stream
-        self.batch_input = batch_input
 
     @property
     def sources(self):
@@ -65,21 +76,27 @@ class Transformer(AbstractDataStream):
         return super(Transformer, self).get_epoch_iterator(**kwargs)
 
     def get_data(self, request=None):
-        if self.batch_input:
-            return self.get_data_from_batch(request)
-        else:
-            return self.get_data_from_example(request)
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
 
-    def get_data_from_example(self, request=None):
+        if self.produces_examples != self.data_stream.produces_examples:
+            raise NotImplementedError
+        if self.produces_examples and self.data_stream.produces_examples:
+            return self.transform_example(data)
+        else:
+            return self.transform_batch(data)
+
+    def transform_example(self, example):
         raise NotImplementedError(
             "`{}` does not support examples as inputs, "
-            "but `batch_input` was set to `False`".format(type(self))
+            "but the wrapped data stream produces examples.".format(type(self))
         )
 
-    def get_data_from_batch(self, request=None):
+    def transform_batch(self, batch):
         raise NotImplementedError(
             "`{}` does not support batches as inputs, "
-            "but `batch_input` was set to `False`".format(type(self))
+            "but the wrapped data stream produces batches.".format(type(self))
         )
 
 
