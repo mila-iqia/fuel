@@ -30,7 +30,7 @@ def convert_iris(directory, output_directory, output_filename='iris.hdf5'):
         Single-element tuple containing the path to the converted dataset.
 
     """
-    classes = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2}
+    classes = {b'Iris-setosa': 0, b'Iris-versicolor': 1, b'Iris-virginica': 2}
     data = numpy.loadtxt(
         os.path.join(directory, 'iris.data'),
         converters={4: lambda x: classes[x]},
