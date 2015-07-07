@@ -11,7 +11,7 @@ from fuel.schemes import ConstantScheme, SequentialScheme
 from fuel.streams import DataStream
 from fuel.transformers import (
     Transformer, Mapping, SortMapping, ForceFloatX, Filter, Cache, Batch,
-    Padding, MultiProcessing, Unpack, Merge, SourcewiseTransformer, Flatten,
+    Padding, MultiProcessing, Unpack, Merge, Flatten,
     ScaleAndShift, Cast, Rename, FilterSources)
 
 
@@ -144,7 +144,7 @@ class TestScaleAndShift(object):
         self.stream = DataStream(
             IterableDataset(
                 OrderedDict([('features', [1, 2, 3]), ('targets', [0, 1, 0])]),
-            axis_labels={'features': ('batch'), 'targets': ('batch')}))
+                axis_labels={'features': ('batch'), 'targets': ('batch')}))
         self.wrapper = ScaleAndShift(
             self.stream, 2, -1, which_sources=('targets',))
 
@@ -417,7 +417,7 @@ class TestMerge(object):
 class TestMultiprocessing(object):
     def setUp(self):
         stream = IterableDataset(range(100)).get_example_stream()
-        self.transformer = Mapping(stream, lambda x: (x[0] + 1,))
+        self.transformer = Mapping(stream, True, lambda x: (x[0] + 1,))
 
     def test_multiprocessing(self):
         background = MultiProcessing(self.transformer)
