@@ -571,7 +571,7 @@ class Padding(Transformer):
         return tuple(batch_with_masks)
 
 
-class Merge(Transformer):
+class Merge(AbstractDataStream):
     """Merges several datastreams into a single one.
 
     Parameters
@@ -595,12 +595,31 @@ class Merge(Transformer):
     ('Hello world!', 'Bonjour le monde!')
 
     """
-    def __init__(self, data_streams, sources):
+    def __init__(self, data_streams, sources, **kwargs):
+        if not all(data_stream.produces_examples ==
+                   data_streams[0].produces_examples
+                   for data_stream in data_streams):
+            raise ValueError('all data streams must produce the same type of '
+                             'output (batches or examples)')
         self.data_streams = data_streams
+        self.produces_examples = self.data_streams[0].produces_examples
+
         if len(list(chain(*[data_stream.sources for data_stream
                             in data_streams]))) != len(sources):
             raise ValueError("wrong number of sources given")
         self.sources = sources
+
+    def close(self):
+        for data_stream in self.data_streams:
+            data_stream.close()
+
+    def reset(self):
+        for data_stream in self.data_streams:
+            data_stream.reset()
+
+    def next_epoch(self):
+        for data_stream in self.data_streams:
+            data_stream.next_epoch()
 
     def get_epoch_iterator(self, **kwargs):
         batches = chain.from_iterable(

@@ -396,20 +396,18 @@ class TestMerge(object):
         self.streams = (
             IterableDataset(['Hello world!']).get_example_stream(),
             IterableDataset(['Bonjour le monde!']).get_example_stream())
+        self.transformer = Merge(self.streams, ('english', 'french'))
 
     def test_sources(self):
-        transformer = Merge(self.streams, ('english', 'french'))
-        assert_equal(transformer.sources, ('english', 'french'))
+        assert_equal(self.transformer.sources, ('english', 'french'))
 
     def test_merge(self):
-        transformer = Merge(self.streams, ('english', 'french'))
-        assert_equal(next(transformer.get_epoch_iterator()),
+        assert_equal(next(self.transformer.get_epoch_iterator()),
                      ('Hello world!', 'Bonjour le monde!'))
 
     def test_as_dict(self):
-        transformer = Merge(self.streams, ('english', 'french'))
         assert_equal(
-            next(transformer.get_epoch_iterator(as_dict=True)),
+            next(self.transformer.get_epoch_iterator(as_dict=True)),
             ({'english': 'Hello world!', 'french': 'Bonjour le monde!'}))
 
     def test_error_on_wrong_number_of_sources(self):
