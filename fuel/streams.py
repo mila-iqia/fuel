@@ -47,6 +47,9 @@ class AbstractDataStream(object):
         self.axis_labels = axis_labels
         if self.iteration_scheme:
             self.produces_examples = iteration_scheme.requests_examples
+        else:
+            # TODO: is this a valid assumption?
+            self.produces_examples = True
 
     def get_data(self, request=None):
         """Request data from the dataset or the wrapped stream.
