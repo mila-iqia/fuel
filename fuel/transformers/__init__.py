@@ -114,8 +114,9 @@ class Mapping(Transformer):
         data under source names `add_sources`.
 
     """
-    def __init__(self, data_stream, mapping, add_sources=None):
-        super(Mapping, self).__init__(data_stream)
+    def __init__(self, data_stream, produces_examples, mapping,
+                 add_sources=None, **kwargs):
+        super(Mapping, self).__init__(data_stream, produces_examples, **kwargs)
         self.mapping = mapping
         self.add_sources = add_sources
 

@@ -42,8 +42,8 @@ class TestDataset(object):
     def test_default_transformer(self):
         class DoublingDataset(IterableDataset):
             def apply_default_transformer(self, stream):
-                return Mapping(
-                    stream, lambda sources: tuple(2 * s for s in sources))
+                return Mapping(stream, True,
+                               lambda sources: tuple(2 * s for s in sources))
         dataset = DoublingDataset(self.data)
         stream = dataset.apply_default_transformer(DataStream(dataset))
         assert_equal(list(stream.get_epoch_iterator()), [(2,), (4,), (6,)])
