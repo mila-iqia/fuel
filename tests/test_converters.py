@@ -449,7 +449,8 @@ class TestIris(object):
                   'iris/iris.data'],
             filenames=['iris.data'])
 
-        classes = {b'Iris-setosa': 0, b'Iris-versicolor': 1, b'Iris-virginica': 2}
+        classes = {
+            b'Iris-setosa': 0, b'Iris-versicolor': 1, b'Iris-virginica': 2}
         data = numpy.loadtxt(
             os.path.join(tempdir, 'iris.data'),
             converters={4: lambda x: classes[x]},
