@@ -11,7 +11,7 @@ from fuel.schemes import ConstantScheme, SequentialScheme
 from fuel.streams import DataStream
 from fuel.transformers import (
     Transformer, Mapping, SortMapping, ForceFloatX, Filter, Cache, Batch,
-    Padding, MultiProcessing, Unpack, Merge, SingleMapping, Flatten,
+    Padding, MultiProcessing, Unpack, Merge, SourcewiseTransformer, Flatten,
     ScaleAndShift, Cast, Rename, FilterSources)
 
 
@@ -123,48 +123,59 @@ class TestMapping(object):
                      data_sorted)
 
 
-def test_single_mapping_value_error_on_request():
-    class IdentitySingleMapping(SingleMapping):
-        def mapping(self, source):
-            return source
-
-    data_stream = DataStream(IndexableDataset([0, 1, 2]))
-    transformer = IdentitySingleMapping(data_stream)
-    assert_raises(ValueError, transformer.get_data, [0, 1])
-
-
-def test_flatten():
-    stream = DataStream(
-        IndexableDataset(
+class TestFlatten(object):
+    def setUp(self):
+        self.dataset = IndexableDataset(
             OrderedDict([('features', numpy.ones((4, 2, 2))),
-                         ('targets', numpy.array([0, 1, 0, 1]))])),
-        iteration_scheme=SequentialScheme(4, 2))
-    wrapper = Flatten(stream, which_sources=('features',))
-    assert_equal(
-        list(wrapper.get_epoch_iterator()),
-        [(numpy.ones((2, 4)), numpy.array([0, 1])),
-         (numpy.ones((2, 4)), numpy.array([0, 1]))])
+                         ('targets', numpy.array([[0], [1], [0], [1]]))]))
+        self.stream = DataStream(
+            self.dataset, iteration_scheme=SequentialScheme(4, 2))
+        self.wrapper = Flatten(self.stream, which_sources=('features',))
+
+    def test_flatten(self):
+        assert_equal(
+            list(self.wrapper.get_epoch_iterator()),
+            [(numpy.ones((2, 4)), numpy.array([[0], [1]])),
+             (numpy.ones((2, 4)), numpy.array([[0], [1]]))])
 
 
-def test_scale_and_shift():
-    stream = DataStream(
-        IterableDataset(
-            OrderedDict([('features', [1, 2, 3]), ('targets', [0, 1, 0])])))
-    wrapper = ScaleAndShift(stream, 2, -1, which_sources=('targets',))
-    assert list(wrapper.get_epoch_iterator()) == [(1, -1), (2, 1), (3, -1)]
+class TestScaleAndShift(object):
+    def setUp(self):
+        self.stream = DataStream(
+            IterableDataset(
+                OrderedDict([('features', [1, 2, 3]), ('targets', [0, 1, 0])]),
+            axis_labels={'features': ('batch'), 'targets': ('batch')}))
+        self.wrapper = ScaleAndShift(
+            self.stream, 2, -1, which_sources=('targets',))
+
+    def test_scale_and_shift(self):
+        assert_equal(list(self.wrapper.get_epoch_iterator()),
+                     [(1, -1), (2, 1), (3, -1)])
+
+    def test_axis_labels_are_passed_through(self):
+        assert_equal(self.wrapper.axis_labels, self.stream.axis_labels)
 
 
-def test_cast():
-    stream = DataStream(
-        IterableDataset(
-            OrderedDict([
-                ('features', numpy.array([1, 2, 3]).astype('float64')),
-                ('targets', [0, 1, 0])])))
-    wrapper = Cast(stream, 'float32', which_sources=('features',))
-    assert_equal(
-        list(wrapper.get_epoch_iterator()),
-        [(numpy.array(1), 0), (numpy.array(2), 1), (numpy.array(3), 0)])
-    assert all(f.dtype == 'float32' for f, t in wrapper.get_epoch_iterator())
+class TestCast(object):
+    def setUp(self):
+        self.stream = DataStream(
+            IterableDataset(
+                OrderedDict([
+                    ('features', numpy.array([1, 2, 3]).astype('float64')),
+                    ('targets', [0, 1, 0])]),
+                axis_labels={'features': ('batch'), 'targets': ('batch')}))
+        self.wrapper = Cast(
+            self.stream, 'float32', which_sources=('features',))
+
+    def test_cast(self):
+        assert_equal(
+            list(self.wrapper.get_epoch_iterator()),
+            [(numpy.array(1), 0), (numpy.array(2), 1), (numpy.array(3), 0)])
+        assert all(
+            f.dtype == 'float32' for f, t in self.wrapper.get_epoch_iterator())
+
+    def test_axis_labels_are_passed_through(self):
+        assert_equal(self.wrapper.axis_labels, self.stream.axis_labels)
 
 
 class TestForceFloatX(object):

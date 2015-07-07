@@ -136,8 +136,8 @@ class Mapping(Transformer):
 
 
 @add_metaclass(ABCMeta)
-class SingleMapping(Transformer):
-    """Applies a single mapping to multiple sources.
+class SourcewiseTransformer(Transformer):
+    """Applies a transformation sourcewise.
 
     Parameters
     ----------
@@ -148,44 +148,78 @@ class SingleMapping(Transformer):
         which case the mapping is applied to all sources.
 
     """
-    def __init__(self, data_stream, which_sources=None):
+    def __init__(self, data_stream, produces_examples, which_sources=None,
+                 **kwargs):
         if which_sources is None:
             which_sources = data_stream.sources
         self.which_sources = which_sources
-        super(SingleMapping, self).__init__(data_stream)
+        super(SourcewiseTransformer, self).__init__(
+            data_stream, produces_examples, **kwargs)
+
+    def _apply_sourcewise_transformation(self, data, method):
+        data = list(data)
+        for i, source_name in enumerate(self.data_stream.sources):
+            if source_name in self.which_sources:
+                data[i] = method(data[i])
+        return tuple(data)
 
     @abstractmethod
-    def mapping(self, source):
-        """Applies a single mapping to selected sources.
+    def transform_source_example(self, source_example):
+        """Applies a transformation to an example from a source.
 
         Parameters
         ----------
-        source : :class:`numpy.ndarray`
-            Input source.
+        source_example : :class:`numpy.ndarray`
+            An example from a source.
 
         """
 
-    def get_data(self, request=None):
-        if request is not None:
-            raise ValueError
-        data = list(next(self.child_epoch_iterator))
-        for i, source_name in enumerate(self.data_stream.sources):
-            if source_name in self.which_sources:
-                data[i] = self.mapping(data[i])
-        return tuple(data)
+    @abstractmethod
+    def transform_source_batch(self, source_batch):
+        """Applies a transformation to a batch from a source.
+
+        Parameters
+        ----------
+        source_batch : :class:`numpy.ndarray`
+            A batch of examples from a source.
+
+        """
+
+    def transform_example(self, example):
+        return self._apply_sourcewise_transformation(
+            data=example, method=self.transform_source_example)
+
+    def transform_batch(self, batch):
+        return self._apply_sourcewise_transformation(
+            data=batch, method=self.transform_source_batch)
 
 
-class Flatten(SingleMapping):
-    """Flattens selected sources along all but the first axis."""
+class Flatten(SourcewiseTransformer):
+    """Flattens selected sources.
+
+    If the wrapped data stream produces batches, they will be flattened
+    along all but the first axis.
+
+    Incoming sources will be treated as numpy arrays (i.e. using
+    `numpy.asarray`).
+
+    """
     def __init__(self, data_stream, **kwargs):
-        super(Flatten, self).__init__(data_stream, **kwargs)
+        super(Flatten, self).__init__(
+            data_stream, data_stream.produces_examples, **kwargs)
 
-    def mapping(self, source):
-        return source.reshape((source.shape[0], -1))
+    def transform_source_example(self, source_example):
+        return numpy.asarray(source_example).flatten()
+
+    def transform_source_batch(self, source_batch):
+        return numpy.asarray(source_batch).reshape((source_batch.shape[0], -1))
 
 
-class ScaleAndShift(SingleMapping):
+class ScaleAndShift(SourcewiseTransformer):
     """Scales and shifts selected sources by scalar quantities.
+
+    Incoming sources will be treated as numpy arrays (i.e. using
+    `numpy.asarray`).
 
     Parameters
     ----------
@@ -198,14 +232,25 @@ class ScaleAndShift(SingleMapping):
     def __init__(self, data_stream, scale, shift, **kwargs):
         self.scale = scale
         self.shift = shift
-        super(ScaleAndShift, self).__init__(data_stream, **kwargs)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        super(ScaleAndShift, self).__init__(
+            data_stream, data_stream.produces_examples, **kwargs)
 
-    def mapping(self, source):
-        return source * self.scale + self.shift
+    def scale_and_shift(self, source):
+        return numpy.asarray(source) * self.scale + self.shift
+
+    def transform_source_example(self, source_example):
+        return self.scale_and_shift(source_example)
+
+    def transform_source_batch(self, source_batch):
+        return self.scale_and_shift(source_batch)
 
 
-class Cast(SingleMapping):
+class Cast(SourcewiseTransformer):
     """Casts selected sources as some dtype.
+
+    Incoming sources will be treated as numpy arrays (i.e. using
+    `numpy.asarray`).
 
     Parameters
     ----------
@@ -218,10 +263,18 @@ class Cast(SingleMapping):
         if dtype == 'floatX':
             dtype = config.floatX
         self.dtype = dtype
-        super(Cast, self).__init__(data_stream, **kwargs)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        super(Cast, self).__init__(
+            data_stream, data_stream.produces_examples, **kwargs)
 
-    def mapping(self, source):
-        return source.astype(self.dtype)
+    def cast(self, source):
+        return numpy.asarray(source, dtype=self.dtype)
+
+    def transform_source_example(self, source_example):
+        return self.cast(source_example)
+
+    def transform_source_batch(self, source_batch):
+        return self.cast(source_batch)
 
 
 class ForceFloatX(Transformer):
