@@ -8,6 +8,7 @@ from six import add_metaclass, iteritems
 
 from fuel import config
 from fuel.streams import AbstractDataStream
+from fuel.schemes import BatchSizeScheme
 
 
 @add_metaclass(ABCMeta)
@@ -310,8 +311,10 @@ class Filter(Transformer):
         Should return ``True`` for the samples to be kept.
 
     """
-    def __init__(self, data_stream, predicate):
-        super(Filter, self).__init__(data_stream)
+    def __init__(self, data_stream, predicate, **kwargs):
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        super(Filter, self).__init__(
+            data_stream, data_stream.produces_examples, **kwargs)
         self.predicate = predicate
 
     def get_epoch_iterator(self, **kwargs):
@@ -343,12 +346,17 @@ class Cache(Transformer):
         refilled when needed through the :meth:`get_data` method.
 
     """
-    def __init__(self, data_stream, iteration_scheme):
+    def __init__(self, data_stream, iteration_scheme, **kwargs):
+        if not isinstance(iteration_scheme, BatchSizeScheme):
+            raise ValueError('iteration scheme must be an instance of '
+                             'BatchSizeScheme')
         super(Cache, self).__init__(
-            data_stream, iteration_scheme=iteration_scheme, batch_input=True)
+            data_stream, iteration_scheme=iteration_scheme, **kwargs)
         self.cache = [[] for _ in self.sources]
 
-    def get_data_from_batch(self, request=None):
+    def get_data(self, request=None):
+        if request is None:
+            raise ValueError
         if request > len(self.cache[0]):
             self._cache()
         data = []
@@ -416,12 +424,20 @@ class Batch(Transformer):
         raised if a batch of the requested size cannot be provided.
 
     """
-    def __init__(self, data_stream, iteration_scheme, strictness=0):
+    def __init__(self, data_stream, iteration_scheme, strictness=0, **kwargs):
+        if not data_stream.produces_examples:
+            raise ValueError('the wrapped data stream must produce examples, '
+                             'not batches of examples.')
+        if data_stream.axis_labels:
+            kwargs.setdefault(
+                'axis_labels',
+                dict([(source, ('batch',) + labels if labels else None) for
+                      source, labels in iteritems(data_stream.axis_labels)]))
         super(Batch, self).__init__(
-            data_stream, iteration_scheme=iteration_scheme)
+            data_stream, iteration_scheme=iteration_scheme, **kwargs)
         self.strictness = strictness
 
-    def get_data_from_example(self, request=None):
+    def get_data(self, request=None):
         """Get data from the dataset."""
         if request is None:
             raise ValueError
@@ -454,11 +470,17 @@ class Unpack(Transformer):
         The data stream to unpack
 
     """
-    def __init__(self, data_stream):
-        super(Unpack, self).__init__(data_stream, batch_input=True)
+    def __init__(self, data_stream, **kwargs):
+        if data_stream.produces_examples:
+            raise ValueError('the wrapped data stream must produce batches of '
+                             'examples, not examples')
+        super(Unpack, self).__init__(
+            data_stream, produces_examples=True, **kwargs)
         self.data = None
 
-    def get_data_from_batch(self, request=None):
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
         if not self.data:
             data = next(self.child_epoch_iterator)
             self.data = izip(*data)
@@ -494,8 +516,13 @@ class Padding(Transformer):
         be used.
 
     """
-    def __init__(self, data_stream, mask_sources=None, mask_dtype=None):
-        super(Padding, self).__init__(data_stream, batch_input=True)
+    def __init__(self, data_stream, mask_sources=None, mask_dtype=None,
+                 **kwargs):
+        if data_stream.produces_examples:
+            raise ValueError('the wrapped data stream must produce batches of '
+                             'examples, not examples')
+        super(Padding, self).__init__(
+            data_stream, produces_examples=False, **kwargs)
         if mask_sources is None:
             mask_sources = self.data_stream.sources
         self.mask_sources = mask_sources
@@ -513,38 +540,35 @@ class Padding(Transformer):
                 sources.append(source + '_mask')
         return tuple(sources)
 
-    def get_data_from_batch(self, request=None):
-        if request is not None:
-            raise ValueError
-        data = list(next(self.child_epoch_iterator))
-        data_with_masks = []
-        for i, (source, source_data) in enumerate(
-                zip(self.data_stream.sources, data)):
+    def transform_batch(self, batch):
+        batch_with_masks = []
+        for i, (source, source_batch) in enumerate(
+                zip(self.data_stream.sources, batch)):
             if source not in self.mask_sources:
-                data_with_masks.append(source_data)
+                batch_with_masks.append(source_batch)
                 continue
 
-            shapes = [numpy.asarray(sample).shape for sample in source_data]
+            shapes = [numpy.asarray(sample).shape for sample in source_batch]
             lengths = [shape[0] for shape in shapes]
             max_sequence_length = max(lengths)
             rest_shape = shapes[0][1:]
             if not all([shape[1:] == rest_shape for shape in shapes]):
                 raise ValueError("All dimensions except length must be equal")
-            dtype = numpy.asarray(source_data[0]).dtype
+            dtype = numpy.asarray(source_batch[0]).dtype
 
-            padded_data = numpy.zeros(
-                (len(source_data), max_sequence_length) + rest_shape,
+            padded_batch = numpy.zeros(
+                (len(source_batch), max_sequence_length) + rest_shape,
                 dtype=dtype)
-            for i, sample in enumerate(source_data):
-                padded_data[i, :len(sample)] = sample
-            data_with_masks.append(padded_data)
+            for i, sample in enumerate(source_batch):
+                padded_batch[i, :len(sample)] = sample
+            batch_with_masks.append(padded_batch)
 
-            mask = numpy.zeros((len(source_data), max_sequence_length),
+            mask = numpy.zeros((len(source_batch), max_sequence_length),
                                self.mask_dtype)
             for i, sequence_length in enumerate(lengths):
                 mask[i, :sequence_length] = 1
-            data_with_masks.append(mask)
-        return tuple(data_with_masks)
+            batch_with_masks.append(mask)
+        return tuple(batch_with_masks)
 
 
 class Merge(Transformer):

@@ -202,12 +202,30 @@ class TestForceFloatX(object):
         assert_equal(transformer.axis_labels, axis_labels)
 
 
-def test_filter():
-    data = [1, 2, 3]
-    data_filtered = [1, 3]
-    stream = DataStream(IterableDataset(data))
-    wrapper = Filter(stream, lambda d: d[0] % 2 == 1)
-    assert list(wrapper.get_epoch_iterator()) == list(zip(data_filtered))
+class TestFilter(object):
+    def test_filter_examples(self):
+        data = [1, 2, 3]
+        data_filtered = [1, 3]
+        stream = DataStream(IterableDataset(data))
+        wrapper = Filter(stream, lambda d: d[0] % 2 == 1)
+        assert_equal(list(wrapper.get_epoch_iterator()),
+                     list(zip(data_filtered)))
+
+    def test_filter_batches(self):
+        data = [1, 2, 3, 4]
+        data_filtered = [([3, 4],)]
+        stream = DataStream(IndexableDataset(data),
+                            iteration_scheme=SequentialScheme(4, 2))
+        wrapper = Filter(stream, lambda d: d[0][0] % 3 == 0)
+        assert_equal(list(wrapper.get_epoch_iterator()), data_filtered)
+
+    def test_axis_labels_are_passed_through(self):
+        stream = DataStream(IndexableDataset(
+                                {'features': [1, 2, 3, 4]},
+                                axis_labels={'features': ('batch',)}),
+                            iteration_scheme=SequentialScheme(4, 2))
+        wrapper = Filter(stream, lambda d: d[0][0] % 3 == 0)
+        assert_equal(wrapper.axis_labels, stream.axis_labels)
 
 
 class TestCache(object):
@@ -269,6 +287,13 @@ class TestBatch(object):
         stream = DataStream(IterableDataset([1, 2, 3, 4, 5]))
         transformer = Batch(stream, ConstantScheme(2))
         assert_raises(ValueError, transformer.get_data, None)
+
+    def test_adds_batch_to_axis_labels(self):
+        stream = DataStream(IterableDataset(
+            {'features': [1, 2, 3, 4, 5]},
+            axis_labels={'features': ('index',)}))
+        transformer = Batch(stream, ConstantScheme(2), strictness=0)
+        assert_equal(transformer.axis_labels, {'features': ('batch', 'index')})
 
 
 class TestUnpack(object):
