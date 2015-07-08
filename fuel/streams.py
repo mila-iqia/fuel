@@ -45,11 +45,27 @@ class AbstractDataStream(object):
     def __init__(self, iteration_scheme=None, axis_labels=None):
         self.iteration_scheme = iteration_scheme
         self.axis_labels = axis_labels
+
+    @property
+    def produces_examples(self):
         if self.iteration_scheme:
-            self.produces_examples = iteration_scheme.requests_examples
+            return self.iteration_scheme.requests_examples
+        elif not hasattr(self, '_produces_examples'):
+            raise ValueError("cannot infer type of stream for {} instance; "
+                             "set the produces_examples attribute to True "
+                             "(for example streams) or False (for batch "
+                             "streams).".format(self.__class__.__name__))
         else:
-            # TODO: is this a valid assumption?
-            self.produces_examples = True
+            return self._produces_examples
+
+    @produces_examples.setter
+    def produces_examples(self, value):
+        if self.iteration_scheme:
+            raise ValueError("cannot set produces_examples on {} instance; "
+                             "determined by iteration scheme {}".format(
+                                 self.__class__.__name__,
+                                 self.iteration_scheme))
+        self._produces_examples = value
 
     def get_data(self, request=None):
         """Request data from the dataset or the wrapped stream.

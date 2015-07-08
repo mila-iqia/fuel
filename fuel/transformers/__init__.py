@@ -39,8 +39,6 @@ class Transformer(AbstractDataStream):
         super(Transformer, self).__init__(**kwargs)
         if produces_examples is not None:
             self.produces_examples = produces_examples
-        else:
-            self.produces_examples = self.iteration_scheme.requests_examples
         self.data_stream = data_stream
 
     @property
@@ -595,7 +593,9 @@ class Merge(AbstractDataStream):
     ('Hello world!', 'Bonjour le monde!')
 
     """
-    def __init__(self, data_streams, sources, **kwargs):
+    def __init__(self, data_streams, sources, axis_labels=None):
+        super(Merge, self).__init__(
+            iteration_scheme=None, axis_labels=axis_labels)
         if not all(data_stream.produces_examples ==
                    data_streams[0].produces_examples
                    for data_stream in data_streams):

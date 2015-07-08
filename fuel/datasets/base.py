@@ -304,6 +304,11 @@ class IterableDataset(Dataset):
             raise ValueError
         return next(state)
 
+    def get_example_stream(self):
+        stream = super(IterableDataset, self).get_example_stream()
+        stream.produces_examples = True
+        return stream
+
 
 class IndexableDataset(Dataset):
     """Creates a dataset from a set of indexable containers.
