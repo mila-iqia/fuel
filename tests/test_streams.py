@@ -1,9 +1,29 @@
 import numpy
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_raises
 
 from fuel.datasets import IterableDataset
 from fuel.schemes import SequentialExampleScheme
-from fuel.streams import DataStream
+from fuel.streams import AbstractDataStream, DataStream
+
+
+class DummyDataStream(AbstractDataStream):
+    def reset(self): pass
+
+    def close(self): pass
+
+    def next_epoch(self): pass
+
+    def get_epoch_iterator(self, as_dict=False): pass
+
+
+class TestAbstractDataStream(object):
+    def test_raises_value_error_on_no_scheme_no_produces_examples(self):
+        stream = DummyDataStream()
+        assert_raises(ValueError, getattr, stream, 'produces_examples')
+
+    def test_raises_value_error_when_setting_produces_examples_if_scheme(self):
+        stream = DummyDataStream(SequentialExampleScheme(2))
+        assert_raises(ValueError, setattr, stream, 'produces_examples', True)
 
 
 class TestDataStream(object):

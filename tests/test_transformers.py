@@ -7,11 +7,12 @@ from six.moves import zip, cPickle
 
 from fuel import config
 from fuel.datasets import IterableDataset, IndexableDataset
-from fuel.schemes import ConstantScheme, SequentialScheme
+from fuel.schemes import (ConstantScheme, SequentialScheme,
+                          SequentialExampleScheme)
 from fuel.streams import DataStream
 from fuel.transformers import (
     Transformer, Mapping, SortMapping, ForceFloatX, Filter, Cache, Batch,
-    Padding, MultiProcessing, Unpack, Merge, Flatten,
+    Padding, MultiProcessing, Unpack, Merge, SourcewiseTransformer, Flatten,
     ScaleAndShift, Cast, Rename, FilterSources)
 
 
@@ -19,6 +20,7 @@ class FlagDataStream(DataStream):
     close_called = False
     reset_called = False
     next_epoch_called = False
+    produces_examples = True
 
     def close(self):
         self.close_called = True
@@ -57,6 +59,19 @@ class TestTransformer(object):
 
     def test_value_error_on_request(self):
         assert_raises(ValueError, self.transformer.get_data, [0, 1])
+
+    def test_batch_to_example_and_vice_versa_not_implemented(self):
+        self.transformer.produces_examples = False
+        self.transformer.get_epoch_iterator()
+        assert_raises(NotImplementedError, self.transformer.get_data)
+
+    def test_transform_example_not_implemented_by_default(self):
+        assert_raises(
+            NotImplementedError, self.transformer.transform_example, None)
+
+    def test_transform_batch_not_implemented_by_default(self):
+        assert_raises(
+            NotImplementedError, self.transformer.transform_batch, None)
 
 
 class TestMapping(object):
@@ -122,21 +137,50 @@ class TestMapping(object):
         assert_equal(list(transformer.get_epoch_iterator()),
                      data_sorted)
 
+    def test_value_error_on_request(self):
+        stream = IterableDataset(self.data).get_example_stream()
+        transformer = Mapping(stream, True, lambda d: ([2 * i for i in d[0]],))
+        assert_raises(ValueError, transformer.get_data, [0, 1])
+
+
+class TestSourcewiseTransformer(object):
+    def test_transform_source_example_not_implemented(self):
+        transformer = SourcewiseTransformer(
+            IterableDataset([1, 2]).get_example_stream(), True)
+        assert_raises(
+            NotImplementedError, transformer.transform_source_example, None)
+
+    def test_transform_source_batch_not_implemented(self):
+        transformer = SourcewiseTransformer(
+            IterableDataset([1, 2]).get_example_stream(), True)
+        assert_raises(
+            NotImplementedError, transformer.transform_source_batch, None)
+
 
 class TestFlatten(object):
     def setUp(self):
-        self.dataset = IndexableDataset(
-            OrderedDict([('features', numpy.ones((4, 2, 2))),
-                         ('targets', numpy.array([[0], [1], [0], [1]]))]))
-        self.stream = DataStream(
-            self.dataset, iteration_scheme=SequentialScheme(4, 2))
-        self.wrapper = Flatten(self.stream, which_sources=('features',))
+        self.data = OrderedDict(
+            [('features', numpy.ones((4, 2, 2))),
+             ('targets', numpy.array([[0], [1], [0], [1]]))])
 
-    def test_flatten(self):
+    def test_flatten_batches(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2)),
+            which_sources=('features',))
         assert_equal(
-            list(self.wrapper.get_epoch_iterator()),
+            list(wrapper.get_epoch_iterator()),
             [(numpy.ones((2, 4)), numpy.array([[0], [1]])),
              (numpy.ones((2, 4)), numpy.array([[0], [1]]))])
+
+    def test_flatten_examples(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialExampleScheme(4)),
+            which_sources=('features',))
+        assert_equal(
+            list(wrapper.get_epoch_iterator()),
+            [(numpy.ones(4), 0), (numpy.ones(4), 1)] * 2)
 
 
 class TestScaleAndShift(object):
@@ -258,6 +302,14 @@ class TestCache(object):
                 assert_equal(list(range(100))[i * 7:(i + 1) * 7], features)
             assert_equal(i, 2)
 
+    def test_value_error_on_non_batchsizescheme(self):
+        assert_raises(ValueError, Cache, self.stream, SequentialScheme(4, 2))
+
+    def test_value_error_on_none_request(self):
+        cached_stream = Cache(self.stream, ConstantScheme(7))
+        cached_stream.get_epoch_iterator()
+        assert_raises(ValueError, cached_stream.get_data, None)
+
 
 class TestBatch(object):
     def test_strictness_0(self):
@@ -297,6 +349,11 @@ class TestBatch(object):
         transformer = Batch(stream, ConstantScheme(2), strictness=0)
         assert_equal(transformer.axis_labels, {'features': ('batch', 'index')})
 
+    def test_value_error_on_batch_stream(self):
+        stream = DataStream(IndexableDataset([1, 2, 3, 4]),
+                            iteration_scheme=SequentialScheme(4, 2))
+        assert_raises(ValueError, Batch, stream, SequentialScheme(4, 2))
+
 
 class TestUnpack(object):
     def setUp(self):
@@ -320,6 +377,16 @@ class TestUnpack(object):
         wrapper = Unpack(self.stream_np)
         epoch = wrapper.get_epoch_iterator()
         cPickle.dumps(epoch)
+
+    def test_value_error_on_example_stream(self):
+        stream = IterableDataset(
+            dict(features=[[1], [2, 3]],
+                 targets=[[4, 5, 6], [7]])).get_example_stream()
+        assert_raises(ValueError, Unpack, stream)
+
+    def test_value_error_on_request(self):
+        wrapper = Unpack(self.stream)
+        assert_raises(ValueError, wrapper.get_data, [0, 1])
 
 
 class TestPadding(object):
@@ -392,6 +459,12 @@ class TestPadding(object):
             ConstantScheme(2)))
         assert_raises(ValueError, transformer.get_data, [0, 1])
 
+    def test_value_error_on_example_stream(self):
+        stream = IterableDataset(
+            dict(features=[[1], [2, 3]],
+                 targets=[[4, 5, 6], [7]])).get_example_stream()
+        assert_raises(ValueError, Padding, stream)
+
 
 class TestMerge(object):
     def setUp(self):
@@ -414,6 +487,36 @@ class TestMerge(object):
 
     def test_error_on_wrong_number_of_sources(self):
         assert_raises(ValueError, Merge, self.streams, ('english',))
+
+    def test_value_error_on_different_stream_output_type(self):
+        spanish_stream = DataStream(IndexableDataset(['Hola mundo!']),
+                                    iteration_scheme=SequentialScheme(2, 2))
+        assert_raises(ValueError, Merge, self.streams + (spanish_stream,),
+                      ('english', 'french', 'spanish'))
+
+    def test_close_calls_close_on_all_streams(self):
+        streams = [FlagDataStream(IterableDataset([1, 2, 3])),
+                   FlagDataStream(IterableDataset([4, 5, 6])),
+                   FlagDataStream(IterableDataset([7, 8, 9]))]
+        transformer = Merge(streams, ('1', '2', '3'))
+        transformer.close()
+        assert all(stream.close_called for stream in streams)
+
+    def test_next_epoch_calls_next_epoch_on_all_streams(self):
+        streams = [FlagDataStream(IterableDataset([1, 2, 3])),
+                   FlagDataStream(IterableDataset([4, 5, 6])),
+                   FlagDataStream(IterableDataset([7, 8, 9]))]
+        transformer = Merge(streams, ('1', '2', '3'))
+        transformer.next_epoch()
+        assert all(stream.next_epoch_called for stream in streams)
+
+    def test_reset_calls_reset_on_all_streams(self):
+        streams = [FlagDataStream(IterableDataset([1, 2, 3])),
+                   FlagDataStream(IterableDataset([4, 5, 6])),
+                   FlagDataStream(IterableDataset([7, 8, 9]))]
+        transformer = Merge(streams, ('1', '2', '3'))
+        transformer.reset()
+        assert all(stream.reset_called for stream in streams)
 
 
 class TestMultiprocessing(object):

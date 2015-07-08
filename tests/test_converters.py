@@ -392,6 +392,14 @@ class TestCalTech101Silhouettes(object):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
+    def test_fill_subparser(self):
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('caltech101_silhouettes')
+        caltech101_silhouettes.fill_subparser(subparser)
+        assert (parser.parse_args(['caltech101_silhouettes', '16']).func is
+                caltech101_silhouettes.convert_silhouettes)
+
     def test_download_and_convert(self, size=16):
         tempdir = self.tempdir
 
@@ -431,6 +439,13 @@ class TestIris(object):
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
+
+    def test_fill_subparser(self):
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('iris')
+        iris.fill_subparser(subparser)
+        assert parser.parse_args(['iris']).func is iris.convert_iris
 
     def test_download_and_convert(self):
         tempdir = self.tempdir

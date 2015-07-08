@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from multiprocessing import Process, Queue
 
 import numpy
@@ -15,6 +15,12 @@ from fuel.schemes import BatchSizeScheme
 class Transformer(AbstractDataStream):
     """A data stream that wraps another data stream.
 
+    Subclasses must define a `transform_batch` method (to act on batches),
+    a `transform_example` method (to act on individual examples), or
+    both methods. If a `transform_any` method is defined, it is used
+    for both example and batch inputs. This is useful if the example
+    and batch version of a transformation are the same.
+
     Attributes
     ----------
     child_epoch_iterator : iterator type
@@ -28,14 +34,6 @@ class Transformer(AbstractDataStream):
 
     """
     def __init__(self, data_stream, produces_examples=None, **kwargs):
-        if 'iteration_scheme' not in kwargs and produces_examples is None:
-            raise ValueError("a transformer must either explicitly define "
-                             "its output type or have its own iteration "
-                             "scheme.")
-        if 'iteration_scheme' in kwargs and produces_examples is not None:
-            raise ValueError("a transformer can't have its own iteration "
-                             "scheme while explicitly defining whether it "
-                             "produces examples")
         super(Transformer, self).__init__(**kwargs)
         if produces_examples is not None:
             self.produces_examples = produces_examples
@@ -79,12 +77,15 @@ class Transformer(AbstractDataStream):
             raise ValueError
         data = next(self.child_epoch_iterator)
 
-        if self.produces_examples != self.data_stream.produces_examples:
+        if hasattr(self, 'transform_any'):
+            return self.transform_any(data)
+        elif self.produces_examples != self.data_stream.produces_examples:
             raise NotImplementedError
-        if self.produces_examples and self.data_stream.produces_examples:
-            return self.transform_example(data)
         else:
-            return self.transform_batch(data)
+            if self.produces_examples and self.data_stream.produces_examples:
+                return self.transform_example(data)
+            else:
+                return self.transform_batch(data)
 
     def transform_example(self, example):
         raise NotImplementedError(
@@ -138,6 +139,13 @@ class Mapping(Transformer):
 class SourcewiseTransformer(Transformer):
     """Applies a transformation sourcewise.
 
+    Subclasses must define `transform_source_example` (to transform
+    examples), `transform_source_batch` (to transform batches) or
+    both. If a `transform_any_source` method is defined, this
+    method is called for both examples and batches. This is useful
+    when the example and batch version of a transformation are the
+    same.
+
     Parameters
     ----------
     data_stream : instance of :class:`DataStream`
@@ -155,6 +163,19 @@ class SourcewiseTransformer(Transformer):
         super(SourcewiseTransformer, self).__init__(
             data_stream, produces_examples, **kwargs)
 
+    def __getattr__(self, attr):
+        # If transform_any_source isn't accessible to __getattribute__, it
+        # isn't defined. In order not to get into an infinite recursion loop
+        # in the next elif, we raise the AttributeError here.
+        if attr == 'transform_any_source':
+            raise AttributeError
+        # This is a way to define `transform_any` iff a `transform_any_source`
+        # method is defined.
+        elif attr == 'transform_any' and hasattr(self, 'transform_any_source'):
+            return self._transform_any
+        else:
+            raise AttributeError
+
     def _apply_sourcewise_transformation(self, data, method):
         data = list(data)
         for i, source_name in enumerate(self.data_stream.sources):
@@ -162,7 +183,6 @@ class SourcewiseTransformer(Transformer):
                 data[i] = method(data[i])
         return tuple(data)
 
-    @abstractmethod
     def transform_source_example(self, source_example):
         """Applies a transformation to an example from a source.
 
@@ -172,8 +192,8 @@ class SourcewiseTransformer(Transformer):
             An example from a source.
 
         """
+        raise NotImplementedError
 
-    @abstractmethod
     def transform_source_batch(self, source_batch):
         """Applies a transformation to a batch from a source.
 
@@ -183,6 +203,7 @@ class SourcewiseTransformer(Transformer):
             A batch of examples from a source.
 
         """
+        raise NotImplementedError
 
     def transform_example(self, example):
         return self._apply_sourcewise_transformation(
@@ -191,6 +212,12 @@ class SourcewiseTransformer(Transformer):
     def transform_batch(self, batch):
         return self._apply_sourcewise_transformation(
             data=batch, method=self.transform_source_batch)
+
+    # This is used internally. It will be visible to the outside world as the
+    # `transform_any` method iff a `transform_any_source` method is defined.
+    def _transform_any(self, data):
+        return self._apply_sourcewise_transformation(
+            data=data, method=self.transform_any_source)
 
 
 class Flatten(SourcewiseTransformer):
@@ -235,14 +262,8 @@ class ScaleAndShift(SourcewiseTransformer):
         super(ScaleAndShift, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
-    def scale_and_shift(self, source):
-        return numpy.asarray(source) * self.scale + self.shift
-
-    def transform_source_example(self, source_example):
-        return self.scale_and_shift(source_example)
-
-    def transform_source_batch(self, source_batch):
-        return self.scale_and_shift(source_batch)
+    def transform_any_source(self, source_data):
+        return numpy.asarray(source_data) * self.scale + self.shift
 
 
 class Cast(SourcewiseTransformer):
@@ -266,14 +287,8 @@ class Cast(SourcewiseTransformer):
         super(Cast, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
-    def cast(self, source):
-        return numpy.asarray(source, dtype=self.dtype)
-
-    def transform_source_example(self, source_example):
-        return self.cast(source_example)
-
-    def transform_source_batch(self, source_batch):
-        return self.cast(source_batch)
+    def transform_any_source(self, source_data):
+        return numpy.asarray(source_data, dtype=self.dtype)
 
 
 class ForceFloatX(SourcewiseTransformer):
@@ -283,19 +298,13 @@ class ForceFloatX(SourcewiseTransformer):
         super(ForceFloatX, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
-    def force_floatx(self, source):
-        source_needs_casting = (isinstance(source, numpy.ndarray) and
-                                source.dtype.kind == "f" and
-                                source.dtype != config.floatX)
+    def transform_any_source(self, source_data):
+        source_needs_casting = (isinstance(source_data, numpy.ndarray) and
+                                source_data.dtype.kind == "f" and
+                                source_data.dtype != config.floatX)
         if source_needs_casting:
-            source = source.astype(config.floatX)
-        return source
-
-    def transform_source_example(self, source_example):
-        return self.force_floatx(source_example)
-
-    def transform_source_batch(self, source_batch):
-        return self.force_floatx(source_batch)
+            source_data = source_data.astype(config.floatX)
+        return source_data
 
 
 class Filter(Transformer):
@@ -737,11 +746,8 @@ class Rename(Transformer):
         super(Rename, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
-    def transform_example(self, example):
-        return example
-
-    def transform_batch(self, batch):
-        return batch
+    def transform_any(self, data):
+        return data
 
 
 class FilterSources(Transformer):
@@ -774,12 +780,6 @@ class FilterSources(Transformer):
         # keep order of data_stream.sources
         self.sources = tuple(s for s in data_stream.sources if s in sources)
 
-    def filter_sources(self, data):
+    def transform_any(self, data):
         return [d for d, s in izip(data, self.data_stream.sources)
                 if s in self.sources]
-
-    def transform_example(self, example):
-        return self.filter_sources(example)
-
-    def transform_batch(self, batch):
-        return self.filter_sources(batch)
