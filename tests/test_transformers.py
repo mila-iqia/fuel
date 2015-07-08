@@ -220,10 +220,11 @@ class TestFilter(object):
         assert_equal(list(wrapper.get_epoch_iterator()), data_filtered)
 
     def test_axis_labels_are_passed_through(self):
-        stream = DataStream(IndexableDataset(
-                                {'features': [1, 2, 3, 4]},
-                                axis_labels={'features': ('batch',)}),
-                            iteration_scheme=SequentialScheme(4, 2))
+        stream = DataStream(
+            IndexableDataset(
+                {'features': [1, 2, 3, 4]},
+                axis_labels={'features': ('batch',)}),
+            iteration_scheme=SequentialScheme(4, 2))
         wrapper = Filter(stream, lambda d: d[0][0] % 3 == 0)
         assert_equal(wrapper.axis_labels, stream.axis_labels)
 

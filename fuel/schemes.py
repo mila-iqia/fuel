@@ -18,6 +18,12 @@ class IterationScheme(object):
     sequential batches, shuffled batches, etc. for datasets that choose to
     support them.
 
+    Attributes
+    ----------
+    requests_examples : bool
+        Whether requests produced by this scheme correspond to single
+        examples (as opposed to batches).
+
     Notes
     -----
     Iteration schemes implement the :meth:`get_request_iterator` method,
@@ -30,12 +36,6 @@ class IterationScheme(object):
 
     .. _iterator protocol:
        https://docs.python.org/3.3/library/stdtypes.html#iterator-types
-
-    Attributes
-    ----------
-    requests_examples : bool
-        Whether requests produced by this scheme correspond to single
-        examples (as opposed to batches).
 
     """
     @abstractmethod
