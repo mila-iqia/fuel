@@ -111,8 +111,7 @@ class ConcatenatedScheme(IterationScheme):
 
     """
     def __init__(self, schemes):
-        if not all(scheme.requests_examples == schemes[0].requests_examples
-                   for scheme in schemes):
+        if not len(set(scheme.requests_examples for scheme in schemes)) == 1:
             raise ValueError('all schemes must produce the same type of '
                              'requests (batches or examples)')
         self.schemes = schemes
