@@ -106,8 +106,8 @@ class ConcatenatedScheme(IterationScheme):
 
     Notes
     -----
-    All schemes must produce the same type of requests (batches or
-    examples).
+    All schemes being concatenated must produce the same type of
+    requests (batches or examples).
 
     """
     def __init__(self, schemes):
