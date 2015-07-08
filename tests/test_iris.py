@@ -2,7 +2,6 @@ import numpy
 
 from numpy.testing import assert_raises, assert_equal, assert_allclose
 
-from fuel import config
 from fuel.datasets import Iris
 from tests import skip_if_not_available
 

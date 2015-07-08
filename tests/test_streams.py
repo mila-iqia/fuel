@@ -7,13 +7,17 @@ from fuel.streams import AbstractDataStream, DataStream
 
 
 class DummyDataStream(AbstractDataStream):
-    def reset(self): pass
+    def reset(self):
+        pass
 
-    def close(self): pass
+    def close(self):
+        pass
 
-    def next_epoch(self): pass
+    def next_epoch(self):
+        pass
 
-    def get_epoch_iterator(self, as_dict=False): pass
+    def get_epoch_iterator(self, as_dict=False):
+        pass
 
 
 class TestAbstractDataStream(object):
