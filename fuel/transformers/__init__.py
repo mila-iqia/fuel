@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from multiprocessing import Process, Queue
 
 import numpy
@@ -82,27 +82,50 @@ class Transformer(AbstractDataStream):
             raise ValueError
         data = next(self.child_epoch_iterator)
 
-        if hasattr(self, 'transform_any'):
-            return self.transform_any(data)
-        elif self.produces_examples != self.data_stream.produces_examples:
-            raise NotImplementedError
+        if self.produces_examples != self.data_stream.produces_examples:
+            types = {True: 'examples', False: 'batches'}
+            raise NotImplementedError(
+                "the wrapped data stream produces {} while the {} transformer "
+                "produces {}, which it does not support.".format(
+                    types[self.data_stream.produces_examples],
+                    self.__class__.__name__,
+                    types[self.produces_examples]))
+        elif self.produces_examples:
+            return self.transform_example(data)
         else:
-            if self.produces_examples and self.data_stream.produces_examples:
-                return self.transform_example(data)
-            else:
-                return self.transform_batch(data)
+            return self.transform_batch(data)
 
     def transform_example(self, example):
+        """Transforms a single example."""
         raise NotImplementedError(
-            "`{}` does not support examples as inputs, "
-            "but the wrapped data stream produces examples.".format(type(self))
-        )
+            "`{}` does not support examples as input, but the wrapped data "
+            "stream produces examples.".format(self.__class__.__name__))
 
     def transform_batch(self, batch):
+        """Transforms a batch of examples."""
         raise NotImplementedError(
-            "`{}` does not support batches as inputs, "
-            "but the wrapped data stream produces batches.".format(type(self))
-        )
+            "`{}` does not support batches as input, but the wrapped data "
+            "stream produces batches.".format(self.__class__.__name__))
+
+
+@add_metaclass(ABCMeta)
+class AgnosticTransformer(Transformer):
+    """A transformer that operates the same on examples or batches.
+
+    Subclasses must implement the `transform_any` method, which is to be
+    applied to both examples and batches. This is useful when the example
+    and batch implementation of a transformation are the same.
+
+    """
+    @abstractmethod
+    def transform_any(self, data):
+        """Transforms the input, which can either be an example or a batch."""
+
+    def transform_example(self, example):
+        return self.transform_any(example)
+
+    def transform_batch(self, batch):
+        return self.transform_any(batch)
 
 
 class Mapping(Transformer):
@@ -168,19 +191,6 @@ class SourcewiseTransformer(Transformer):
         super(SourcewiseTransformer, self).__init__(
             data_stream, produces_examples, **kwargs)
 
-    def __getattr__(self, attr):
-        # If transform_any_source isn't accessible to __getattribute__, it
-        # isn't defined. In order not to get into an infinite recursion loop
-        # in the next elif, we raise the AttributeError here.
-        if attr == 'transform_any_source':
-            raise AttributeError
-        # This is a way to define `transform_any` iff a `transform_any_source`
-        # method is defined.
-        elif attr == 'transform_any' and hasattr(self, 'transform_any_source'):
-            return self._transform_any
-        else:
-            raise AttributeError
-
     def _apply_sourcewise_transformation(self, data, method):
         data = list(data)
         for i, source_name in enumerate(self.data_stream.sources):
@@ -197,7 +207,9 @@ class SourcewiseTransformer(Transformer):
             An example from a source.
 
         """
-        raise NotImplementedError
+        raise NotImplementedError(
+            "`{}` does not support examples as input, but the wrapped data "
+            "stream produces examples.".format(self.__class__.__name__))
 
     def transform_source_batch(self, source_batch):
         """Applies a transformation to a batch from a source.
@@ -208,7 +220,9 @@ class SourcewiseTransformer(Transformer):
             A batch of examples from a source.
 
         """
-        raise NotImplementedError
+        raise NotImplementedError(
+            "`{}` does not support batches as input, but the wrapped data "
+            "stream produces batches.".format(self.__class__.__name__))
 
     def transform_example(self, example):
         return self._apply_sourcewise_transformation(
@@ -218,11 +232,34 @@ class SourcewiseTransformer(Transformer):
         return self._apply_sourcewise_transformation(
             data=batch, method=self.transform_source_batch)
 
-    # This is used internally. It will be visible to the outside world as the
-    # `transform_any` method iff a `transform_any_source` method is defined.
-    def _transform_any(self, data):
+
+@add_metaclass(ABCMeta)
+class AgnosticSourcewiseTransformer(AgnosticTransformer,
+                                    SourcewiseTransformer):
+    """A sourcewise transformer that operates the same on examples or batches.
+
+    Subclasses must implement the `transform_any_source` method, which is
+    to be applied to both examples and batches. This is useful when the
+    example and batch implementation of a sourcewise transformation are
+    the same.
+
+    """
+    def transform_any(self, data):
         return self._apply_sourcewise_transformation(
             data=data, method=self.transform_any_source)
+
+    @abstractmethod
+    def transform_any_source(self, source_data):
+        """Applies a transformation to a source.
+
+        The data can either be an example or a batch of examples.
+
+        Parameters
+        ----------
+        source_data : :class:`numpy.ndarray`
+            Data from a source.
+
+        """
 
 
 class Flatten(SourcewiseTransformer):
@@ -246,7 +283,7 @@ class Flatten(SourcewiseTransformer):
         return numpy.asarray(source_batch).reshape((source_batch.shape[0], -1))
 
 
-class ScaleAndShift(SourcewiseTransformer):
+class ScaleAndShift(AgnosticSourcewiseTransformer):
     """Scales and shifts selected sources by scalar quantities.
 
     Incoming sources will be treated as numpy arrays (i.e. using
@@ -271,7 +308,7 @@ class ScaleAndShift(SourcewiseTransformer):
         return numpy.asarray(source_data) * self.scale + self.shift
 
 
-class Cast(SourcewiseTransformer):
+class Cast(AgnosticSourcewiseTransformer):
     """Casts selected sources as some dtype.
 
     Incoming sources will be treated as numpy arrays (i.e. using
@@ -296,7 +333,7 @@ class Cast(SourcewiseTransformer):
         return numpy.asarray(source_data, dtype=self.dtype)
 
 
-class ForceFloatX(SourcewiseTransformer):
+class ForceFloatX(AgnosticSourcewiseTransformer):
     """Force all floating point numpy arrays to be floatX."""
     def __init__(self, data_stream, **kwargs):
         kwargs.setdefault('axis_labels', data_stream.axis_labels)
@@ -728,7 +765,7 @@ class MultiProcessing(Transformer):
         return data
 
 
-class Rename(Transformer):
+class Rename(AgnosticTransformer):
     """Renames the sources of the stream.
 
     Parameters
@@ -761,7 +798,7 @@ class Rename(Transformer):
         return data
 
 
-class FilterSources(Transformer):
+class FilterSources(AgnosticTransformer):
     """Selects a subset of the stream sources.
 
     Order of data stream's sources is maintained. The order of sources
