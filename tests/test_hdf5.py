@@ -276,7 +276,7 @@ class TestH5PYDataset(object):
 
     def test_value_error_out_of_memory_get_data(self):
         dataset = H5PYDataset(self.h5file, which_sets=('train',))
-        assert_raises(ValueError, dataset._out_of_memory_get_data, None, True)
+        assert_raises(ValueError, dataset._out_of_memory_get_data, None, dict())
 
     def test_index_split_out_of_memory(self):
         features = numpy.arange(50, dtype='uint8').reshape((10, 5))
