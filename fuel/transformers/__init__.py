@@ -21,6 +21,11 @@ class Transformer(AbstractDataStream):
     for both example and batch inputs. This is useful if the example
     and batch version of a transformation are the same.
 
+    In all cases, the transformer is expected to have the same output
+    type (example or batch) as its input type.  If the transformer
+    subclass is going from batches to examples or vice versa, it
+    should override `get_data` instead.
+
     Attributes
     ----------
     child_epoch_iterator : iterator type
