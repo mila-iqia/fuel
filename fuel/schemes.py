@@ -271,8 +271,8 @@ def cross_validation(scheme_class, num_examples, num_folds, strict=True,
     for i in xrange(num_folds):
         begin = num_examples * i // num_folds
         end = num_examples * (i+1) // num_folds
-        train = scheme_class(chain(xrange(0, begin),
-                                   xrange(end, num_examples)),
+        train = scheme_class(list(chain(xrange(0, begin),
+                                        xrange(end, num_examples))),
                              **kwargs)
         valid = scheme_class(xrange(begin, end), **kwargs)
 
