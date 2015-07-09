@@ -17,9 +17,7 @@ class Transformer(AbstractDataStream):
 
     Subclasses must define a `transform_batch` method (to act on batches),
     a `transform_example` method (to act on individual examples), or
-    both methods. If a `transform_any` method is defined, it is used
-    for both example and batch inputs. This is useful if the example
-    and batch version of a transformation are the same.
+    both methods.
 
     In all cases, the transformer is expected to have the same output
     type (example or batch) as its input type.  If the transformer
@@ -169,10 +167,7 @@ class SourcewiseTransformer(Transformer):
 
     Subclasses must define `transform_source_example` (to transform
     examples), `transform_source_batch` (to transform batches) or
-    both. If a `transform_any_source` method is defined, this
-    method is called for both examples and batches. This is useful
-    when the example and batch version of a transformation are the
-    same.
+    both.
 
     Parameters
     ----------
