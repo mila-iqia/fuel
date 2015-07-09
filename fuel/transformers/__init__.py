@@ -142,9 +142,9 @@ class Mapping(Transformer):
         data under source names `add_sources`.
 
     """
-    def __init__(self, data_stream, produces_examples, mapping,
-                 add_sources=None, **kwargs):
-        super(Mapping, self).__init__(data_stream, produces_examples, **kwargs)
+    def __init__(self, data_stream, mapping, add_sources=None, **kwargs):
+        super(Mapping, self).__init__(
+            data_stream, self.data_stream.produces_examples, **kwargs)
         self.mapping = mapping
         self.add_sources = add_sources
 
@@ -486,8 +486,8 @@ class Batch(Transformer):
         if data_stream.axis_labels:
             kwargs.setdefault(
                 'axis_labels',
-                dict([(source, ('batch',) + labels if labels else None) for
-                      source, labels in iteritems(data_stream.axis_labels)]))
+                dict((source, ('batch',) + labels if labels else None) for
+                      source, labels in iteritems(data_stream.axis_labels)))
         super(Batch, self).__init__(
             data_stream, iteration_scheme=iteration_scheme, **kwargs)
         self.strictness = strictness
