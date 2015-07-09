@@ -117,15 +117,28 @@ def test_cross_validation():
     (train, valid, valid_size) = next(cross)
     assert list(train.get_request_iterator()) == list(range(3, 10))
     assert list(valid.get_request_iterator()) == list(range(0, 3))
+
+    # test that indices are not depleted
+    assert list(train.get_request_iterator()) == list(range(3, 10))
+    assert list(valid.get_request_iterator()) == list(range(0, 3))
     assert valid_size == 3
 
     (train, valid, valid_size) = next(cross)
     assert (list(train.get_request_iterator()) ==
             list(range(0, 3)) + list(range(6, 10)))
     assert list(valid.get_request_iterator()) == list(range(3, 6))
+
+    # test that indices are not depleted
+    assert (list(train.get_request_iterator()) ==
+            list(range(0, 3)) + list(range(6, 10)))
+    assert list(valid.get_request_iterator()) == list(range(3, 6))
     assert valid_size == 3
 
     (train, valid, valid_size) = next(cross)
+    assert list(train.get_request_iterator()) == list(range(0, 6))
+    assert list(valid.get_request_iterator()) == list(range(6, 10))
+
+    # test that indices are not depleted
     assert list(train.get_request_iterator()) == list(range(0, 6))
     assert list(valid.get_request_iterator()) == list(range(6, 10))
     assert valid_size == 4
@@ -139,7 +152,15 @@ def test_cross_validation():
     assert list(train.get_request_iterator()) == [[4, 5], [6, 7]]
     assert list(valid.get_request_iterator()) == [[0, 1], [2, 3]]
 
+    # test that indices are not depleted
+    assert list(train.get_request_iterator()) == [[4, 5], [6, 7]]
+    assert list(valid.get_request_iterator()) == [[0, 1], [2, 3]]
+
     (train, valid) = next(cross)
+    assert list(train.get_request_iterator()) == [[0, 1], [2, 3]]
+    assert list(valid.get_request_iterator()) == [[4, 5], [6, 7]]
+
+    # test that indices are not depleted
     assert list(train.get_request_iterator()) == [[0, 1], [2, 3]]
     assert list(valid.get_request_iterator()) == [[4, 5], [6, 7]]
 
