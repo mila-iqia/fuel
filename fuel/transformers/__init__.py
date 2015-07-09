@@ -440,6 +440,12 @@ class Batch(Transformer):
         if not data_stream.produces_examples:
             raise ValueError('the wrapped data stream must produce examples, '
                              'not batches of examples.')
+        # The value for `produces_examples` is inferred from the iteration
+        # scheme's `requests_examples` attribute. We expect the scheme to
+        # request batches.
+        if iteration_scheme.requests_examples:
+            raise ValueError('the iteration scheme must request batches, '
+                             'not individual examples.')
         if data_stream.axis_labels:
             kwargs.setdefault(
                 'axis_labels',

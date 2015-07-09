@@ -354,6 +354,10 @@ class TestBatch(object):
                             iteration_scheme=SequentialScheme(4, 2))
         assert_raises(ValueError, Batch, stream, SequentialScheme(4, 2))
 
+    def test_value_error_on_example_scheme(self):
+        stream = IterableDataset([1, 2, 3, 4]).get_example_stream()
+        assert_raises(ValueError, Batch, stream, SequentialExampleScheme(4))
+
 
 class TestUnpack(object):
     def setUp(self):
