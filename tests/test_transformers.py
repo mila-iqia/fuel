@@ -82,13 +82,13 @@ class TestMapping(object):
 
     def test_mapping(self):
         stream = IterableDataset(self.data).get_example_stream()
-        transformer = Mapping(stream, True, lambda d: ([2 * i for i in d[0]],))
+        transformer = Mapping(stream, lambda d: ([2 * i for i in d[0]],))
         assert_equal(list(transformer.get_epoch_iterator()),
                      list(zip([[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
 
     def test_add_sources(self):
         stream = IterableDataset(self.data).get_example_stream()
-        transformer = Mapping(stream, True, lambda d: ([2 * i for i in d[0]],),
+        transformer = Mapping(stream, lambda d: ([2 * i for i in d[0]],),
                               add_sources=('doubled',))
         assert_equal(transformer.sources, ('data', 'doubled'))
         assert_equal(list(transformer.get_epoch_iterator()),
@@ -96,21 +96,20 @@ class TestMapping(object):
 
     def test_sort_mapping_trivial_key(self):
         stream = IterableDataset(self.data).get_example_stream()
-        transformer = Mapping(
-            stream, True, SortMapping(operator.itemgetter(0)))
+        transformer = Mapping(stream, SortMapping(operator.itemgetter(0)))
         assert_equal(list(transformer.get_epoch_iterator()),
                      list(zip([[1, 2, 3]] * 3)))
 
     def test_sort_mapping_alternate_key(self):
         stream = IterableDataset(self.data).get_example_stream()
-        transformer = Mapping(stream, True, SortMapping(lambda x: -x[0]))
+        transformer = Mapping(stream, SortMapping(lambda x: -x[0]))
         assert_equal(list(transformer.get_epoch_iterator()),
                      list(zip([[3, 2, 1]] * 3)))
 
     def test_sort_mapping_reverse(self):
         stream = IterableDataset(self.data).get_example_stream()
         transformer = Mapping(
-            stream, True, SortMapping(operator.itemgetter(0), reverse=True))
+            stream, SortMapping(operator.itemgetter(0), reverse=True))
         assert_equal(list(transformer.get_epoch_iterator()),
                      list(zip([[3, 2, 1]] * 3)))
 
@@ -122,7 +121,7 @@ class TestMapping(object):
                        (numpy.array([1, 2, 3]), numpy.array([4, 5, 6]))]
         stream = IterableDataset(data).get_example_stream()
         transformer = Mapping(
-            stream, True, mapping=SortMapping(operator.itemgetter(0)))
+            stream, mapping=SortMapping(operator.itemgetter(0)))
         assert_equal(list(transformer.get_epoch_iterator()),
                      data_sorted)
 
@@ -133,13 +132,13 @@ class TestMapping(object):
                        ([1, 2, 3], [4, 5, 6])]
         stream = IterableDataset(data).get_example_stream()
         transformer = Mapping(
-            stream, True, mapping=SortMapping(operator.itemgetter(0)))
+            stream, mapping=SortMapping(operator.itemgetter(0)))
         assert_equal(list(transformer.get_epoch_iterator()),
                      data_sorted)
 
     def test_value_error_on_request(self):
         stream = IterableDataset(self.data).get_example_stream()
-        transformer = Mapping(stream, True, lambda d: ([2 * i for i in d[0]],))
+        transformer = Mapping(stream, lambda d: ([2 * i for i in d[0]],))
         assert_raises(ValueError, transformer.get_data, [0, 1])
 
 
@@ -526,7 +525,7 @@ class TestMerge(object):
 class TestMultiprocessing(object):
     def setUp(self):
         stream = IterableDataset(range(100)).get_example_stream()
-        self.transformer = Mapping(stream, True, lambda x: (x[0] + 1,))
+        self.transformer = Mapping(stream, lambda x: (x[0] + 1,))
 
     def test_multiprocessing(self):
         background = MultiProcessing(self.transformer)
