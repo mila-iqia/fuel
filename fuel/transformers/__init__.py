@@ -268,8 +268,26 @@ class Flatten(SourcewiseTransformer):
 
     """
     def __init__(self, data_stream, **kwargs):
+        # Modify the axis_labels dict to reflect the fact that all non-batch
+        # axes will be grouped together under the same 'feature' axis.
+        if data_stream.axis_labels:
+            which_sources = kwargs.get('which_sources', data_stream.sources)
+            kwargs.setdefault(
+                'axis_labels',
+                dict((source, self._infer_labels(
+                        labels, data_stream.produces_examples)
+                      if source in which_sources else labels) for
+                      (source, labels) in iteritems(data_stream.axis_labels)))
         super(Flatten, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
+
+    def _infer_labels(self, labels, produces_examples):
+        if not labels:
+            return None
+        elif produces_examples:
+            return ('feature',)
+        else:
+            return (labels[0], 'feature')
 
     def transform_source_example(self, source_example):
         return numpy.asarray(source_example).flatten()
@@ -295,7 +313,8 @@ class ScaleAndShift(AgnosticSourcewiseTransformer):
     def __init__(self, data_stream, scale, shift, **kwargs):
         self.scale = scale
         self.shift = shift
-        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
         super(ScaleAndShift, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
@@ -320,7 +339,8 @@ class Cast(AgnosticSourcewiseTransformer):
         if dtype == 'floatX':
             dtype = config.floatX
         self.dtype = dtype
-        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
         super(Cast, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
@@ -331,7 +351,8 @@ class Cast(AgnosticSourcewiseTransformer):
 class ForceFloatX(AgnosticSourcewiseTransformer):
     """Force all floating point numpy arrays to be floatX."""
     def __init__(self, data_stream, **kwargs):
-        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
         super(ForceFloatX, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
@@ -356,7 +377,8 @@ class Filter(Transformer):
 
     """
     def __init__(self, data_stream, predicate, **kwargs):
-        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
         super(Filter, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
         self.predicate = predicate
@@ -391,9 +413,14 @@ class Cache(Transformer):
 
     """
     def __init__(self, data_stream, iteration_scheme, **kwargs):
+        # Note: produces_examples will always be False because of this
+        # restriction: the only iteration schemes allowed are BatchSizeScheme,
+        # which produce batches.
         if not isinstance(iteration_scheme, BatchSizeScheme):
             raise ValueError('iteration scheme must be an instance of '
                              'BatchSizeScheme')
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
         super(Cache, self).__init__(
             data_stream, iteration_scheme=iteration_scheme, **kwargs)
         self.cache = [[] for _ in self.sources]
@@ -524,6 +551,11 @@ class Unpack(Transformer):
         if data_stream.produces_examples:
             raise ValueError('the wrapped data stream must produce batches of '
                              'examples, not examples')
+        if data_stream.axis_labels:
+            kwargs.setdefault(
+                'axis_labels',
+                dict((source, labels[1:] if labels else None) for
+                     source, labels in iteritems(data_stream.axis_labels)))
         super(Unpack, self).__init__(
             data_stream, produces_examples=True, **kwargs)
         self.data = None
@@ -744,6 +776,8 @@ class MultiProcessing(Transformer):
 
     """
     def __init__(self, data_stream, max_store=100, **kwargs):
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
         super(MultiProcessing, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
         self.background = BackgroundProcess(data_stream, max_store)
@@ -783,9 +817,9 @@ class Rename(AgnosticTransformer):
         if data_stream.axis_labels:
             kwargs.setdefault(
                 'axis_labels',
-                dict([(names[source] if source in names else source, labels)
-                      for (source, labels) in
-                      iteritems(data_stream.axis_labels)]))
+                dict((names[source] if source in names else source, labels)
+                     for (source, labels) in
+                     iteritems(data_stream.axis_labels)))
         super(Rename, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
@@ -814,9 +848,9 @@ class FilterSources(AgnosticTransformer):
                              "data_stream.sources")
         if data_stream.axis_labels:
             kwargs.setdefault('axis_labels',
-                              dict([(source, labels) for (source, labels)
-                                    in iteritems(data_stream.axis_labels)
-                                    if source in sources]))
+                              dict((source, labels) for (source, labels)
+                                   in iteritems(data_stream.axis_labels)
+                                   if source in sources))
         super(FilterSources, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 

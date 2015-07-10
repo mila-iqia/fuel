@@ -172,6 +172,16 @@ class TestFlatten(object):
             [(numpy.ones((2, 4)), numpy.array([[0], [1]])),
              (numpy.ones((2, 4)), numpy.array([[0], [1]]))])
 
+    def test_axis_labels_on_flatten_batches(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2),
+                       axis_labels={'features': ('batch', 'width', 'height'),
+                                    'targets': ('batch', 'index')}),
+            which_sources=('features',))
+        assert_equal(wrapper.axis_labels, {'features': ('batch', 'feature'),
+                                           'targets': ('batch', 'index')})
+
     def test_flatten_examples(self):
         wrapper = Flatten(
             DataStream(IndexableDataset(self.data),
@@ -180,6 +190,16 @@ class TestFlatten(object):
         assert_equal(
             list(wrapper.get_epoch_iterator()),
             [(numpy.ones(4), 0), (numpy.ones(4), 1)] * 2)
+
+    def test_axis_labels_on_flatten_examples(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialExampleScheme(4),
+                       axis_labels={'features': ('batch', 'width', 'height'),
+                                    'targets': ('batch', 'index')}),
+            which_sources=('features',))
+        assert_equal(wrapper.axis_labels, {'features': ('feature',),
+                                           'targets': ('index',)})
 
 
 class TestScaleAndShift(object):
@@ -241,8 +261,9 @@ class TestForceFloatX(object):
     def test_axis_labels_are_passed_through(self):
         axis_labels = {'x': ('batch', 'feature'), 'y': ('batch', 'index')}
         self.dataset.axis_labels = axis_labels
-        transformer = ForceFloatX(self.dataset.get_example_stream())
-        assert_equal(transformer.axis_labels, axis_labels)
+        stream = self.dataset.get_example_stream()
+        transformer = ForceFloatX(stream)
+        assert_equal(transformer.axis_labels, stream.axis_labels)
 
 
 class TestFilter(object):

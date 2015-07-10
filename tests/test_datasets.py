@@ -14,7 +14,7 @@ from fuel.transformers import Mapping
 class TestDataset(object):
     def setUp(self):
         self.data = [1, 2, 3]
-        self.stream = DataStream(IterableDataset(self.data))
+        self.stream = IterableDataset(self.data).get_example_stream()
 
     def test_one_example_at_a_time(self):
         assert_equal(
@@ -137,13 +137,13 @@ class TestIndexableDataset(object):
 def test_sources_selection():
     features = [5, 6, 7, 1]
     targets = [1, 0, 1, 1]
-    stream = DataStream(IterableDataset(OrderedDict(
-        [('features', features), ('targets', targets)])))
+    stream = IterableDataset(OrderedDict(
+        [('features', features), ('targets', targets)])).get_example_stream()
     assert list(stream.get_epoch_iterator()) == list(zip(features, targets))
 
-    stream = DataStream(IterableDataset(
+    stream = IterableDataset(
         {'features': features, 'targets': targets},
-        sources=('targets',)))
+        sources=('targets',)).get_example_stream()
     assert list(stream.get_epoch_iterator()) == list(zip(targets))
 
 

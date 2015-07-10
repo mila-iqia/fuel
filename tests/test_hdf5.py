@@ -8,6 +8,7 @@ from six.moves import range, cPickle
 
 from fuel.datasets.hdf5 import PytablesDataset, H5PYDataset
 from fuel.streams import DataStream
+from fuel.schemes import SequentialScheme
 
 
 class TestPytablesDataset(object):
@@ -158,7 +159,8 @@ class TestH5PYDataset(object):
             os.remove('file.hdf5')
 
     def test_data_stream_pickling(self):
-        stream = DataStream(H5PYDataset(self.h5file, which_sets=('train',)))
+        stream = DataStream(H5PYDataset(self.h5file, which_sets=('train',)),
+                            iteration_scheme=SequentialScheme(100, 10))
         cPickle.loads(cPickle.dumps(stream))
         stream.close()
 

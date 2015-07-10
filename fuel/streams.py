@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
 import zmq
-from six import add_metaclass
+from six import add_metaclass, iteritems
 
 from fuel.iterator import DataIterator
 from fuel.server import recv_arrays
@@ -42,8 +42,11 @@ class AbstractDataStream(object):
         of examples).
 
     """
-    def __init__(self, iteration_scheme=None, axis_labels=None):
+    def __init__(self, iteration_scheme=None, produces_examples=None,
+                 axis_labels=None):
         self.iteration_scheme = iteration_scheme
+        if produces_examples is not None:
+            self.produces_examples = produces_examples
         self.axis_labels = axis_labels
 
     @property
@@ -125,8 +128,14 @@ class DataStream(AbstractDataStream):
 
     """
     def __init__(self, dataset, **kwargs):
-        kwargs.setdefault('axis_labels', dataset.axis_labels)
+        if dataset.axis_labels:
+            kwargs.setdefault('axis_labels', dataset.axis_labels.copy())
         super(DataStream, self).__init__(**kwargs)
+        # If the data stream produces examples, remove 'batch' from axis labels
+        if self.produces_examples and self.axis_labels:
+            for source, labels in iteritems(self.axis_labels):
+                self.axis_labels[source] = tuple(
+                    label for label in labels if label != 'batch')
         self.dataset = dataset
         self.data_state = self.dataset.open()
         self._fresh_state = True

@@ -49,8 +49,7 @@ class TextFile(Dataset):
     >>> text_data = TextFile(files=['sentences.txt'],
     ...                      dictionary=dictionary, bos_token=None,
     ...                      preprocess=lower)
-    >>> from fuel.streams import DataStream
-    >>> for data in DataStream(text_data).get_epoch_iterator():
+    >>> for data in text_data.get_example_stream().get_epoch_iterator():
     ...     print(data)
     ([2, 0, 3, 0, 1],)
     ([2, 0, 4, 1],)

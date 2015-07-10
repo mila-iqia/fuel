@@ -29,7 +29,7 @@ def test_text():
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, bos_token=None,
                          preprocess=lower)
-    stream = DataStream(text_data)
+    stream = text_data.get_example_stream()
     epoch = stream.get_epoch_iterator()
     assert len(list(epoch)) == 4
     epoch = stream.get_epoch_iterator()
@@ -50,7 +50,7 @@ def test_text():
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, preprocess=lower,
                          level="character")
-    sentence = next(DataStream(text_data).get_epoch_iterator())[0]
+    sentence = next(text_data.get_example_stream().get_epoch_iterator())[0]
     assert sentence[:3] == [27, 19, 7]
     assert sentence[-3:] == [2, 4, 28]
 
