@@ -182,6 +182,16 @@ class TestFlatten(object):
         assert_equal(wrapper.axis_labels, {'features': ('batch', 'feature'),
                                            'targets': ('batch', 'index')})
 
+    def test_axis_labels_on_flatten_batches_with_none(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2),
+                       axis_labels={'features': None,
+                                    'targets': ('batch', 'index')}),
+            which_sources=('features',))
+        assert_equal(wrapper.axis_labels, {'features': None,
+                                           'targets': ('batch', 'index')})
+
     def test_flatten_examples(self):
         wrapper = Flatten(
             DataStream(IndexableDataset(self.data),
@@ -330,6 +340,11 @@ class TestCache(object):
         cached_stream.get_epoch_iterator()
         assert_raises(ValueError, cached_stream.get_data, None)
 
+    def test_axis_labels_passed_on_by_default(self):
+        self.stream.axis_labels = {'features': ('batch', 'index')}
+        cached_stream = Cache(self.stream, ConstantScheme(7))
+        assert_equal(cached_stream.axis_labels, self.stream.axis_labels)
+
 
 class TestBatch(object):
     def test_strictness_0(self):
@@ -411,6 +426,11 @@ class TestUnpack(object):
     def test_value_error_on_request(self):
         wrapper = Unpack(self.stream)
         assert_raises(ValueError, wrapper.get_data, [0, 1])
+
+    def test_axis_labels_default(self):
+        self.stream.axis_labels = {'features': ('batch', 'index')}
+        wrapper = Unpack(self.stream)
+        assert_equal(wrapper.axis_labels, {'features': ('index',)})
 
 
 class TestPadding(object):
@@ -556,6 +576,11 @@ class TestMultiprocessing(object):
     def test_value_error_on_request(self):
         background = MultiProcessing(self.transformer)
         assert_raises(ValueError, background.get_data, [0, 1])
+
+    def test_axis_labels_passed_on_by_default(self):
+        self.transformer.axis_labels = {'features': ('batch', 'index')}
+        background = MultiProcessing(self.transformer)
+        assert_equal(background.axis_labels, self.transformer.axis_labels)
 
 
 class TestRename(object):

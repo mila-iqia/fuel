@@ -274,20 +274,23 @@ class Flatten(SourcewiseTransformer):
             which_sources = kwargs.get('which_sources', data_stream.sources)
             kwargs.setdefault(
                 'axis_labels',
-                dict((source, self._infer_labels(
-                        labels, data_stream.produces_examples)
-                      if source in which_sources else labels) for
-                      (source, labels) in iteritems(data_stream.axis_labels)))
+                self._infer_axis_labels(data_stream, which_sources))
         super(Flatten, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
-    def _infer_labels(self, labels, produces_examples):
-        if not labels:
-            return None
-        elif produces_examples:
-            return ('feature',)
-        else:
-            return (labels[0], 'feature')
+    def _infer_axis_labels(self, data_stream, which_sources):
+        axis_labels = {}
+        for source, labels in iteritems(data_stream.axis_labels):
+            if source in which_sources:
+                if not labels:
+                    axis_labels[source] = None
+                elif data_stream.produces_examples:
+                    axis_labels[source] = ('feature',)
+                else:
+                    axis_labels[source] = (labels[0], 'feature')
+            else:
+                axis_labels[source] = labels
+        return axis_labels
 
     def transform_source_example(self, source_example):
         return numpy.asarray(source_example).flatten()
