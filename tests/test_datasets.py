@@ -142,7 +142,7 @@ def test_sources_selection():
 
     stream = DataStream(IterableDataset(
         {'features': features, 'targets': targets},
-        sources=('targets',))
+        sources=('targets',)))
     assert list(stream.get_epoch_iterator()) == list(zip(targets))
 
 

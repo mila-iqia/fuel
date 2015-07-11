@@ -671,6 +671,7 @@ class Merge(AbstractDataStream):
     >>> from fuel.datasets import IterableDataset
     >>> english = IterableDataset(['Hello world!'])
     >>> french = IterableDataset(['Bonjour le monde!'])
+    >>> from fuel.streams import DataStream
     >>> streams = (DataStream(english),
     ...            DataStream(french))
     >>> merged_stream = Merge(streams, ('english', 'french'))
