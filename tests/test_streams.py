@@ -35,18 +35,18 @@ class TestDataStream(object):
         self.dataset = IterableDataset(numpy.eye(2))
 
     def test_sources_setter(self):
-        stream = self.dataset.get_example_stream()
+        stream = DataStream(self.dataset)
         stream.sources = ('features',)
         assert_equal(stream.sources, ('features',))
 
     def test_no_axis_labels(self):
-        stream = self.dataset.get_example_stream()
+        stream = DataStream(self.dataset)
         assert stream.axis_labels is None
 
     def test_axis_labels_on_produces_examples(self):
         axis_labels = {'data': ('batch', 'features')}
         self.dataset.axis_labels = axis_labels
-        stream = self.dataset.get_example_stream()
+        stream = DataStream(self.dataset)
         assert_equal(stream.axis_labels, {'data': ('features',)})
 
     def test_axis_labels_on_produces_batches(self):

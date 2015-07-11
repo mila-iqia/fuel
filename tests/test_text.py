@@ -29,7 +29,7 @@ def test_text():
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, bos_token=None,
                          preprocess=lower)
-    stream = text_data.get_example_stream()
+    stream = DataStream(text_data)
     epoch = stream.get_epoch_iterator()
     assert len(list(epoch)) == 4
     epoch = stream.get_epoch_iterator()
@@ -50,7 +50,7 @@ def test_text():
     text_data = TextFile(files=[sentences1, sentences2],
                          dictionary=dictionary, preprocess=lower,
                          level="character")
-    sentence = next(text_data.get_example_stream().get_epoch_iterator())[0]
+    sentence = next(DataSteam(text_data).get_epoch_iterator())[0]
     assert sentence[:3] == [27, 19, 7]
     assert sentence[-3:] == [2, 4, 28]
 
@@ -58,7 +58,7 @@ def test_text():
 def test_ngram_stream():
     sentences = [list(numpy.random.randint(10, size=sentence_length))
                  for sentence_length in [3, 5, 7]]
-    stream = IterableDataset(sentences).get_example_stream()
+    stream = DataStream(IterableDataset(sentences)))
     ngrams = NGrams(4, stream)
     assert len(list(ngrams.get_epoch_iterator())) == 4
 
@@ -67,7 +67,7 @@ def test_ngram_stream_error_on_multiple_sources():
     # Check that NGram accepts only data streams with one source
     sentences = [list(numpy.random.randint(10, size=sentence_length))
                  for sentence_length in [3, 5, 7]]
-    stream = IterableDataset(sentences).get_example_stream()
+    stream = DataStream(IterableDataset(sentences))
     stream.sources = ('1', '2')
     assert_raises(ValueError, NGrams, 4, stream)
 
@@ -83,6 +83,6 @@ def test_ngram_stream_raises_error_on_batch_stream():
 def test_ngram_stream_raises_error_on_request():
     sentences = [list(numpy.random.randint(10, size=sentence_length))
                  for sentence_length in [3, 5, 7]]
-    stream = IterableDataset(sentences).get_example_stream()
+    stream = DataStream(IterableDataset(sentences))
     ngrams = NGrams(4, stream)
     assert_raises(ValueError, ngrams.get_data, [0, 1])

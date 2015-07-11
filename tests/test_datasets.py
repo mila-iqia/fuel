@@ -14,7 +14,7 @@ from fuel.transformers import Mapping
 class TestDataset(object):
     def setUp(self):
         self.data = [1, 2, 3]
-        self.stream = IterableDataset(self.data).get_example_stream()
+        self.stream = DataStream(IterableDataset(self.data))
 
     def test_one_example_at_a_time(self):
         assert_equal(
@@ -45,8 +45,7 @@ class TestDataset(object):
                 return Mapping(
                     stream, lambda sources: tuple(2 * s for s in sources))
         dataset = DoublingDataset(self.data)
-        stream = dataset.apply_default_transformer(
-            dataset.get_example_stream())
+        stream = dataset.apply_default_transformer(DataStream(dataset))
         assert_equal(list(stream.get_epoch_iterator()), [(2,), (4,), (6,)])
 
     def test_no_axis_labels(self):
@@ -137,13 +136,13 @@ class TestIndexableDataset(object):
 def test_sources_selection():
     features = [5, 6, 7, 1]
     targets = [1, 0, 1, 1]
-    stream = IterableDataset(OrderedDict(
-        [('features', features), ('targets', targets)])).get_example_stream()
+    stream = DataStream(IterableDataset(OrderedDict(
+        [('features', features), ('targets', targets)])))
     assert list(stream.get_epoch_iterator()) == list(zip(features, targets))
 
-    stream = IterableDataset(
+    stream = DataStream(IterableDataset(
         {'features': features, 'targets': targets},
-        sources=('targets',)).get_example_stream()
+        sources=('targets',))
     assert list(stream.get_epoch_iterator()) == list(zip(targets))
 
 
