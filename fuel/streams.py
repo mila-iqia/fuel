@@ -67,6 +67,7 @@ class AbstractDataStream(object):
                                  self.iteration_scheme))
         self._produces_examples = value
 
+    @abstractmethod
     def get_data(self, request=None):
         """Request data from the dataset or the wrapped stream.
 

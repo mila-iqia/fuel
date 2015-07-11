@@ -710,16 +710,14 @@ class Merge(AbstractDataStream):
             data_stream.next_epoch()
 
     def get_epoch_iterator(self, **kwargs):
-        batches = chain.from_iterable(
-            izip(*[data_stream.get_epoch_iterator()
-                   for data_stream in self.data_streams]))
+        return super(Merge, self).get_epoch_iterator(**kwargs)
 
-        part = partition(len(self.sources), chain.from_iterable(batches))
-        as_dict = kwargs.get('as_dict', False)
-        if as_dict:
-            return imap(dict, starmap(zip, izip(repeat(self.sources), part)))
-        else:
-            return part
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        return sum(
+            (data_stream.get_data() for data_stream in self.data_streams),
+            tuple())
 
 
 class BackgroundProcess(object):

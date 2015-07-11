@@ -19,6 +19,9 @@ class DummyDataStream(AbstractDataStream):
     def get_epoch_iterator(self, as_dict=False):
         pass
 
+    def get_data(self, request=None):
+        pass
+
 
 class TestAbstractDataStream(object):
     def test_raises_value_error_on_no_scheme_no_produces_examples(self):
