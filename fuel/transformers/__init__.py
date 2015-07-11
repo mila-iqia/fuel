@@ -2,8 +2,7 @@ from abc import ABCMeta, abstractmethod
 from multiprocessing import Process, Queue
 
 import numpy
-from picklable_itertools import chain, ifilter, izip, imap, repeat, starmap
-from picklable_itertools.extras import partition
+from picklable_itertools import chain, ifilter, izip
 from six import add_metaclass, iteritems
 
 from fuel import config
