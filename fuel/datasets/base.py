@@ -98,9 +98,7 @@ class Dataset(object):
         self._example_iteration_scheme = value
 
     def get_example_stream(self):
-        produces_example = None if self.example_iteration_scheme else True
-        return DataStream(self, produces_examples=produces_example,
-                          iteration_scheme=self.example_iteration_scheme)
+        return DataStream(self, iteration_scheme=self.example_iteration_scheme)
 
     def open(self):
         """Return the state if the dataset requires one.
