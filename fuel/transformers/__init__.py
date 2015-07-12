@@ -18,13 +18,12 @@ class Transformer(AbstractDataStream):
     a `transform_example` method (to act on individual examples), or
     both methods.
 
-    In all cases, the transformer is expected to have the same output
-    type (example or batch) as its input type.  If the transformer
-    subclass is going from batches to examples or vice versa, it
-    should override `get_data` instead.
-
+    Typically (using the interface mentioned above), the transformer
+    is expected to have the same output type (example or batch) as its
+    input type.  If the transformer subclass is going from batches to
+    examples or vice versa, it should override `get_data` instead.
     Overriding `get_data` is also necessary when access to `request` is
-    necessary (e.g. for the `Cache` transformer).
+    necessary (e.g. for the :class:`Cache` transformer).
 
     Attributes
     ----------
