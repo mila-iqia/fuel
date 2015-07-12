@@ -23,6 +23,9 @@ class Transformer(AbstractDataStream):
     subclass is going from batches to examples or vice versa, it
     should override `get_data` instead.
 
+    Overriding `get_data` is also necessary when access to `request` is
+    necessary (e.g. for the `Cache` transformer).
+
     Attributes
     ----------
     child_epoch_iterator : iterator type
