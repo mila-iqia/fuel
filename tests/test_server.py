@@ -19,7 +19,7 @@ class TestServer(object):
         self.server_process = Process(
             target=start_server, args=(get_stream(),))
         self.server_process.start()
-        self.stream = ServerDataStream(('f', 't'))
+        self.stream = ServerDataStream(('f', 't'), False)
 
     def tearDown(self):
         self.server_process.terminate()

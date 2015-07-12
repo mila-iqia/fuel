@@ -7,11 +7,12 @@ from six.moves import zip, cPickle
 
 from fuel import config
 from fuel.datasets import IterableDataset, IndexableDataset
-from fuel.schemes import ConstantScheme, SequentialScheme
+from fuel.schemes import (ConstantScheme, SequentialScheme,
+                          SequentialExampleScheme)
 from fuel.streams import DataStream
 from fuel.transformers import (
     Transformer, Mapping, SortMapping, ForceFloatX, Filter, Cache, Batch,
-    Padding, MultiProcessing, Unpack, Merge, SingleMapping, Flatten,
+    Padding, MultiProcessing, Unpack, Merge, SourcewiseTransformer, Flatten,
     ScaleAndShift, Cast, Rename, FilterSources)
 
 
@@ -19,6 +20,7 @@ class FlagDataStream(DataStream):
     close_called = False
     reset_called = False
     next_epoch_called = False
+    produces_examples = True
 
     def close(self):
         self.close_called = True
@@ -36,7 +38,8 @@ class FlagDataStream(DataStream):
 class TestTransformer(object):
     def setUp(self):
         self.data_stream = FlagDataStream(IterableDataset([1, 2, 3]))
-        self.transformer = Transformer(self.data_stream)
+        self.transformer = Transformer(
+            self.data_stream, produces_examples=True)
 
     def test_close(self):
         # Transformer.close should call its wrapped stream's close method
@@ -54,13 +57,21 @@ class TestTransformer(object):
         self.transformer.next_epoch()
         assert self.data_stream.next_epoch_called
 
-    def test_get_data_from_example_not_implemented(self):
-        self.transformer.batch_input = False
+    def test_value_error_on_request(self):
+        assert_raises(ValueError, self.transformer.get_data, [0, 1])
+
+    def test_batch_to_example_and_vice_versa_not_implemented(self):
+        self.transformer.produces_examples = False
+        self.transformer.get_epoch_iterator()
         assert_raises(NotImplementedError, self.transformer.get_data)
 
-    def test_get_data_from_batch_not_implemented(self):
-        self.transformer.batch_input = True
-        assert_raises(NotImplementedError, self.transformer.get_data)
+    def test_transform_example_not_implemented_by_default(self):
+        assert_raises(
+            NotImplementedError, self.transformer.transform_example, None)
+
+    def test_transform_batch_not_implemented_by_default(self):
+        assert_raises(
+            NotImplementedError, self.transformer.transform_batch, None)
 
 
 class TestMapping(object):
@@ -74,11 +85,6 @@ class TestMapping(object):
         transformer = Mapping(stream, lambda d: ([2 * i for i in d[0]],))
         assert_equal(list(transformer.get_epoch_iterator()),
                      list(zip([[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
-
-    def test_value_error_on_request(self):
-        stream = DataStream(IterableDataset(self.data))
-        transformer = Mapping(stream, lambda d: ([2 * i for i in d[0]],))
-        assert_raises(ValueError, transformer.get_data, [0, 1])
 
     def test_add_sources(self):
         stream = DataStream(IterableDataset(self.data))
@@ -130,49 +136,119 @@ class TestMapping(object):
         assert_equal(list(transformer.get_epoch_iterator()),
                      data_sorted)
 
-
-def test_single_mapping_value_error_on_request():
-    class IdentitySingleMapping(SingleMapping):
-        def mapping(self, source):
-            return source
-
-    data_stream = DataStream(IndexableDataset([0, 1, 2]))
-    transformer = IdentitySingleMapping(data_stream)
-    assert_raises(ValueError, transformer.get_data, [0, 1])
+    def test_value_error_on_request(self):
+        stream = DataStream(IterableDataset(self.data))
+        transformer = Mapping(stream, lambda d: ([2 * i for i in d[0]],))
+        assert_raises(ValueError, transformer.get_data, [0, 1])
 
 
-def test_flatten():
-    stream = DataStream(
-        IndexableDataset(
-            OrderedDict([('features', numpy.ones((4, 2, 2))),
-                         ('targets', numpy.array([0, 1, 0, 1]))])),
-        iteration_scheme=SequentialScheme(4, 2))
-    wrapper = Flatten(stream, which_sources=('features',))
-    assert_equal(
-        list(wrapper.get_epoch_iterator()),
-        [(numpy.ones((2, 4)), numpy.array([0, 1])),
-         (numpy.ones((2, 4)), numpy.array([0, 1]))])
+class TestSourcewiseTransformer(object):
+    def test_transform_source_example_not_implemented(self):
+        transformer = SourcewiseTransformer(
+            DataStream(IterableDataset([1, 2])), True)
+        assert_raises(
+            NotImplementedError, transformer.transform_source_example, None)
+
+    def test_transform_source_batch_not_implemented(self):
+        transformer = SourcewiseTransformer(
+            DataStream(IterableDataset([1, 2])), True)
+        assert_raises(
+            NotImplementedError, transformer.transform_source_batch, None)
 
 
-def test_scale_and_shift():
-    stream = DataStream(
-        IterableDataset(
-            OrderedDict([('features', [1, 2, 3]), ('targets', [0, 1, 0])])))
-    wrapper = ScaleAndShift(stream, 2, -1, which_sources=('targets',))
-    assert list(wrapper.get_epoch_iterator()) == [(1, -1), (2, 1), (3, -1)]
+class TestFlatten(object):
+    def setUp(self):
+        self.data = OrderedDict(
+            [('features', numpy.ones((4, 2, 2))),
+             ('targets', numpy.array([[0], [1], [0], [1]]))])
+
+    def test_flatten_batches(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2)),
+            which_sources=('features',))
+        assert_equal(
+            list(wrapper.get_epoch_iterator()),
+            [(numpy.ones((2, 4)), numpy.array([[0], [1]])),
+             (numpy.ones((2, 4)), numpy.array([[0], [1]]))])
+
+    def test_axis_labels_on_flatten_batches(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2),
+                       axis_labels={'features': ('batch', 'width', 'height'),
+                                    'targets': ('batch', 'index')}),
+            which_sources=('features',))
+        assert_equal(wrapper.axis_labels, {'features': ('batch', 'feature'),
+                                           'targets': ('batch', 'index')})
+
+    def test_axis_labels_on_flatten_batches_with_none(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2),
+                       axis_labels={'features': None,
+                                    'targets': ('batch', 'index')}),
+            which_sources=('features',))
+        assert_equal(wrapper.axis_labels, {'features': None,
+                                           'targets': ('batch', 'index')})
+
+    def test_flatten_examples(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialExampleScheme(4)),
+            which_sources=('features',))
+        assert_equal(
+            list(wrapper.get_epoch_iterator()),
+            [(numpy.ones(4), 0), (numpy.ones(4), 1)] * 2)
+
+    def test_axis_labels_on_flatten_examples(self):
+        wrapper = Flatten(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialExampleScheme(4),
+                       axis_labels={'features': ('batch', 'width', 'height'),
+                                    'targets': ('batch', 'index')}),
+            which_sources=('features',))
+        assert_equal(wrapper.axis_labels, {'features': ('feature',),
+                                           'targets': ('index',)})
 
 
-def test_cast():
-    stream = DataStream(
-        IterableDataset(
+class TestScaleAndShift(object):
+    def setUp(self):
+        dataset = IterableDataset(
+            OrderedDict([('features', [1, 2, 3]), ('targets', [0, 1, 0])]),
+            axis_labels={'features': ('batch'), 'targets': ('batch')})
+        self.stream = DataStream(dataset)
+        self.wrapper = ScaleAndShift(
+            self.stream, 2, -1, which_sources=('targets',))
+
+    def test_scale_and_shift(self):
+        assert_equal(list(self.wrapper.get_epoch_iterator()),
+                     [(1, -1), (2, 1), (3, -1)])
+
+    def test_axis_labels_are_passed_through(self):
+        assert_equal(self.wrapper.axis_labels, self.stream.axis_labels)
+
+
+class TestCast(object):
+    def setUp(self):
+        dataset = IterableDataset(
             OrderedDict([
                 ('features', numpy.array([1, 2, 3]).astype('float64')),
-                ('targets', [0, 1, 0])])))
-    wrapper = Cast(stream, 'float32', which_sources=('features',))
-    assert_equal(
-        list(wrapper.get_epoch_iterator()),
-        [(numpy.array(1), 0), (numpy.array(2), 1), (numpy.array(3), 0)])
-    assert all(f.dtype == 'float32' for f, t in wrapper.get_epoch_iterator())
+                ('targets', [0, 1, 0])]),
+            axis_labels={'features': ('batch'), 'targets': ('batch')})
+        self.stream = DataStream(dataset)
+        self.wrapper = Cast(
+            self.stream, 'float32', which_sources=('features',))
+
+    def test_cast(self):
+        assert_equal(
+            list(self.wrapper.get_epoch_iterator()),
+            [(numpy.array(1), 0), (numpy.array(2), 1), (numpy.array(3), 0)])
+        assert all(
+            f.dtype == 'float32' for f, t in self.wrapper.get_epoch_iterator())
+
+    def test_axis_labels_are_passed_through(self):
+        assert_equal(self.wrapper.axis_labels, self.stream.axis_labels)
 
 
 class TestForceFloatX(object):
@@ -192,29 +268,45 @@ class TestForceFloatX(object):
         assert_equal(str(data[0].dtype), config.floatX)
         assert_equal(str(data[1].dtype), 'int64')
 
-    def test_value_error_on_request(self):
-        transformer = ForceFloatX(DataStream(self.dataset))
-        assert_raises(ValueError, transformer.get_data, [0, 1])
-
-    def test_axis_labels(self):
+    def test_axis_labels_are_passed_through(self):
         axis_labels = {'x': ('batch', 'feature'), 'y': ('batch', 'index')}
         self.dataset.axis_labels = axis_labels
-        transformer = ForceFloatX(DataStream(self.dataset))
-        assert_equal(transformer.axis_labels, axis_labels)
+        stream = DataStream(self.dataset)
+        transformer = ForceFloatX(stream)
+        assert_equal(transformer.axis_labels, stream.axis_labels)
 
 
-def test_filter():
-    data = [1, 2, 3]
-    data_filtered = [1, 3]
-    stream = DataStream(IterableDataset(data))
-    wrapper = Filter(stream, lambda d: d[0] % 2 == 1)
-    assert list(wrapper.get_epoch_iterator()) == list(zip(data_filtered))
+class TestFilter(object):
+    def test_filter_examples(self):
+        data = [1, 2, 3]
+        data_filtered = [1, 3]
+        stream = DataStream(IterableDataset(data))
+        wrapper = Filter(stream, lambda d: d[0] % 2 == 1)
+        assert_equal(list(wrapper.get_epoch_iterator()),
+                     list(zip(data_filtered)))
+
+    def test_filter_batches(self):
+        data = [1, 2, 3, 4]
+        data_filtered = [([3, 4],)]
+        stream = DataStream(IndexableDataset(data),
+                            iteration_scheme=SequentialScheme(4, 2))
+        wrapper = Filter(stream, lambda d: d[0][0] % 3 == 0)
+        assert_equal(list(wrapper.get_epoch_iterator()), data_filtered)
+
+    def test_axis_labels_are_passed_through(self):
+        stream = DataStream(
+            IndexableDataset(
+                {'features': [1, 2, 3, 4]},
+                axis_labels={'features': ('batch',)}),
+            iteration_scheme=SequentialScheme(4, 2))
+        wrapper = Filter(stream, lambda d: d[0][0] % 3 == 0)
+        assert_equal(wrapper.axis_labels, stream.axis_labels)
 
 
 class TestCache(object):
     def setUp(self):
-        self.stream = Batch(
-            DataStream(IterableDataset(range(100))), ConstantScheme(11))
+        self.stream = Batch(DataStream(IterableDataset(range(100))),
+                            ConstantScheme(11))
 
     def test_cache_fills_correctly(self):
         cached_stream = Cache(self.stream, ConstantScheme(7))
@@ -238,6 +330,19 @@ class TestCache(object):
                 assert_equal(len(features), 7)
                 assert_equal(list(range(100))[i * 7:(i + 1) * 7], features)
             assert_equal(i, 2)
+
+    def test_value_error_on_non_batchsizescheme(self):
+        assert_raises(ValueError, Cache, self.stream, SequentialScheme(4, 2))
+
+    def test_value_error_on_none_request(self):
+        cached_stream = Cache(self.stream, ConstantScheme(7))
+        cached_stream.get_epoch_iterator()
+        assert_raises(ValueError, cached_stream.get_data, None)
+
+    def test_axis_labels_passed_on_by_default(self):
+        self.stream.axis_labels = {'features': ('batch', 'index')}
+        cached_stream = Cache(self.stream, ConstantScheme(7))
+        assert_equal(cached_stream.axis_labels, self.stream.axis_labels)
 
 
 class TestBatch(object):
@@ -271,6 +376,23 @@ class TestBatch(object):
         transformer = Batch(stream, ConstantScheme(2))
         assert_raises(ValueError, transformer.get_data, None)
 
+    def test_adds_batch_to_axis_labels(self):
+        stream = DataStream(
+            IterableDataset(
+                {'features': [1, 2, 3, 4, 5]},
+                axis_labels={'features': ('index',)}))
+        transformer = Batch(stream, ConstantScheme(2), strictness=0)
+        assert_equal(transformer.axis_labels, {'features': ('batch', 'index')})
+
+    def test_value_error_on_batch_stream(self):
+        stream = DataStream(IndexableDataset([1, 2, 3, 4]),
+                            iteration_scheme=SequentialScheme(4, 2))
+        assert_raises(ValueError, Batch, stream, SequentialScheme(4, 2))
+
+    def test_value_error_on_example_scheme(self):
+        stream = DataStream(IterableDataset([1, 2, 3, 4]))
+        assert_raises(ValueError, Batch, stream, SequentialExampleScheme(4))
+
 
 class TestUnpack(object):
     def setUp(self):
@@ -295,12 +417,27 @@ class TestUnpack(object):
         epoch = wrapper.get_epoch_iterator()
         cPickle.dumps(epoch)
 
+    def test_value_error_on_example_stream(self):
+        stream = DataStream(
+            IterableDataset(
+                dict(features=[[1], [2, 3]],
+                     targets=[[4, 5, 6], [7]])))
+        assert_raises(ValueError, Unpack, stream)
+
+    def test_value_error_on_request(self):
+        wrapper = Unpack(self.stream)
+        assert_raises(ValueError, wrapper.get_data, [0, 1])
+
+    def test_axis_labels_default(self):
+        self.stream.axis_labels = {'features': ('batch', 'index')}
+        wrapper = Unpack(self.stream)
+        assert_equal(wrapper.axis_labels, {'features': ('index',)})
+
 
 class TestPadding(object):
     def test_1d_sequences(self):
         stream = Batch(
-            DataStream(
-                IterableDataset([[1], [2, 3], [], [4, 5, 6], [7]])),
+            DataStream(IterableDataset([[1], [2, 3], [], [4, 5, 6], [7]])),
             ConstantScheme(2))
         transformer = Padding(stream)
         assert_equal(transformer.sources, ("data", "data_mask"))
@@ -352,8 +489,9 @@ class TestPadding(object):
         transformer = Padding(Batch(
             DataStream(
                 IterableDataset(
-                    OrderedDict([('features', [[1], [2, 3]]),
-                                 ('targets', [[4, 5, 6], [7]])]))),
+                    OrderedDict([
+                        ('features', [[1], [2, 3]]),
+                        ('targets', [[4, 5, 6], [7]])]))),
             ConstantScheme(2)),
             mask_sources=('features',))
         assert_equal(len(next(transformer.get_epoch_iterator())), 3)
@@ -366,35 +504,69 @@ class TestPadding(object):
             ConstantScheme(2)))
         assert_raises(ValueError, transformer.get_data, [0, 1])
 
+    def test_value_error_on_example_stream(self):
+        stream = DataStream(
+            IterableDataset(
+                dict(features=[[1], [2, 3]], targets=[[4, 5, 6], [7]])))
+        assert_raises(ValueError, Padding, stream)
+
 
 class TestMerge(object):
     def setUp(self):
         self.streams = (
-            IterableDataset(['Hello world!']).get_example_stream(),
-            IterableDataset(['Bonjour le monde!']).get_example_stream())
+            DataStream(IterableDataset(['Hello world!'])),
+            DataStream(IterableDataset(['Bonjour le monde!'])))
+        self.transformer = Merge(self.streams, ('english', 'french'))
 
     def test_sources(self):
-        transformer = Merge(self.streams, ('english', 'french'))
-        assert_equal(transformer.sources, ('english', 'french'))
+        assert_equal(self.transformer.sources, ('english', 'french'))
 
     def test_merge(self):
-        transformer = Merge(self.streams, ('english', 'french'))
-        assert_equal(next(transformer.get_epoch_iterator()),
+        assert_equal(next(self.transformer.get_epoch_iterator()),
                      ('Hello world!', 'Bonjour le monde!'))
 
     def test_as_dict(self):
-        transformer = Merge(self.streams, ('english', 'french'))
         assert_equal(
-            next(transformer.get_epoch_iterator(as_dict=True)),
+            next(self.transformer.get_epoch_iterator(as_dict=True)),
             ({'english': 'Hello world!', 'french': 'Bonjour le monde!'}))
 
     def test_error_on_wrong_number_of_sources(self):
         assert_raises(ValueError, Merge, self.streams, ('english',))
 
+    def test_value_error_on_different_stream_output_type(self):
+        spanish_stream = DataStream(IndexableDataset(['Hola mundo!']),
+                                    iteration_scheme=SequentialScheme(2, 2))
+        assert_raises(ValueError, Merge, self.streams + (spanish_stream,),
+                      ('english', 'french', 'spanish'))
+
+    def test_close_calls_close_on_all_streams(self):
+        streams = [FlagDataStream(IterableDataset([1, 2, 3])),
+                   FlagDataStream(IterableDataset([4, 5, 6])),
+                   FlagDataStream(IterableDataset([7, 8, 9]))]
+        transformer = Merge(streams, ('1', '2', '3'))
+        transformer.close()
+        assert all(stream.close_called for stream in streams)
+
+    def test_next_epoch_calls_next_epoch_on_all_streams(self):
+        streams = [FlagDataStream(IterableDataset([1, 2, 3])),
+                   FlagDataStream(IterableDataset([4, 5, 6])),
+                   FlagDataStream(IterableDataset([7, 8, 9]))]
+        transformer = Merge(streams, ('1', '2', '3'))
+        transformer.next_epoch()
+        assert all(stream.next_epoch_called for stream in streams)
+
+    def test_reset_calls_reset_on_all_streams(self):
+        streams = [FlagDataStream(IterableDataset([1, 2, 3])),
+                   FlagDataStream(IterableDataset([4, 5, 6])),
+                   FlagDataStream(IterableDataset([7, 8, 9]))]
+        transformer = Merge(streams, ('1', '2', '3'))
+        transformer.reset()
+        assert all(stream.reset_called for stream in streams)
+
 
 class TestMultiprocessing(object):
     def setUp(self):
-        stream = IterableDataset(range(100)).get_example_stream()
+        stream = DataStream(IterableDataset(range(100)))
         self.transformer = Mapping(stream, lambda x: (x[0] + 1,))
 
     def test_multiprocessing(self):
@@ -406,44 +578,76 @@ class TestMultiprocessing(object):
         background = MultiProcessing(self.transformer)
         assert_raises(ValueError, background.get_data, [0, 1])
 
-
-def test_rename():
-    stream = DataStream(
-        IndexableDataset(
-            OrderedDict([('X', numpy.ones((4, 2, 2))),
-                         ('y', numpy.array([0, 1, 0, 1]))])),
-        iteration_scheme=SequentialScheme(4, 2))
-    transformer = Rename(stream, {'X': 'features', 'y': 'targets'})
-    assert_equal(transformer.sources, ('features', 'targets'))
-    assert_equal(
-        list(transformer.get_epoch_iterator()),
-        [(numpy.ones((2, 2, 2)), numpy.array([0, 1])),
-         (numpy.ones((2, 2, 2)), numpy.array([0, 1]))])
-    assert_raises(ValueError, transformer.get_data, [0, 1])
-    assert_raises(KeyError, Rename, stream, {'Z': 'features'})
+    def test_axis_labels_passed_on_by_default(self):
+        self.transformer.axis_labels = {'features': ('batch', 'index')}
+        background = MultiProcessing(self.transformer)
+        assert_equal(background.axis_labels, self.transformer.axis_labels)
 
 
-def test_filter_sources():
-    stream = DataStream(
-        IndexableDataset(
-            OrderedDict([('features', numpy.ones((4, 2, 2))),
-                         ('targets', numpy.array([0, 1, 0, 1]))])),
-        iteration_scheme=SequentialScheme(4, 2))
+class TestRename(object):
+    def setUp(self):
+        self.stream = DataStream(
+            IndexableDataset(
+                OrderedDict([('X', numpy.ones((4, 2, 2))),
+                             ('y', numpy.array([0, 1, 0, 1]))]),
+                axis_labels={'X': ('batch', 'width', 'height'),
+                             'y': ('batch',)}),
+            iteration_scheme=SequentialScheme(4, 2))
+        self.transformer = Rename(
+            self.stream, {'X': 'features', 'y': 'targets'})
 
-    transformer = FilterSources(stream, sources=("features",))
+    def test_renames_sources(self):
+        assert_equal(self.transformer.sources, ('features', 'targets'))
 
-    assert_equal(transformer.sources, ('features',))
-    assert len(next(transformer.get_epoch_iterator())) == 1
+    def test_leaves_data_unchanged(self):
+        assert_equal(
+            list(self.transformer.get_epoch_iterator()),
+            [(numpy.ones((2, 2, 2)), numpy.array([0, 1])),
+             (numpy.ones((2, 2, 2)), numpy.array([0, 1]))])
 
-    transformer = FilterSources(stream, sources=("features", "targets"))
+    def test_raises_error_on_nonexistent_source_name(self):
+        assert_raises(KeyError, Rename, self.stream, {'Z': 'features'})
 
-    assert_equal(transformer.sources, ('features', 'targets'))
-    assert len(next(transformer.get_epoch_iterator())) == 2
+    def test_renames_axis_labels(self):
+        assert_equal(self.transformer.axis_labels,
+                     {'features': ('batch', 'width', 'height'),
+                      'targets': ('batch',)})
 
-    transformer = FilterSources(stream, sources=("targets", "features"))
 
-    assert_equal(transformer.sources, ('features', 'targets'))
-    assert len(next(transformer.get_epoch_iterator())) == 2
+class TestFilterSources(object):
+    def setUp(self):
+        self.stream = DataStream(
+            IndexableDataset(
+                OrderedDict([('features', numpy.ones((4, 2, 2))),
+                             ('targets', numpy.array([0, 1, 0, 1]))]),
+                axis_labels={'features': ('batch', 'width', 'height'),
+                             'targets': ('batch',)}),
+            iteration_scheme=SequentialScheme(4, 2))
 
-    assert_raises(ValueError, transformer.get_data, [0, 1])
-    assert_raises(ValueError, FilterSources, stream, ['error', 'targets'])
+    def test_works_on_sourcessubset(self):
+        transformer = FilterSources(self.stream, sources=("features",))
+        assert_equal(transformer.sources, ('features',))
+        assert_equal(list(transformer.get_epoch_iterator()),
+                     [(numpy.ones((2, 2, 2)),), (numpy.ones((2, 2, 2)),)])
+
+    def test_works_on_all_sources(self):
+        transformer = FilterSources(
+            self.stream, sources=("features", "targets"))
+        assert_equal(transformer.sources, ('features', 'targets'))
+        assert_equal(list(transformer.get_epoch_iterator()),
+                     [(numpy.ones((2, 2, 2)), numpy.array([0, 1])),
+                      (numpy.ones((2, 2, 2)), numpy.array([0, 1]))])
+
+    def test_works_on_unsorted_sources(self):
+        transformer = FilterSources(
+            self.stream, sources=("targets", "features"))
+        assert_equal(transformer.sources, ('features', 'targets'))
+
+    def test_raises_value_error_on_nonexistent_sources(self):
+        assert_raises(
+            ValueError, FilterSources, self.stream, ['error', 'targets'])
+
+    def test_filters_axis_labels(self):
+        transformer = FilterSources(self.stream, sources=("features",))
+        assert_equal(transformer.axis_labels,
+                     {'features': ('batch', 'width', 'height')})

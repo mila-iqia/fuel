@@ -2,7 +2,6 @@ import numpy
 
 from numpy.testing import assert_raises, assert_equal, assert_allclose
 
-from fuel import config
 from fuel.datasets import Iris
 from tests import skip_if_not_available
 
@@ -13,7 +12,7 @@ def test_iris_all():
     dataset = Iris(('all',), load_in_memory=False)
     handle = dataset.open()
     data, labels = dataset.get_data(handle, slice(0, 10))
-    assert data.dtype == config.floatX
+    assert data.dtype == 'float32'
     assert data.shape == (10, 4)
     assert labels.shape == (10, 1)
     known = numpy.array([5.1, 3.5, 1.4, 0.2])
