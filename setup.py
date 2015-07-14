@@ -1,6 +1,8 @@
 """Installation script."""
 from os import path
 from setuptools import find_packages, setup
+from Cython.Build import cythonize
+from distutils.extension import Extension
 
 HERE = path.abspath(path.dirname(__file__))
 
@@ -29,11 +31,15 @@ setup(
     ],
     keywords='dataset data iteration pipeline processing',
     packages=find_packages(exclude=['tests']),
-    install_requires=['six', 'picklable_itertools', 'pyyaml', 'h5py',
+    install_requires=['six', 'picklable_itertools', 'pyyaml', 'h5py', 'cython',
                       'tables', 'progressbar2', 'pyzmq', 'scipy', 'pillow',
                       'requests'],
     extras_require={
         'test': ['nose', 'nose2', 'mock']
     },
-    scripts=['bin/fuel-convert', 'bin/fuel-download', 'bin/fuel-info']
+    scripts=['bin/fuel-convert', 'bin/fuel-download', 'bin/fuel-info'],
+    ext_modules=cythonize(Extension("fuel.transformers._image",
+                                    ["fuel/transformers/_image.pyx"],
+                                    extra_compile_args=[
+                                        '-Wno-unused-function']))
 )
