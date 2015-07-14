@@ -6,7 +6,7 @@ import numpy
 from six import PY3, add_metaclass
 
 from ._image import window_batch_bchw
-from . import SourcewiseTransformer
+from . import ExpectsAxisLabels, SourcewiseTransformer
 from .. import config
 
 
