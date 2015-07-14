@@ -32,8 +32,8 @@ class ImagesFromBytes(SourcewiseTransformer):
     `(channel, height, width)` layout that is pervasive in the world of
     convolutional networks.
 
-    This SourcewiseTransformer supports streams returning single examples as
-    `bytes` objects (`str` on Python 2.x) as well as streams that
+    This SourcewiseTransformer supports streams returning single examples
+    as `bytes` objects (`str` on Python 2.x) as well as streams that
     return iterables containing such objects. In the case of an
     iterable, a list of loaded images is returned.
 
