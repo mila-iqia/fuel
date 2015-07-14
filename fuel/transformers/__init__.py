@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import logging
 from multiprocessing import Process, Queue
 
 import numpy
@@ -8,6 +9,39 @@ from six import add_metaclass, iteritems
 from fuel import config
 from fuel.streams import AbstractDataStream
 from fuel.schemes import BatchSizeScheme
+from ..exceptions import AxisLabelsMismatchError
+
+log = logging.getLogger(__name__)
+
+
+class ExpectsAxisLabels(object):
+    """Mixin used to verify axis labels.
+
+    Notes
+    -----
+    Provides a method :meth:`verify_axis_labels` that should be called
+    with the expected and actual values for an axis labels tuple. If
+    `actual` is `None`, a warning is logged; if it is non-`None` and does
+    not match `expected`, a :class:`AxisLabelsMismatchError` is raised.
+
+    The check is only performed on the first call; if the call succeeds,
+    an attribute is written to skip further checks, in the interest of
+    speed.
+
+    """
+    def verify_axis_labels(self, expected, actual):
+        if not getattr(self, '_checked_axis_labels', False):
+            if actual is None:
+                log.warning("%s instance could not verify (missing) axis "
+                            "expected %s, got None",
+                            self.__class__.__name__, expected)
+            else:
+                if expected != actual:
+                    raise AxisLabelsMismatchError("{} expected axis labels "
+                                                  "{}, got {} instead".format(
+                                                      self.__class__.__name__,
+                                                      expected, actual))
+        self._checked_axis_labels = True
 
 
 @add_metaclass(ABCMeta)

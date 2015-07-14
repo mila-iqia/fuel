@@ -1,3 +1,8 @@
+class AxisLabelsMismatchError(ValueError):
+    """Raised when a pair of axis labels tuples do not match."""
+    pass
+
+
 class ConfigurationError(Exception):
     """Error raised when a configuration value is requested but not set."""
 
