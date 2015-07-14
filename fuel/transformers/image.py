@@ -106,7 +106,7 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
                                 self.data_stream.axis_labels)
         if example.ndim > 3 or example.ndim < 2:
             raise NotImplementedError
-        min_height, min_width = self.min_shape
+        min_height, min_width = self.minimum_shape
         original_height, original_width = example.shape[-2:]
         if original_height < min_height or original_width < min_width:
             dt = example.dtype
