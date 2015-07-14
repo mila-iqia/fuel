@@ -6,11 +6,7 @@ import requests
 from progressbar import (ProgressBar, Percentage, Bar, ETA, FileTransferSpeed,
                          Timer, UnknownLength)
 from six.moves import zip, urllib
-
-
-class NeedURLPrefix(Exception):
-    """Raised when a URL is not provided for a file."""
-    pass
+from ..exceptions import NeedURLPrefix
 
 
 @contextmanager

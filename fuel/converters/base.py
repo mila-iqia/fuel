@@ -7,20 +7,7 @@ import numpy
 from progressbar import (ProgressBar, Percentage, Bar, ETA)
 
 from fuel.datasets import H5PYDataset
-
-
-class MissingInputFiles(Exception):
-    """Exception raised by a converter when input files are not found.
-
-    Parameters
-    ----------
-    filenames : list
-        A list of filenames that were not found.
-
-    """
-    def __init__(self, message, filenames):
-        self.filenames = filenames
-        super(MissingInputFiles, self).__init__(message, filenames)
+from ..exceptions import MissingInputFiles
 
 
 def check_exists(required_files):
