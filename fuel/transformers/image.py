@@ -210,8 +210,11 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
             raise ValueError("uninterpretable example format; expected "
                              "ndarray with ndim = 3")
         image_height, image_width = example.shape[1:]
-        assert image_height >= windowed_height
-        assert image_width >= windowed_width
+        if image_height < windowed_height or image_width < windowed_width:
+            raise ValueError("can't obtain ({}, {}) window from image "
+                             "dimensions ({}, {})".format(
+                                 windowed_height, windowed_width,
+                                 image_height, image_width))
         if image_height - windowed_height > 0:
             off_h = self.rng.random_integers(image_height - windowed_height)
         else:
