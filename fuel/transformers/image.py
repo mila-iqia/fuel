@@ -1,16 +1,14 @@
-from abc import ABCMeta
 from io import BytesIO
 from PIL import Image
 
 import numpy
-from six import PY3, add_metaclass
+from six import PY3
 
 from ._image import window_batch_bchw
 from . import ExpectsAxisLabels, SourcewiseTransformer
 from .. import config
 
 
-@add_metaclass(ABCMeta)
 class ImagesFromBytes(SourcewiseTransformer):
     """Load from a stream of image-formatted data represented as bytes.
 
@@ -64,7 +62,6 @@ class ImagesFromBytes(SourcewiseTransformer):
         return [self.transform_source_example(im) for im in batch]
 
 
-@add_metaclass(ABCMeta)
 class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
     """Resize (lists of) images to minimum dimensions.
 
@@ -140,7 +137,6 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
         return example
 
 
-@add_metaclass(ABCMeta)
 class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
     """Randomly crop images to a fixed window size.
 
