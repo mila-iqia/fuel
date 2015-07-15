@@ -29,7 +29,7 @@ cpdef window_batch_bchw(image_dtype[:, :, :, :] batch,
         An array of offsets for the height dimension of each image.
         Assumed that batch.shape[0] <= height_offsets.shape[0].
     width_offsets : memoryview, integer, 1-dimensional
-        An array of offsets for the height dimension of each image.
+        An array of offsets for the width dimension of each image.
         Assumed that batch.shape[0] <= width_offsets.shape[0].
     out : memoryview
         The array to which to write output. It is assumed that
