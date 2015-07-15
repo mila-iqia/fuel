@@ -11,6 +11,8 @@ class MissingInputFiles(Exception):
 
     Parameters
     ----------
+    message : str
+        The error message to be associated with this exception.
     filenames : list
         A list of filenames that were not found.
 
