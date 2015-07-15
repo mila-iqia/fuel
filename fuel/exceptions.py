@@ -1,6 +1,5 @@
 class AxisLabelsMismatchError(ValueError):
     """Raised when a pair of axis labels tuples do not match."""
-    pass
 
 
 class ConfigurationError(Exception):
