@@ -38,8 +38,9 @@ class ImagesFromBytes(SourcewiseTransformer):
     iterable, a list of loaded images is returned.
 
     """
-    def __init__(self, data_stream, which_sources, color_mode='RGB'):
-        super(ImagesFromBytes, self).__init__(data_stream, which_sources)
+    def __init__(self, data_stream, which_sources, color_mode='RGB', **kwargs):
+        super(ImagesFromBytes, self).__init__(data_stream, which_sources,
+                                              **kwargs)
         self.color_mode = color_mode
 
     def transform_source_example(self, example):
