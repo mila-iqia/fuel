@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from collections import defaultdict
 import logging
 from multiprocessing import Process, Queue
 
@@ -29,8 +30,10 @@ class ExpectsAxisLabels(object):
     speed.
 
     """
-    def verify_axis_labels(self, expected, actual):
+    def verify_axis_labels(self, expected, actual, source_name):
         if not getattr(self, '_checked_axis_labels', False):
+            self._checked_axis_labels = defaultdict(bool)
+        if not self._checked_axis_labels[source_name]:
             if actual is None:
                 log.warning("%s instance could not verify (missing) axis "
                             "expected %s, got None",
@@ -41,7 +44,7 @@ class ExpectsAxisLabels(object):
                                                   "{}, got {} instead".format(
                                                       self.__class__.__name__,
                                                       expected, actual))
-        self._checked_axis_labels = True
+            self._checked_axis_labels[source_name] = True
 
 
 @add_metaclass(ABCMeta)

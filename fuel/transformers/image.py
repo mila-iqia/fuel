@@ -98,12 +98,14 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
 
     def transform_source_batch(self, batch, source_name):
         self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
-                                self.data_stream.axis_labels[source_name])
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
         return [self._example_transform(im, source_name) for im in batch]
 
     def transform_source_example(self, example, source_name):
         self.verify_axis_labels(('channel', 'height', 'width'),
-                                self.data_stream.axis_labels[source_name])
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
         return self._example_transform(example, source_name)
 
     def _example_transform(self, example, source_name):
@@ -170,9 +172,10 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
         kwargs.setdefault('axis_labels', data_stream.axis_labels)
         super(RandomFixedSizeCrop, self).__init__(data_stream, **kwargs)
 
-    def transform_source_batch(self, source, _):
+    def transform_source_batch(self, source, source_name):
         self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
-                                self.data_stream.axis_labels)
+                                self.data_stream.axis_labels,
+                                source_name)
         windowed_height, windowed_width = self.window_shape
         if isinstance(source, list):
             return [self.transform_source_example(im) for im in source]
@@ -200,7 +203,8 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
 
     def transform_source_example(self, example, source_name):
         self.verify_axis_labels(('channel', 'height', 'width'),
-                                self.data_stream.axis_labels[source_name])
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
         windowed_height, windowed_width = self.window_shape
         if not isinstance(example, numpy.ndarray) or example.ndim != 3:
             raise ValueError("uninterpretable example format; expected "
