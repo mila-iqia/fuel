@@ -1,6 +1,7 @@
 from io import BytesIO
 from PIL import Image
 
+import math
 import numpy
 from six import PY3
 
@@ -120,18 +121,9 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
                 im = example
             im = Image.fromarray(im)
             width, height = im.size
-            # Based on the current width and height, generate
-            # dimensions that respect the minimum constraints but also
-            # match the old aspect ratio.
-            aspect = float(width) / height
-            if width < min_width:
-                width = min_width
-                height = int(width / aspect)
-            # N.B.: not elif. Aspect-ratio corrected height may be less
-            # than minimum requested height.
-            if height < min_height:
-                height = min_height
-                width = int(height * aspect)
+            multiplier = max(1, min_width / width, min_height / height)
+            width = math.ceil(width * multiplier)
+            height = math.ceil(height * multiplier)
             im = numpy.array(im.resize((width, height))).astype(dt)
             # If necessary, undo the axis swap from earlier.
             if im.ndim == 3:
