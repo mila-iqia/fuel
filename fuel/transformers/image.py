@@ -88,6 +88,7 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
     def __init__(self, data_stream, minimum_shape, resample='nearest',
                  **kwargs):
         self.minimum_shape = minimum_shape
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
         try:
             self.resample = getattr(Image, resample.upper())
         except AttributeError:
