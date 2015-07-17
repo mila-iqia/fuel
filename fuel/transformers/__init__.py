@@ -235,6 +235,8 @@ class SourcewiseTransformer(Transformer):
         ----------
         source_example : :class:`numpy.ndarray`
             An example from a source.
+        source_name : str
+            The name of the source being operated upon.
 
         """
         raise NotImplementedError(
@@ -248,6 +250,8 @@ class SourcewiseTransformer(Transformer):
         ----------
         source_batch : :class:`numpy.ndarray`
             A batch of examples from a source.
+        source_name : str
+            The name of the source being operated upon.
 
         """
         raise NotImplementedError(
@@ -288,6 +292,8 @@ class AgnosticSourcewiseTransformer(AgnosticTransformer,
         ----------
         source_data : :class:`numpy.ndarray`
             Data from a source.
+        source_name : str
+            The name of the source being operated upon.
 
         """
 
