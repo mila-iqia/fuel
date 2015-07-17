@@ -38,6 +38,7 @@ class ImagesFromBytes(SourcewiseTransformer):
 
     """
     def __init__(self, data_stream, which_sources, color_mode='RGB', **kwargs):
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
         super(ImagesFromBytes, self).__init__(data_stream, which_sources,
                                               **kwargs)
         self.color_mode = color_mode
@@ -89,11 +90,12 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
     def __init__(self, data_stream, minimum_shape, resample='nearest',
                  **kwargs):
         self.minimum_shape = minimum_shape
-        kwargs.setdefault('produces_examples', data_stream.produces_examples)
         try:
             self.resample = getattr(Image, resample.upper())
         except AttributeError:
             raise ValueError("unknown resampling filter '{}'".format(resample))
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
         super(MinimumImageDimensions, self).__init__(data_stream, **kwargs)
 
     def transform_source_batch(self, batch, source_name):
@@ -169,6 +171,7 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
         self.warned_axis_labels = False
         if self.rng is None:
             self.rng = numpy.random.RandomState(config.default_seed)
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
         kwargs.setdefault('axis_labels', data_stream.axis_labels)
         super(RandomFixedSizeCrop, self).__init__(data_stream, **kwargs)
 
