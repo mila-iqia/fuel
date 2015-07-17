@@ -108,7 +108,7 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
                                 source_name)
         return self._example_transform(example, source_name)
 
-    def _example_transform(self, example, source_name):
+    def _example_transform(self, example, _):
         if example.ndim > 3 or example.ndim < 2:
             raise NotImplementedError
         min_height, min_width = self.minimum_shape
