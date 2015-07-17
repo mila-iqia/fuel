@@ -41,7 +41,7 @@ class ImagesFromBytes(SourcewiseTransformer):
                                               **kwargs)
         self.color_mode = color_mode
 
-    def transform_source_example(self, example):
+    def transform_source_example(self, example, source_name):
         if PY3:
             bytes_type = bytes
         else:
@@ -58,8 +58,8 @@ class ImagesFromBytes(SourcewiseTransformer):
         else:
             return image
 
-    def transform_source_batch(self, batch):
-        return [self.transform_source_example(im) for im in batch]
+    def transform_source_batch(self, batch, source_name):
+        return [self.transform_source_example(im, source_name) for im in batch]
 
 
 class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
@@ -94,14 +94,17 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
             raise ValueError("unknown resampling filter '{}'".format(resample))
         super(MinimumImageDimensions, self).__init__(data_stream, **kwargs)
 
-    def transform_source_batch(self, batch):
+    def transform_source_batch(self, batch, source_name):
         self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
-                                self.data_stream.axis_labels)
-        return [self.transform_source_example(im) for im in batch]
+                                self.data_stream.axis_labels[source_name])
+        return [self._example_transform(im, source_name) for im in batch]
 
-    def transform_source_example(self, example):
+    def transform_source_example(self, example, source_name):
         self.verify_axis_labels(('channel', 'height', 'width'),
-                                self.data_stream.axis_labels)
+                                self.data_stream.axis_labels[source_name])
+        return self._example_transform(example, source_name)
+
+    def _example_transform(self, example, source_name):
         if example.ndim > 3 or example.ndim < 2:
             raise NotImplementedError
         min_height, min_width = self.minimum_shape
@@ -174,7 +177,7 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
         kwargs.setdefault('axis_labels', data_stream.axis_labels)
         super(RandomFixedSizeCrop, self).__init__(data_stream, **kwargs)
 
-    def transform_source_batch(self, source):
+    def transform_source_batch(self, source, _):
         self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
                                 self.data_stream.axis_labels)
         windowed_height, windowed_width = self.window_shape
@@ -202,9 +205,9 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
                              "of arrays with ndim = 3, or an array with "
                              "ndim = 4")
 
-    def transform_source_example(self, example):
+    def transform_source_example(self, example, source_name):
         self.verify_axis_labels(('channel', 'height', 'width'),
-                                self.data_stream.axis_labels)
+                                self.data_stream.axis_labels[source_name])
         windowed_height, windowed_width = self.window_shape
         if not isinstance(example, numpy.ndarray) or example.ndim != 3:
             raise ValueError("uninterpretable example format; expected "
