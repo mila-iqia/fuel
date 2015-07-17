@@ -147,13 +147,15 @@ class TestSourcewiseTransformer(object):
         transformer = SourcewiseTransformer(
             DataStream(IterableDataset([1, 2])), True)
         assert_raises(
-            NotImplementedError, transformer.transform_source_example, None)
+            NotImplementedError, transformer.transform_source_example,
+            None, 'foo')
 
     def test_transform_source_batch_not_implemented(self):
         transformer = SourcewiseTransformer(
             DataStream(IterableDataset([1, 2])), True)
         assert_raises(
-            NotImplementedError, transformer.transform_source_batch, None)
+            NotImplementedError, transformer.transform_source_batch,
+            None, 'foo')
 
 
 class TestFlatten(object):

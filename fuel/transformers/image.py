@@ -1,3 +1,4 @@
+from __future__ import division
 from io import BytesIO
 from PIL import Image
 
@@ -126,8 +127,8 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
             im = Image.fromarray(im)
             width, height = im.size
             multiplier = max(1, min_width / width, min_height / height)
-            width = math.ceil(width * multiplier)
-            height = math.ceil(height * multiplier)
+            width = int(math.ceil(width * multiplier))
+            height = int(math.ceil(height * multiplier))
             im = numpy.array(im.resize((width, height))).astype(dt)
             # If necessary, undo the axis swap from earlier.
             if im.ndim == 3:
@@ -177,11 +178,12 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
 
     def transform_source_batch(self, source, source_name):
         self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
-                                self.data_stream.axis_labels,
+                                self.data_stream.axis_labels[source_name],
                                 source_name)
         windowed_height, windowed_width = self.window_shape
         if isinstance(source, list):
-            return [self.transform_source_example(im) for im in source]
+            return [self.transform_source_example(im, source_name)
+                    for im in source]
         elif isinstance(source, numpy.ndarray) and source.ndim == 4:
             # Hardcoded assumption of (batch, channels, height, width).
             # This is what the fast Cython code supports.
@@ -219,12 +221,12 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
                                  windowed_height, windowed_width,
                                  image_height, image_width))
         if image_height - windowed_height > 0:
-            off_h = self.rng.random_integers(image_height - windowed_height)
+            off_h = self.rng.random_integers(0, image_height - windowed_height)
         else:
             off_h = 0
         if image_width - windowed_width > 0:
-            off_w = self.rng.random_integers(image_width - windowed_width)
+            off_w = self.rng.random_integers(0, image_width - windowed_width)
         else:
             off_w = 0
-        return example[off_h:off_h + windowed_height,
+        return example[:, off_h:off_h + windowed_height,
                        off_w:off_w + windowed_width]
