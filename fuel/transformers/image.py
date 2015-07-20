@@ -157,12 +157,12 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
     This transformer expects to act on stream sources which provide one of
 
      * Single images represented as 3-dimensional ndarrays, with layout
-       `(n_channels, height, width)`.
+       `(channel, height, width)`.
      * Batches of images represented as lists of 3-dimensional ndarrays,
        possibly of different shapes (i.e. images of differing
        heights/widths).
      * Batches of images represented as 4-dimensional ndarrays, with
-       layout `(batch, n_channels, height, width)`.
+       layout `(batch, channel, height, width)`.
 
     The format of the stream will be un-altered, i.e. if lists are
     yielded by `data_stream` then lists will be yielded by this
