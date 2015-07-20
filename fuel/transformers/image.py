@@ -40,6 +40,11 @@ class ImagesFromBytes(SourcewiseTransformer):
     """
     def __init__(self, data_stream, color_mode='RGB', **kwargs):
         kwargs.setdefault('produces_examples', data_stream.produces_examples)
+        # Acrobatics currently required to correctly set axis labels.
+        which_sources = kwargs.get('which_sources', data_stream.sources)
+        axis_labels = self._make_axis_labels(data_stream, which_sources,
+                                             kwargs['produces_examples'])
+        kwargs.setdefault('axis_labels', axis_labels)
         super(ImagesFromBytes, self).__init__(data_stream, **kwargs)
         self.color_mode = color_mode
 
@@ -66,6 +71,28 @@ class ImagesFromBytes(SourcewiseTransformer):
 
     def transform_source_batch(self, batch, source_name):
         return [self.transform_source_example(im, source_name) for im in batch]
+
+    def _make_axis_labels(self, data_stream, which_sources, produces_examples):
+        # This is ugly and probably deserves a refactoring of how we handle
+        # axis labels. It would be simpler to use memoized read-only
+        # properties, but the AbstractDataStream constructor tries to set
+        # self.axis_labels currently. We can't use self.which_sources or
+        # self.produces_examples here, because this *computes* things that
+        # need to be passed into the superclass constructor, necessarily
+        # meaning that the superclass constructor hasn't been called.
+        # Cooperative inheritance is hard, etc.
+        labels = {}
+        for source in data_stream.sources:
+            if source in which_sources:
+                if produces_examples:
+                    labels[source] = ('channel', 'height', 'width')
+                else:
+                    labels[source] = ('batch', 'channel', 'height', 'width')
+            else:
+                labels[source] = (data_stream.axis_labels[source]
+                                  if source in data_stream.axis_labels
+                                  else None)
+        return labels
 
 
 class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
