@@ -1,9 +1,9 @@
 from __future__ import division
 from io import BytesIO
-from PIL import Image
-
 import math
+
 import numpy
+from PIL import Image
 from six import PY3
 
 from ._image import window_batch_bchw
