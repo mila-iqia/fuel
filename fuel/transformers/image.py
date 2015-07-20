@@ -25,10 +25,12 @@ class ImagesFromBytes(SourcewiseTransformer):
     Notes
     -----
     Images are returned as NumPy arrays converted from PIL objects.
-    If `color_mode` is RGB, then the array is transposed from the
-    `(height, width, channel)` dimension layout native to PIL to the
-    `(channel, height, width)` layout that is pervasive in the world of
-    convolutional networks.
+    If there is more than one color channel, then the array is transposed
+    from the `(height, width, channel)` dimension layout native to PIL to
+    the `(channel, height, width)` layout that is pervasive in the world
+    of convolutional networks. If there is only one color channel, as for
+    monochrome or binary images, a leading axis with length 1 is added for
+    the sake of uniformity/predictability.
 
     This SourcewiseTransformer supports streams returning single examples
     as `bytes` objects (`str` on Python 2.x) as well as streams that
@@ -52,11 +54,15 @@ class ImagesFromBytes(SourcewiseTransformer):
         if self.color_mode is not None:
             pil_image = pil_image.convert(self.color_mode)
         image = numpy.array(pil_image)
-        if self.color_mode == 'RGB':
+        if image.ndim == 3:
             # Transpose to `(channels, height, width)` layout.
             return image.transpose(2, 0, 1)
+        elif image.ndim == 2:
+            # Add a channels axis of length 1.
+            image = image[numpy.newaxis]
         else:
-            return image
+            raise ValueError('unexpected number of axes')
+        return image
 
     def transform_source_batch(self, batch, source_name):
         return [self.transform_source_example(im, source_name) for im in batch]
