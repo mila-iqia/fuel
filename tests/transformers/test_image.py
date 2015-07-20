@@ -1,13 +1,24 @@
 from collections import OrderedDict
+from io import BytesIO
 import numpy
-from six.moves import zip
+from PIL import Image
 from picklable_itertools.extras import partition_all
+from six.moves import zip
 from fuel import config
 from fuel.datasets.base import IndexableDataset
 from fuel.schemes import ShuffledScheme, SequentialExampleScheme
 from fuel.streams import DataStream
-from fuel.transformers.image import (MinimumImageDimensions,
+from fuel.transformers.image import (ImagesFromBytes,
+                                     MinimumImageDimensions,
                                      RandomFixedSizeCrop)
+
+
+def reorder_axes(shp):
+    if len(shp) == 3:
+        shp = (shp[-1],) + shp[:-1]
+    elif len(shp) == 2:
+        shp = (1,) + shp
+    return shp
 
 
 class ImageTestingMixin(object):
@@ -19,6 +30,111 @@ class ImageTestingMixin(object):
         scheme = ShuffledScheme(self.dataset.num_examples,
                                 batch_size=self.batch_size)
         self.batch_stream = DataStream(self.dataset, iteration_scheme=scheme)
+
+
+class TestImagesFromBytes(ImageTestingMixin):
+    def setUp(self):
+        rng = numpy.random.RandomState(config.default_seed)
+        self.shapes = [
+            (10, 12, 3),
+            (9, 8, 4),
+            (12, 14, 3),
+            (4, 7),
+            (9, 8, 4),
+            (7, 9, 3)
+        ]
+        pil1 = Image.fromarray(rng.random_integers(0, 255,
+                                                   size=self.shapes[0])
+                               .astype('uint8'), mode='RGB')
+        pil2 = Image.fromarray(rng.random_integers(0, 255,
+                                                   size=self.shapes[1])
+                               .astype('uint8'), mode='CMYK')
+        pil3 = Image.fromarray(rng.random_integers(0, 255,
+                                                   size=self.shapes[2])
+                               .astype('uint8'), mode='RGB')
+        pil4 = Image.fromarray(rng.random_integers(0, 255,
+                                                   size=self.shapes[3])
+                               .astype('uint8'), mode='L')
+        pil5 = Image.fromarray(rng.random_integers(0, 255,
+                                                   size=self.shapes[4])
+                               .astype('uint8'), mode='RGBA')
+        pil6 = Image.fromarray(rng.random_integers(0, 255,
+                                                   size=self.shapes[5])
+                               .astype('uint8'), mode='YCbCr')
+        source1 = [pil1, pil2, pil3]
+        source2 = [pil4, pil5, pil6]
+        bytesio1 = [BytesIO() for _ in range(3)]
+        bytesio2 = [BytesIO() for _ in range(3)]
+        formats1 = ['PNG', 'JPEG', 'BMP']
+        formats2 = ['GIF', 'PNG', 'JPEG']
+        for s, b, f in zip(source1, bytesio1, formats1):
+            s.save(b, format=f)
+        for s, b, f in zip(source2, bytesio2, formats2):
+            s.save(b, format=f)
+        self.dataset = IndexableDataset(
+            OrderedDict([('source1', [b.getvalue() for b in bytesio1]),
+                         ('source2', [b.getvalue() for b in bytesio2])]),
+            axis_labels={'source1': ('batch', 'bytes'),
+                         'source2': ('batch', 'bytes')})
+        self.common_setup()
+
+    def test_images_from_bytes_example_stream(self):
+        stream = ImagesFromBytes(self.example_stream,
+                                 which_sources=('source1', 'source2'),
+                                 color_mode=None)
+        s1, s2 = list(zip(*list(stream.get_epoch_iterator())))
+        s1_shape = set(s.shape for s in s1)
+        s2_shape = set(s.shape for s in s2)
+        actual_s1 = set(reorder_axes(s) for s in self.shapes[:3])
+        actual_s2 = set(reorder_axes(s) for s in self.shapes[3:])
+        assert actual_s1 == s1_shape
+        assert actual_s2 == s2_shape
+
+    def test_images_from_bytes_batch_stream(self):
+        stream = ImagesFromBytes(self.batch_stream,
+                                 which_sources=('source1', 'source2'),
+                                 color_mode=None)
+        s1, s2 = list(zip(*list(stream.get_epoch_iterator())))
+        s1 = sum(s1, [])
+        s2 = sum(s2, [])
+        s1_shape = set(s.shape for s in s1)
+        s2_shape = set(s.shape for s in s2)
+        actual_s1 = set(reorder_axes(s) for s in self.shapes[:3])
+        actual_s2 = set(reorder_axes(s) for s in self.shapes[3:])
+        assert actual_s1 == s1_shape
+        assert actual_s2 == s2_shape
+
+    def test_images_from_bytes_example_stream_convert_rgb(self):
+        stream = ImagesFromBytes(self.example_stream,
+                                 which_sources=('source1'),
+                                 color_mode='RGB')
+        s1, s2 = list(zip(*list(stream.get_epoch_iterator())))
+        actual_s1_gen = (reorder_axes(s) for s in self.shapes[:3])
+        actual_s1 = set((3,) + s[1:] for s in actual_s1_gen)
+        s1_shape = set(s.shape for s in s1)
+        assert actual_s1 == s1_shape
+
+    def test_images_from_bytes_example_stream_convert_l(self):
+        stream = ImagesFromBytes(self.example_stream,
+                                 which_sources=('source2'),
+                                 color_mode='L')
+        s1, s2 = list(zip(*list(stream.get_epoch_iterator())))
+        actual_s2_gen = (reorder_axes(s) for s in self.shapes[3:])
+        actual_s2 = set((1,) + s[1:] for s in actual_s2_gen)
+        s2_shape = set(s.shape for s in s2)
+        assert actual_s2 == s2_shape
+
+    def test_axis_labels(self):
+        stream = ImagesFromBytes(self.example_stream,
+                                 which_sources=('source2',))
+        assert stream.axis_labels['source1'] == ('bytes',)
+        assert stream.axis_labels['source2'] == ('channel', 'height',
+                                                 'width')
+        bstream = ImagesFromBytes(self.batch_stream,
+                                  which_sources=('source1',))
+        assert bstream.axis_labels['source1'] == ('batch', 'channel', 'height',
+                                                  'width')
+        assert bstream.axis_labels['source2'] == ('batch', 'bytes')
 
 
 class TestMinimumDimensions(ImageTestingMixin):
