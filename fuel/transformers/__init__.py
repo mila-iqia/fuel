@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 class ExpectsAxisLabels(object):
-    """Mixin used to verify axis labels.
+    """Mixin for transformers, used to verify axis labels.
 
     Notes
     -----
@@ -31,6 +31,25 @@ class ExpectsAxisLabels(object):
 
     """
     def verify_axis_labels(self, expected, actual, source_name):
+        """Verify that axis labels for a given source are as expected.
+
+        Parameters
+        ----------
+        expected : tuple
+            A tuple of strings representing the expected axis labels.
+        actual : tuple or None
+            A tuple of strings representing the actual axis labels, or
+            `None` if they could not be determined.
+        source_name : str
+            The name of the source being checked. Used for caching the
+            results of checks so that the check is only performed once.
+
+        Notes
+        -----
+        Logs a warning in case of `actual=None`, raises an error on
+        other mismatches.
+
+        """
         if not getattr(self, '_checked_axis_labels', False):
             self._checked_axis_labels = defaultdict(bool)
         if not self._checked_axis_labels[source_name]:
