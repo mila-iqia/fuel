@@ -211,7 +211,8 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
                                 self.data_stream.axis_labels[source_name],
                                 source_name)
         windowed_height, windowed_width = self.window_shape
-        if isinstance(source, list):
+        if isinstance(source, list) and all(isinstance(b, numpy.ndarray) and
+                                            b.ndim == 3 for b in source):
             return [self.transform_source_example(im, source_name)
                     for im in source]
         elif isinstance(source, numpy.ndarray) and source.ndim == 4:

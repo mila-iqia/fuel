@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from io import BytesIO
 import numpy
+from numpy.testing import assert_raises
 from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
@@ -136,6 +137,12 @@ class TestImagesFromBytes(ImageTestingMixin):
                                                   'width')
         assert bstream.axis_labels['source2'] == ('batch', 'bytes')
 
+    def test_bytes_type_exception(self):
+        stream = ImagesFromBytes(self.example_stream,
+                                 which_sources=('source2',))
+        assert_raises(TypeError, stream.transform_source_example, 54321,
+                      'source2')
+
 
 class TestMinimumDimensions(ImageTestingMixin):
     def setUp(self):
@@ -176,6 +183,19 @@ class TestMinimumDimensions(ImageTestingMixin):
             assert (example.shape[1] == shp[0] and
                     example.shape[0] == shp[1]
                     for example, shp in zip(batch[1], shapes))
+
+    def test_axes_exception(self):
+        stream = MinimumImageDimensions(self.example_stream, (4, 5),
+                                        which_sources=('source1',))
+        assert_raises(NotImplementedError,
+                      stream.transform_source_example,
+                      numpy.empty((2, 3, 4, 2)),
+                      'source1')
+
+    def test_resample_exception(self):
+        assert_raises(ValueError,
+                      MinimumImageDimensions, self.example_stream, (4, 5),
+                      resample='notarealresamplingmode')
 
 
 class TestFixedSizeRandomCrop(ImageTestingMixin):
@@ -231,3 +251,28 @@ class TestFixedSizeRandomCrop(ImageTestingMixin):
                 break
         else:
             assert False
+
+    def test_format_exceptions(self):
+        estream = RandomFixedSizeCrop(self.example_stream, (5, 4),
+                                      which_sources=('source2',))
+        bstream = RandomFixedSizeCrop(self.batch_stream, (5, 4),
+                                      which_sources=('source2',))
+        assert_raises(ValueError, estream.transform_source_example,
+                      numpy.empty((5, 6)), 'source2')
+        assert_raises(ValueError, bstream.transform_source_batch,
+                      [numpy.empty((7, 6))], 'source2')
+        assert_raises(ValueError, bstream.transform_source_batch,
+                      [numpy.empty((8, 6))], 'source2')
+
+    def test_window_too_big_exceptions(self):
+        stream = RandomFixedSizeCrop(self.example_stream, (5, 4),
+                                     which_sources=('source2',))
+
+        assert_raises(ValueError, stream.transform_source_example,
+                      numpy.empty((3, 4, 2)), 'source2')
+
+        bstream = RandomFixedSizeCrop(self.batch_stream, (5, 4),
+                                      which_sources=('source1',))
+
+        assert_raises(ValueError, bstream.transform_source_batch,
+                      numpy.empty((5, 3, 4, 2)), 'source1')
