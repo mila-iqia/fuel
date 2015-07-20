@@ -1,3 +1,4 @@
+import logging
 import operator
 from collections import OrderedDict
 
@@ -11,9 +12,9 @@ from fuel.schemes import (ConstantScheme, SequentialScheme,
                           SequentialExampleScheme)
 from fuel.streams import DataStream
 from fuel.transformers import (
-    Transformer, Mapping, SortMapping, ForceFloatX, Filter, Cache, Batch,
-    Padding, MultiProcessing, Unpack, Merge, SourcewiseTransformer, Flatten,
-    ScaleAndShift, Cast, Rename, FilterSources)
+    ExpectsAxisLabels, Transformer, Mapping, SortMapping, ForceFloatX, Filter,
+    Cache, Batch, Padding, MultiProcessing, Unpack, Merge,
+    SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename, FilterSources)
 
 
 class FlagDataStream(DataStream):
@@ -653,3 +654,34 @@ class TestFilterSources(object):
         transformer = FilterSources(self.stream, sources=("features",))
         assert_equal(transformer.axis_labels,
                      {'features': ('batch', 'width', 'height')})
+
+
+class VerifyWarningHandler(logging.Handler):
+    def __init__(self, *args, **kwargs):
+        self.records = []
+        super(VerifyWarningHandler, self).__init__(*args, **kwargs)
+
+    def handle(self, record):
+        self.records.append(record)
+
+
+class TestExpectsAxisLabels(object):
+    def setUp(self):
+        self.obj = ExpectsAxisLabels()
+        self.handler = VerifyWarningHandler()
+        logging.getLogger().addHandler(self.handler)
+
+    def tearDown(self):
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            if isinstance(handler, VerifyWarningHandler):
+                root_logger.handlers.remove(handler)
+
+    def test_warning(self):
+        self.obj.verify_axis_labels(('a', 'b', 'c'), None, 'foo')
+        assert len(self.handler.records) == 1
+        assert self.handler.records[0].levelno == logging.WARNING
+
+    def test_exception(self):
+        assert_raises(ValueError, self.obj.verify_axis_labels, ('a', 'b', 'c'),
+                      ('b', 'c', 'd'), 'foo')
