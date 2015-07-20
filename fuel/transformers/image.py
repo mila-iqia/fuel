@@ -18,8 +18,6 @@ class ImagesFromBytes(SourcewiseTransformer):
     ----------
     data_stream : instance of :class:`AbstractDataStream`
         The wrapped data stream.
-    which_sources : tuple of str
-        Which sources to apply the mapping to.
     color_mode : str, optional
         Mode to pass to PIL for color space conversion. Default is RGB.
         If `None`, no coercion is performed.
@@ -38,10 +36,9 @@ class ImagesFromBytes(SourcewiseTransformer):
     iterable, a list of loaded images is returned.
 
     """
-    def __init__(self, data_stream, which_sources, color_mode='RGB', **kwargs):
+    def __init__(self, data_stream, color_mode='RGB', **kwargs):
         kwargs.setdefault('produces_examples', data_stream.produces_examples)
-        super(ImagesFromBytes, self).__init__(data_stream, which_sources,
-                                              **kwargs)
+        super(ImagesFromBytes, self).__init__(data_stream, **kwargs)
         self.color_mode = color_mode
 
     def transform_source_example(self, example, source_name):
