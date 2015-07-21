@@ -61,14 +61,11 @@ import os
 
 import yaml
 
+from .exceptions import ConfigurationError
+
 logger = logging.getLogger(__name__)
 
 NOT_SET = object()
-
-
-class ConfigurationError(Exception):
-    """Error raised when a configuration value is requested but not set."""
-    pass
 
 
 class Configuration(object):

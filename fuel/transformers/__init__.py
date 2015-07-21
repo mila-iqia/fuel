@@ -1,4 +1,6 @@
 from abc import ABCMeta, abstractmethod
+from collections import defaultdict
+import logging
 from multiprocessing import Process, Queue
 
 import numpy
@@ -8,6 +10,60 @@ from six import add_metaclass, iteritems
 from fuel import config
 from fuel.streams import AbstractDataStream
 from fuel.schemes import BatchSizeScheme
+from ..exceptions import AxisLabelsMismatchError
+
+log = logging.getLogger(__name__)
+
+
+class ExpectsAxisLabels(object):
+    """Mixin for transformers, used to verify axis labels.
+
+    Notes
+    -----
+    Provides a method :meth:`verify_axis_labels` that should be called
+    with the expected and actual values for an axis labels tuple. If
+    `actual` is `None`, a warning is logged; if it is non-`None` and does
+    not match `expected`, a :class:`AxisLabelsMismatchError` is raised.
+
+    The check is only performed on the first call; if the call succeeds,
+    an attribute is written to skip further checks, in the interest of
+    speed.
+
+    """
+    def verify_axis_labels(self, expected, actual, source_name):
+        """Verify that axis labels for a given source are as expected.
+
+        Parameters
+        ----------
+        expected : tuple
+            A tuple of strings representing the expected axis labels.
+        actual : tuple or None
+            A tuple of strings representing the actual axis labels, or
+            `None` if they could not be determined.
+        source_name : str
+            The name of the source being checked. Used for caching the
+            results of checks so that the check is only performed once.
+
+        Notes
+        -----
+        Logs a warning in case of `actual=None`, raises an error on
+        other mismatches.
+
+        """
+        if not getattr(self, '_checked_axis_labels', False):
+            self._checked_axis_labels = defaultdict(bool)
+        if not self._checked_axis_labels[source_name]:
+            if actual is None:
+                log.warning("%s instance could not verify (missing) axis "
+                            "expected %s, got None",
+                            self.__class__.__name__, expected)
+            else:
+                if expected != actual:
+                    raise AxisLabelsMismatchError("{} expected axis labels "
+                                                  "{}, got {} instead".format(
+                                                      self.__class__.__name__,
+                                                      expected, actual))
+            self._checked_axis_labels[source_name] = True
 
 
 @add_metaclass(ABCMeta)
@@ -191,29 +247,33 @@ class SourcewiseTransformer(Transformer):
         data = list(data)
         for i, source_name in enumerate(self.data_stream.sources):
             if source_name in self.which_sources:
-                data[i] = method(data[i])
+                data[i] = method(data[i], source_name)
         return tuple(data)
 
-    def transform_source_example(self, source_example):
+    def transform_source_example(self, source_example, source_name):
         """Applies a transformation to an example from a source.
 
         Parameters
         ----------
         source_example : :class:`numpy.ndarray`
             An example from a source.
+        source_name : str
+            The name of the source being operated upon.
 
         """
         raise NotImplementedError(
             "`{}` does not support examples as input, but the wrapped data "
             "stream produces examples.".format(self.__class__.__name__))
 
-    def transform_source_batch(self, source_batch):
+    def transform_source_batch(self, source_batch, source_name):
         """Applies a transformation to a batch from a source.
 
         Parameters
         ----------
         source_batch : :class:`numpy.ndarray`
             A batch of examples from a source.
+        source_name : str
+            The name of the source being operated upon.
 
         """
         raise NotImplementedError(
@@ -245,7 +305,7 @@ class AgnosticSourcewiseTransformer(AgnosticTransformer,
             data=data, method=self.transform_any_source)
 
     @abstractmethod
-    def transform_any_source(self, source_data):
+    def transform_any_source(self, source_data, source_name):
         """Applies a transformation to a source.
 
         The data can either be an example or a batch of examples.
@@ -254,6 +314,8 @@ class AgnosticSourcewiseTransformer(AgnosticTransformer,
         ----------
         source_data : :class:`numpy.ndarray`
             Data from a source.
+        source_name : str
+            The name of the source being operated upon.
 
         """
 
@@ -293,10 +355,10 @@ class Flatten(SourcewiseTransformer):
                 axis_labels[source] = labels
         return axis_labels
 
-    def transform_source_example(self, source_example):
+    def transform_source_example(self, source_example, _):
         return numpy.asarray(source_example).flatten()
 
-    def transform_source_batch(self, source_batch):
+    def transform_source_batch(self, source_batch, _):
         return numpy.asarray(source_batch).reshape((source_batch.shape[0], -1))
 
 
@@ -322,7 +384,7 @@ class ScaleAndShift(AgnosticSourcewiseTransformer):
         super(ScaleAndShift, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
-    def transform_any_source(self, source_data):
+    def transform_any_source(self, source_data, _):
         return numpy.asarray(source_data) * self.scale + self.shift
 
 
@@ -348,7 +410,7 @@ class Cast(AgnosticSourcewiseTransformer):
         super(Cast, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
-    def transform_any_source(self, source_data):
+    def transform_any_source(self, source_data, _):
         return numpy.asarray(source_data, dtype=self.dtype)
 
 
@@ -360,7 +422,7 @@ class ForceFloatX(AgnosticSourcewiseTransformer):
         super(ForceFloatX, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
 
-    def transform_any_source(self, source_data):
+    def transform_any_source(self, source_data, _):
         source_needs_casting = (isinstance(source_data, numpy.ndarray) and
                                 source_data.dtype.kind == "f" and
                                 source_data.dtype != config.floatX)
