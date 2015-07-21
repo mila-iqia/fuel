@@ -12,12 +12,15 @@ from .. import config
 
 
 class ImagesFromBytes(SourcewiseTransformer):
-    """Load from a stream of image-formatted data represented as bytes.
+    """Load from a stream of bytes objects representing encoded images.
 
     Parameters
     ----------
     data_stream : instance of :class:`AbstractDataStream`
-        The wrapped data stream.
+        The wrapped data stream. The individual examples returned by
+        this should be the bytes (in a `bytes` container on Python 3
+        or a `str` on Python 2) comprising an image in a format readable
+        by PIL, such as PNG, JPEG, etc.
     color_mode : str, optional
         Mode to pass to PIL for color space conversion. Default is RGB.
         If `None`, no coercion is performed.
