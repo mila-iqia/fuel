@@ -111,7 +111,7 @@ argument:
 
     $ fuel-info mnist.hdf5
 
-.. code-block:: plain
+.. code-block:: text
 
     Metadata for mnist.hdf5
     =======================
