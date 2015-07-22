@@ -4,6 +4,7 @@ Welcome to Fuel's documentation!
 .. toctree::
    :hidden:
 
+   setup
    overview
    built_in_datasets
    h5py_dataset
@@ -43,7 +44,7 @@ Pylearn2_ neural network libraries.
 .. _mailing list: https://groups.google.com/d/forum/fuel-users
 .. _making a GitHub issue: https://github.com/mila-udem/fuel/issues/new
 .. _Blocks: https://github.com/mila-udem/blocks
-.. _Pylearn2: https://github.com/lisa-lab/pylearb2
+.. _Pylearn2: https://github.com/lisa-lab/pylearn2
 
 Motivation
 ----------
@@ -58,7 +59,8 @@ processing.
 Quickstart
 ----------
 
-Begin by telling Fuel where to find the data it needs. You can do this by
+Once you have :doc:`installed <setup>` Fuel, you can
+begin by telling Fuel where to find the data it needs. You can do this by
 creating a ``.fuelrc`` file:
 
 .. code-block:: bash
