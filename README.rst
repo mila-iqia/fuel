@@ -26,6 +26,8 @@ Fuel provides your machine learning models with the data they need to learn.
 * A pipeline of preprocessors that allow you to edit your data on-the-fly, for example by adding noise, extracting n-grams from sentences, extracting patches from images, etc.
 * Ensure that the entire pipeline is serializable with pickle; this is a requirement for being able to checkpoint and resume long-running experiments. For this, we rely heavily on the picklable_itertools_ library.
 
+See the `online documentation`_.
+
 Fuel is developed primarily for use by Blocks_, a Theano toolkit that helps you train neural networks.
 
 If you have questions, don't hesitate to write to the `mailing list`_.
@@ -33,3 +35,4 @@ If you have questions, don't hesitate to write to the `mailing list`_.
 .. _picklable_itertools: http://github.com/dwf/picklable_itertools
 .. _Blocks: http://github.com/mila-udem/blocks
 .. _mailing list: https://groups.google.com/d/forum/fuel-users
+.. _online documentation: http://fuel.readthedocs.org/en/latest/
