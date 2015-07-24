@@ -1,9 +1,9 @@
 Installation
 ============
 
-The easiest way to install Fuel is using the Python package manager pip. Fuel
-isn't listed yet on the Python Package Index (PyPI), so you will have to grab it
-directly from GitHub.
+The easiest way to install Fuel is using the Python package manager ``pip``.
+Fuel isn't listed yet on the Python Package Index (PyPI), so you will
+have to grab it directly from GitHub.
 
 .. code-block:: bash
 
@@ -44,10 +44,12 @@ Fuel's requirements are
 * h5py_ and PyTables_ for the HDF5 storage back-end
 * pillow_, providing PIL for image preprocessing
 * Cython_, for fast extensions
-* pyzmq_, to send data across processes
-* picklable_itertools_, for picklable iterators
-* SciPy_, to read from MatLab's .mat format
+* pyzmq_, to efficiently send data across processes
+* picklable_itertools_, for supporting iterator serialization
+* SciPy_, to read from MATLAB's .mat format
 * requests_, to download canonical datasets
+
+nose2_ is an optional requirement, used to run the tests.
 
 .. _Anaconda: https://store.continuum.io/cshop/anaconda/
 .. _nose2: https://nose2.readthedocs.org/
@@ -99,8 +101,7 @@ Documentation
 ~~~~~~~~~~~~~
 
 If you want to build a local copy of the documentation, you can follow
-the instructions at `Blocks' documentation development guidelines`_,
-replacing "Blocks" by "Fuel".
+the instructions in the `documentation development guidelines`_.
 
-.. _Blocks' documentation development guidelines:
+.. _documentation development guidelines:
    http://blocks.readthedocs.org/en/latest/development/docs.html
