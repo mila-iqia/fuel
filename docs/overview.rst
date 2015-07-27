@@ -16,7 +16,7 @@ sight, but can be very powerful.
    RequestIterator -> DataIterator [style=dashed, label=" Argument to"];
    DataIterator -> DataStream [label=" Gets data from"];
    DataStream -> DataStream [style=dashed, label=" Gets data from (wrapper)"];
-   { rank=same; RequestIterator, DataIterator }
+   { rank=same; RequestIterator DataIterator }
 
 Datasets
   Datasets provide an interface to the data we are trying to access. This data
