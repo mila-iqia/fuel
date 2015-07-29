@@ -24,7 +24,7 @@ def fill_subparser(subparser):
     """
     urls = [
         ('http://www.image-net.org/challenges/LSVRC/2010/'
-         'ILSVRC2010_test_ground_truth.txt')
+         'ILSVRC2010_test_ground_truth.txt'),
         ('http://www.image-net.org/challenges/LSVRC/2010/',
          'download/ILSVRC2010_devkit-1.0.tar.gz'),
     ] + ([None] * len(IMAGE_TARS))
