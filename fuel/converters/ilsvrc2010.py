@@ -233,7 +233,6 @@ def train_set_producer(socket, train_archive, patch_archive, wnid_map):
         Used to decode the filenames of the inner TAR files.
 
     """
-
     patch_images = extract_patch_images(patch_archive, 'train')
     num_patched = 0
     with tar_open(train_archive) as tar:
