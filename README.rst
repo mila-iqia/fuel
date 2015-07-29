@@ -30,6 +30,17 @@ Fuel is developed primarily for use by Blocks_, a Theano toolkit that helps you 
 
 If you have questions, don't hesitate to write to the `mailing list`_.
 
+Citing Fuel
+   If you use Blocks or Fuel in your work, we'd really appreciate it if you could cite the following paper:
+   
+   Bart van Merriënboer, Dzmitry Bahdanau, Vincent Dumoulin, Dmitriy Serdyuk, David Warde-Farley, Jan Chorowski, and Yoshua Bengio, "`Blocks and Fuel: Frameworks for deep learning`_," *arXiv preprint arXiv:1506.00619 [cs.LG]*, 2015.
+    
+Documentation
+   Please see the documentation_ for more information.
+
+
 .. _picklable_itertools: http://github.com/dwf/picklable_itertools
 .. _Blocks: http://github.com/mila-udem/blocks
 .. _mailing list: https://groups.google.com/d/forum/fuel-users
+.. _documentation: http://fuel.readthedocs.org/en/latest/
+.. _Blocks and Fuel\: Frameworks for deep learning: http://arxiv.org/abs/1506.00619
