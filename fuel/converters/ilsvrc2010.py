@@ -198,10 +198,6 @@ def process_train_set(hdf5_file, train_archive, patch_archive, n_train,
         Seed for a NumPy random number generator that permutes the
         training set on disk.
 
-    Notes
-    -----
-    Because the images are stored as HDF5 variable-length arrays,
-
     """
     producer = partial(train_set_producer, train_archive=train_archive,
                        patch_archive=patch_archive, wnid_map=wnid_map)
