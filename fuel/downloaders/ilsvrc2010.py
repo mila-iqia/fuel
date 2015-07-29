@@ -19,7 +19,7 @@ def fill_subparser(subparser):
     Parameters
     ----------
     subparser : :class:`argparse.ArgumentParser`
-        Subparser handling the `mnist` command.
+        Subparser handling the `ilsvrc2010` command.
 
     """
     urls = [
