@@ -339,6 +339,8 @@ def other_set_producer(socket, which_set, image_archive, patch_archive,
     patch_archive : str or file-like object
         Filename or file handle for the TAR archive of patch images.
     groundtruth : iterable
+        Iterable container containing scalar 0-based class index for each
+        image, sorted by filename.
 
     """
     patch_images = extract_patch_images(patch_archive, which_set)
