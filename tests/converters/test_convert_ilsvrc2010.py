@@ -260,6 +260,14 @@ def push_pull_socket_pair(context):
     return push, pull
 
 
+def test_prepare_metadata():
+    raise unittest.SkipTest("TODO")
+
+
+def test_prepare_hdf5_file():
+    raise unittest.SkipTest("TODO")
+
+
 def test_process_train_set():
     raise unittest.SkipTest("TODO")
 
@@ -268,7 +276,19 @@ def test_process_other_set():
     raise unittest.SkipTest("TODO")
 
 
-def test_load_image_from_tar_or_patch():
+def test_train_set_producer():
+    raise unittest.SkipTest("TODO")
+
+
+def test_train_image_consumer():
+    raise unittest.SkipTest("TODO")
+
+
+def test_other_set_producer():
+    raise unittest.SkipTest("TODO")
+
+
+def test_load_from_tar_or_patch():
     images, all_filenames = create_fake_jpeg_tar(3, min_num_images=200,
                                                  max_num_images=200,
                                                  gzip_probability=0.0)
@@ -301,6 +321,10 @@ def test_read_devkit():
     assert cost_mat.shape == (1000, 1000)
     assert cost_mat.dtype == 'uint8'
     assert (cost_mat.flat[::1001] == 0).all()
+
+
+def test_read_metadata_mat_file():
+    raise unittest.SkipTest("TODO")
 
 
 def test_extract_patch_images():
