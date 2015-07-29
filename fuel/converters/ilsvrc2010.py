@@ -9,6 +9,7 @@ import os.path
 import h5py
 import numpy
 from picklable_itertools.extras import equizip
+from progressbar import ProgressBar
 from PIL import Image
 from scipy.io.matlab import loadmat
 from six.moves import zip, xrange
@@ -16,8 +17,8 @@ import zmq
 
 from fuel.datasets import H5PYDataset
 from fuel.utils.formats import tar_open
+from fuel.utils.parallel import producer_consumer
 from fuel import config
-from producer_consumer import producer_consumer
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ PUBLIC_FILES = TEST_GROUNDTRUTH, DEVKIT_ARCHIVE
 ALL_FILES = PUBLIC_FILES + IMAGE_TARS
 
 
-def ilsvrc2010(input_directory, save_path,
+def ilsvrc2010(directory, output_directory,
                output_filename='ilsvrc2010.hdf5',
                shuffle_seed=config.default_seed):
     """Converter for data from the ILSVRC 2010 competition.
@@ -48,34 +49,68 @@ def ilsvrc2010(input_directory, save_path,
     ----------
     input_directory : str
         Path from which to read raw data files.
-    save_path : str
+    output_directory : str
         Path to which to save the HDF5 file.
     output_filename : str, optional
         The output filename for the HDF5 file. Default: 'ilsvrc2010.hdf5'.
+    shuffle_seed : int or sequence, optional
+        Seed for a random number generator used to shuffle the order
+        of the training set on disk, so that sequential reads will not
+        be ordered by class.
 
     .. [ILSVRC2010WEB] http://image-net.org/challenges/LSVRC/2010/index
 
     """
-    devkit_path = os.path.join(input_directory, DEVKIT_ARCHIVE)
-    test_groundtruth_path = os.path.join(input_directory, TEST_GROUNDTRUTH)
-    train, valid, test, patch = [os.path.join(input_directory, fn)
+    devkit_path = os.path.join(directory, DEVKIT_ARCHIVE)
+    test_groundtruth_path = os.path.join(directory, TEST_GROUNDTRUTH)
+    train, valid, test, patch = [os.path.join(directory, fn)
                                  for fn in IMAGE_TARS]
-    # TODO: check for files.
     n_train, valid_groundtruth, test_groundtruth, wnid_map = \
         prepare_metadata(devkit_path, test_groundtruth_path)
     n_valid, n_test = len(valid_groundtruth), len(test_groundtruth)
-    with h5py.File(os.path.join(save_path, output_filename), 'w-') as f:
+    output_path = os.path.join(output_directory, output_filename)
+
+    with h5py.File(output_path, 'w') as f:
         log.info('Creating HDF5 datasets...')
         prepare_hdf5_file(f, n_train, n_valid, n_test)
-        process_train_set(f, train, patch, 50,  # n_train,
-                          wnid_map, shuffle_seed)
-        process_other_set(f, 'valid', valid, patch, valid_groundtruth[:50],
-                          n_train)
-        process_other_set(f, 'test', test, patch, test_groundtruth[:50],
+        log.info('Processing training set...')
+        process_train_set(f, train, patch, n_train, wnid_map, shuffle_seed)
+        log.info('Processing validation set...')
+        process_other_set(f, 'valid', valid, patch, valid_groundtruth, n_train)
+        log.info('Processing test set...')
+        process_other_set(f, 'test', test, patch, test_groundtruth,
                           n_train + n_valid)
+        log.info('Done.')
+
+    return (output_path,)
 
 
 def prepare_metadata(devkit_archive, test_groundtruth_path):
+    """Extract dataset metadata required for HDF5 file setup.
+
+    Parameters
+    ----------
+    devkit_archive : str or file-like object
+        The filename or file-handle for the gzipped TAR archive
+        containing the ILSVRC2010 development kit.
+    test_groundtruth_path : str or file-like object
+        The filename or file-handle for the text file containing
+        the ILSVRC2010 test set ground truth.
+
+    Returns
+    -------
+    n_train : int
+        The number of examples in the training set.
+    valid_groundtruth : ndarray, 1-dimensional
+        An ndarray containing the validation set groundtruth in terms of
+        0-based class indices.
+    test_groundtruth : ndarray, 1-dimensional
+        An ndarray containing the test groundtruth in terms of 0-based
+        class indices.
+    wnid_map : dict
+        A dictionary that maps WordNet IDs to 0-based class indices.
+
+    """
     # Read what's necessary from the development kit.
     synsets, cost_matrix, raw_valid_groundtruth = read_devkit(devkit_archive)
 
@@ -110,23 +145,35 @@ def prepare_metadata(devkit_archive, test_groundtruth_path):
     return n_train, valid_groundtruth, test_groundtruth, wnid_map
 
 
-def prepare_hdf5_file(f, n_train, n_valid, n_test):
+def prepare_hdf5_file(hdf5_file, n_train, n_valid, n_test):
+    """Create datasets within a given HDF5 file.
+
+    Parameters
+    ----------
+    hdf5_file : :class:`h5py.File` instance
+        HDF5 file handle to which to write.
+    n_train : int
+        The number of training set examples.
+    n_valid : int
+        The number of validation set examples.
+    n_test : int
+        The number of test set examples.
+
+    """
     n_total = n_train + n_valid + n_test
     splits = {'train': (0, n_train),
               'valid': (n_train, n_train + n_valid),
               'test': (n_train + n_valid, n_total)}
-    f.attrs['splits'] = H5PYDataset.create_split_array({
+    hdf5_file.attrs['splits'] = H5PYDataset.create_split_array({
         'encoded_images': splits,
         'targets': splits,
         'filenames': splits
     })
     vlen_dtype = h5py.special_dtype(vlen=numpy.dtype('uint8'))
-    f.create_dataset('encoded_images', shape=(n_total,),
-                     dtype=vlen_dtype)
-    f.create_dataset('targets', shape=(n_total, 1),
-                     dtype=numpy.int16)
-    f.create_dataset('filenames', shape=(n_total, 1),
-                     dtype='S32')
+    hdf5_file.create_dataset('encoded_images', shape=(n_total,),
+                             dtype=vlen_dtype)
+    hdf5_file.create_dataset('targets', shape=(n_total, 1), dtype=numpy.int16)
+    hdf5_file.create_dataset('filenames', shape=(n_total, 1), dtype='S32')
 
 
 def process_train_set(hdf5_file, train_archive, patch_archive, n_train,
@@ -171,6 +218,22 @@ def _write_to_hdf5(hdf5_file, index, image_filename, image_data,
 
 
 def train_set_producer(socket, train_archive, patch_archive, wnid_map):
+    """Load/send images from the training set TAR file or patch images.
+
+    Parameters
+    ----------
+    socket : :class:`zmq.Socket`
+        PUSH socket on which to send loaded images.
+    train_archive :  str or file-like object
+        Filename or file handle for the TAR archive of training images.
+    patch_archive :  str or file-like object
+        Filename or file handle for the TAR archive of patch images.
+    wnid_map : dict
+        A dictionary that maps WordNet IDs to 0-based class indices.
+        Used to decode the filenames of the inner TAR files.
+
+    """
+
     patch_images = extract_patch_images(patch_archive, 'train')
     num_patched = 0
     with tar_open(train_archive) as tar:
@@ -192,26 +255,70 @@ def train_set_producer(socket, train_archive, patch_archive, wnid_map):
                     socket.send_pyobj((image_fn, class_index), zmq.SNDMORE)
                     socket.send(image_data)
     if num_patched != len(patch_images):
-        raise Exception
+        raise ValueError('not all patch images were used')
 
 
 def image_consumer(socket, hdf5_file, num_expected, shuffle_seed=None,
                    offset=0):
-    if shuffle_seed is None:
-        index_gen = iter(xrange(num_expected))
-    else:
-        rng = numpy.random.RandomState(shuffle_seed)
-        index_gen = iter(rng.permutation(num_expected))
-    for num in index_gen:
-        image_filename, class_index = socket.recv_pyobj()
-        image_data = numpy.fromstring(socket.recv(), dtype='uint8')
-        _write_to_hdf5(hdf5_file, num + offset, image_filename,
-                       image_data, class_index)
-        print(image_filename, offset + num)
+    """Fill an HDF5 file with incoming images from a socket.
+
+    Parameters
+    ----------
+    socket : :class:`zmq.Socket`
+        PULL socket on which to receive images.
+    hdf5_file : :class:`h5py.File` instance
+        HDF5 file handle to which to write. Assumes `features`, `targets`
+        and `filenames` already exist and have first dimension larger than
+        `sum(images_per_class)`.
+    num_expected : int
+        The number of items we expect to be sent over the socket.
+    shuffle_seed : int or sequence, optional
+        Seed for a NumPy random number generator that permutes the
+        images on disk.
+    offset : int, optional
+        The offset in the HDF5 datasets at which to start writing
+        received examples. Defaults to 0.
+
+    """
+    with ProgressBar(maxval=num_expected) as pb:
+        if shuffle_seed is None:
+            index_gen = iter(xrange(num_expected))
+        else:
+            rng = numpy.random.RandomState(shuffle_seed)
+            index_gen = iter(rng.permutation(num_expected))
+        for i, num in enumerate(index_gen):
+            image_filename, class_index = socket.recv_pyobj()
+            image_data = numpy.fromstring(socket.recv(), dtype='uint8')
+            _write_to_hdf5(hdf5_file, num + offset, image_filename,
+                           image_data, class_index)
+            pb.update(i + 1)
 
 
 def process_other_set(hdf5_file, which_set, image_archive, patch_archive,
                       groundtruth, offset):
+    """Process the validation or test set.
+
+    Parameters
+    ----------
+    hdf5_file : :class:`h5py.File` instance
+        HDF5 file handle to which to write. Assumes `features`, `targets`
+        and `filenames` already exist and have first dimension larger than
+        `sum(images_per_class)`.
+    which_set : str
+        Which set of images is being processed. One of 'train', 'valid',
+        'test'.  Used for extracting the appropriate images from the patch
+        archive.
+    image_archive : str or file-like object
+        The filename or file-handle for the TAR archive containing images.
+    patch_archive : str or file-like object
+        Filename or file handle for the TAR archive of patch images.
+    groundtruth : iterable
+        Iterable container containing scalar 0-based class index for each
+        image, sorted by filename.
+    offset : int
+        The offset in the HDF5 datasets at which to start writing.
+
+    """
     producer = partial(other_set_producer, image_archive=image_archive,
                        patch_archive=patch_archive,
                        groundtruth=groundtruth, which_set=which_set)
@@ -226,10 +333,16 @@ def other_set_producer(socket, which_set, image_archive, patch_archive,
 
     Parameters
     ----------
-    socket : zmq.Socket
+    socket : :class:`zmq.Socket`
+        PUSH socket on which to send images.
     which_set : str
+        Which set of images is being processed. One of 'train', 'valid',
+        'test'.  Used for extracting the appropriate images from the patch
+        archive.
     image_archive : str or file-like object
+        The filename or file-handle for the TAR archive containing images.
     patch_archive : str or file-like object
+        Filename or file handle for the TAR archive of patch images.
     groundtruth : iterable
 
     """
