@@ -18,6 +18,16 @@ class ToBytes(SourcewiseTransformer):
     ragged array.
 
     """
+    def __init__(self, stream, **kwargs):
+        kwargs.setdefault('produces_examples', stream.produces_examples)
+        axis_labels = stream.axis_labels
+        for source in kwargs.get('which_sources', stream.sources):
+            axis_labels[source] = (('batch', 'bytes')
+                                   if 'batch' in axis_labels.get(source, ())
+                                   else ('bytes',))
+        kwargs.setdefault('axis_labels', axis_labels)
+        super(ToBytes, self).__init__(stream, **kwargs)
+
     def transform_source_example(self, example, _):
         return example.tostring()
 
@@ -26,5 +36,5 @@ class ToBytes(SourcewiseTransformer):
 
 
 def rgb_images_from_encoded_bytes(which_sources):
-    return ((ToBytes, [], {'which_sources': which_sources}),
-            (ImagesFromBytes, [], {}))
+    return ((ToBytes, [], {'which_sources': ('encoded_images',)}),
+            (ImagesFromBytes, [], {'which_sources': ('encoded_images',)}))
