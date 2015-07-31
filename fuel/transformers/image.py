@@ -154,7 +154,7 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
             # If we're dealing with a colour image, swap around the axes
             # to be in the format that PIL needs.
             if example.ndim == 3:
-                im = example.tranpose(2, 0, 1)
+                im = example.transpose(1, 2, 0)
             else:
                 im = example
             im = Image.fromarray(im)
