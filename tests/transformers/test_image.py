@@ -150,27 +150,34 @@ class TestMinimumDimensions(ImageTestingMixin):
         source1 = []
         source2 = []
         source3 = []
-        self.shapes = [(5, 9), (4, 6), (3, 6), (6, 4), (2, 5), (4, 8), (8, 3)]
+        self.shapes = [(5, 9), (4, 6), (4, 3), (6, 4), (2, 5), (4, 8), (8, 3)]
         for i, shape in enumerate(self.shapes):
             source1.append(rng.normal(size=shape))
             source2.append(rng.normal(size=shape[::-1]))
-            source3.append(i)
+            source3.append(rng.random_integers(0, 255, size=(3,) + shape)
+                           .astype('uint8'))
         self.dataset = IndexableDataset(OrderedDict([('source1', source1),
                                                      ('source2', source2),
                                                      ('source3', source3)]),
                                         axis_labels={'source1':
+                                                     ('batch', 'channel',
+                                                      'height', 'width'),
+                                                     'source3':
                                                      ('batch', 'channel',
                                                       'height', 'width')})
         self.common_setup()
 
     def test_minimum_dimensions_example_stream(self):
         stream = MinimumImageDimensions(self.example_stream, (4, 5),
-                                        which_sources=('source1',))
+                                        which_sources=('source1',
+                                                       'source3'))
         it = stream.get_epoch_iterator()
         for example, shp in zip(it, self.shapes):
             assert example[0].shape[0] >= 4 and example[0].shape[1] >= 5
             assert (example[1].shape[1] == shp[0] and
                     example[1].shape[0] == shp[1])
+            assert example[2].shape[0] == 3
+            assert example[2].shape[1] >= 4 and example[2].shape[2] >= 5
 
     def test_minimum_dimensions_batch_stream(self):
         stream = MinimumImageDimensions(self.batch_stream, (4, 5),
