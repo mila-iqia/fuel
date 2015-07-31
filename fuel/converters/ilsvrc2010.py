@@ -1,4 +1,5 @@
 from __future__ import division
+from collections import OrderedDict
 from functools import partial
 import gzip
 import io
@@ -161,6 +162,19 @@ def prepare_metadata(devkit_archive, test_groundtruth_path):
     return n_train, valid_groundtruth, test_groundtruth, wnid_map
 
 
+def create_splits(n_train, n_valid, n_test):
+    n_total = n_train + n_valid + n_test
+    tuples = {}
+    tuples['train'] = (0, n_train)
+    tuples['valid'] = (n_train, n_train + n_valid)
+    tuples['test'] = (n_train + n_valid, n_total)
+    sources = ['encoded_images', 'targets', 'filenames']
+    return OrderedDict(
+        (split, OrderedDict((source, tuples[split]) for source in sources))
+        for split in ('train', 'valid', 'test')
+    )
+
+
 def prepare_hdf5_file(hdf5_file, n_train, n_valid, n_test):
     """Create datasets within a given HDF5 file.
 
@@ -177,14 +191,8 @@ def prepare_hdf5_file(hdf5_file, n_train, n_valid, n_test):
 
     """
     n_total = n_train + n_valid + n_test
-    splits = {'train': (0, n_train),
-              'valid': (n_train, n_train + n_valid),
-              'test': (n_train + n_valid, n_total)}
-    hdf5_file.attrs['splits'] = H5PYDataset.create_split_array({
-        'encoded_images': splits,
-        'targets': splits,
-        'filenames': splits
-    })
+    splits = create_splits(n_train, n_valid, n_test)
+    hdf5_file.attrs['split'] = H5PYDataset.create_split_array(splits)
     vlen_dtype = h5py.special_dtype(vlen=numpy.dtype('uint8'))
     hdf5_file.create_dataset('encoded_images', shape=(n_total,),
                              dtype=vlen_dtype)
