@@ -37,9 +37,9 @@ PUBLIC_FILES = TEST_GROUNDTRUTH, DEVKIT_ARCHIVE
 ALL_FILES = PUBLIC_FILES + IMAGE_TARS
 
 
-def ilsvrc2010(directory, output_directory,
-               output_filename='ilsvrc2010.hdf5',
-               shuffle_seed=config.default_seed):
+def convert_ilsvrc2010(directory, output_directory,
+                       output_filename='ilsvrc2010.hdf5',
+                       shuffle_seed=config.default_seed):
     """Converter for data from the ILSVRC 2010 competition.
 
     Source files for this dataset can be obtained by registering at
@@ -83,6 +83,22 @@ def ilsvrc2010(directory, output_directory,
         log.info('Done.')
 
     return (output_path,)
+
+
+def fill_subparser(subparser):
+    """Sets up a subparser to convert the ILSVRC2010 dataset files.
+
+    Parameters
+    ----------
+    subparser : :class:`argparse.ArgumentParser`
+        Subparser handling the `mnist` command.
+
+    """
+    subparser.add_argument(
+        "--shuffle-seed", help="Seed to use for randomizing order of the "
+                               "training set on disk.",
+        default=config.default_seed, type=int, required=False)
+    subparser.set_defaults(func=convert_ilsvrc2010)
 
 
 def prepare_metadata(devkit_archive, test_groundtruth_path):
