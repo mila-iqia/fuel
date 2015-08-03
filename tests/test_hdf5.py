@@ -407,3 +407,13 @@ class TestH5PYDataset(object):
             assert_equal(val, truth)
         assert_equal(rval[1], expected_targets)
         dataset.close(handle)
+
+    def test_splits_subset_slice(self):
+        dataset = H5PYDataset(self.h5file, which_sets=['test'],
+                              subset=slice(0, 2))
+        handle = dataset.open()
+        request = slice(0, 2)
+        assert_equal(dataset.get_data(handle, request),
+                     (self.features[slice(20, 22)],
+                      self.targets[slice(20, 22)]))
+        dataset.close(handle)
