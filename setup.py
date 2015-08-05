@@ -1,5 +1,6 @@
 """Installation script."""
 from os import path
+import sys
 from setuptools import find_packages, setup
 from Cython.Build import cythonize
 from distutils.extension import Extension
@@ -8,6 +9,13 @@ HERE = path.abspath(path.dirname(__file__))
 
 with open(path.join(HERE, 'README.rst')) as f:
     LONG_DESCRIPTION = f.read().strip()
+
+# Visual C++ apparently doesn't respect/know what to do with this flag.
+# Windows users may thus see unused function warnings. Oh well.
+if sys.platform != 'win32':
+    extra_compile_args = ['-Wno-unused-function']
+else:
+    extra_compile_args = []
 
 setup(
     name='fuel',
@@ -40,6 +48,5 @@ setup(
     scripts=['bin/fuel-convert', 'bin/fuel-download', 'bin/fuel-info'],
     ext_modules=cythonize(Extension("fuel.transformers._image",
                                     ["fuel/transformers/_image.pyx"],
-                                    extra_compile_args=[
-                                        '-Wno-unused-function']))
+                                    extra_compile_args=extra_compile_args))
 )
