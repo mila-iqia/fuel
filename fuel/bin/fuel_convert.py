@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""Fuel dataset conversion utility.
-
-"""
+"""Fuel dataset conversion utility."""
 import argparse
 import os
 import sys
@@ -75,7 +73,8 @@ def main(args=None):
         fuel_convert_version = converters.__version__.encode('utf-8')
         h5file.attrs['fuel_convert_version'] = fuel_convert_version
         command = [os.path.basename(sys.argv[0])] + sys.argv[1:]
-        h5file.attrs['fuel_convert_command'] = ' '.join(command).encode('utf-8')
+        h5file.attrs['fuel_convert_command'] = (
+            ' '.join(command).encode('utf-8'))
         h5file.flush()
         h5file.close()
 

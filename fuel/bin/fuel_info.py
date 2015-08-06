@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""Fuel utility for extracting metadata
-
-"""
+"""Fuel utility for extracting metadata."""
 import argparse
 import os
 
@@ -19,6 +17,7 @@ message_body_template = """
         H5PYDataset     {}
         fuel.converters {}
 """
+
 
 def main(args=None):
     """Entry point for `fuel-info` script.

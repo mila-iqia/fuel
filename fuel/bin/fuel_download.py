@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""Fuel dataset downloading utility.
-
-"""
+"""Fuel dataset downloading utility."""
 import argparse
 import os
 
@@ -14,6 +12,7 @@ Some files for this dataset do not have a download URL.
 Provide a URL prefix with --url-prefix to prepend to the filenames,
 e.g. http://path.to/files/
 """.strip()
+
 
 def main(args=None):
     """Entry point for `fuel-download` script.
