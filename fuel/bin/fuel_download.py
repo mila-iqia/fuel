@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""Fuel dataset downloading utility.
+
+"""
 import argparse
 import os
 
@@ -12,7 +15,19 @@ Provide a URL prefix with --url-prefix to prepend to the filenames,
 e.g. http://path.to/files/
 """.strip()
 
-if __name__ == "__main__":
+def main(args=None):
+    """Entry point for `fuel-download` script.
+
+    This function can also be imported and used from Python.
+
+    Parameters
+    ----------
+    args : iterable, optional (default: None)
+        A list of arguments that will be passed to Fuel's downloading
+        utility. If this argument is not specified, `sys.argv[1:]` will
+        be used.
+
+    """
     built_in_datasets = dict(downloaders.all_downloaders)
     parser = argparse.ArgumentParser(
         description='Download script for built-in datasets.')
@@ -38,3 +53,7 @@ if __name__ == "__main__":
         func(**args_dict)
     except NeedURLPrefix:
         parser.error(url_prefix_message)
+
+
+if __name__ == "__main__":
+    main()

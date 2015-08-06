@@ -45,7 +45,11 @@ setup(
     extras_require={
         'test': ['nose', 'nose2', 'mock']
     },
-    scripts=['bin/fuel-convert', 'bin/fuel-download', 'bin/fuel-info'],
+    entry_points={
+        'console_scripts': ['fuel-convert = fuel.bin.fuel_convert:main',
+                            'fuel-download = fuel.bin.fuel_download:main',
+                            'fuel-info = fuel.bin.fuel_info:main']
+    },
     ext_modules=cythonize(Extension("fuel.transformers._image",
                                     ["fuel/transformers/_image.pyx"],
                                     extra_compile_args=extra_compile_args))
