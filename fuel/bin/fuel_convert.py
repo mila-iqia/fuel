@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Fuel dataset conversion utility."""
 import argparse
 import os
 import sys
@@ -18,7 +19,19 @@ class CheckDirectoryAction(argparse.Action):
             raise ValueError('{} is not a existing directory'.format(values))
 
 
-if __name__ == "__main__":
+def main(args=None):
+    """Entry point for `fuel-convert` script.
+
+    This function can also be imported and used from Python.
+
+    Parameters
+    ----------
+    args : iterable, optional (default: None)
+        A list of arguments that will be passed to Fuel's conversion
+        utility. If this argument is not specified, `sys.argv[1:]` will
+        be used.
+
+    """
     built_in_datasets = dict(converters.all_converters)
     parser = argparse.ArgumentParser(
         description='Conversion script for built-in datasets.')
@@ -36,7 +49,7 @@ if __name__ == "__main__":
             type=str, default=os.getcwd(), action=CheckDirectoryAction)
         subparser_fn(subparser)
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
     args_dict = vars(args)
     try:
         func = args_dict.pop('func')
@@ -60,6 +73,11 @@ if __name__ == "__main__":
         fuel_convert_version = converters.__version__.encode('utf-8')
         h5file.attrs['fuel_convert_version'] = fuel_convert_version
         command = [os.path.basename(sys.argv[0])] + sys.argv[1:]
-        h5file.attrs['fuel_convert_command'] = ' '.join(command).encode('utf-8')
+        h5file.attrs['fuel_convert_command'] = (
+            ' '.join(command).encode('utf-8'))
         h5file.flush()
         h5file.close()
+
+
+if __name__ == "__main__":
+    main()
