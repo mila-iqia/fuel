@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """Fuel dataset downloading utility."""
 import argparse
+import importlib
 import os
 
+import fuel
 from fuel import downloaders
 from fuel.downloaders.base import NeedURLPrefix
 from fuel.utils import import_function_by_name
@@ -29,6 +31,14 @@ def main(args=None):
 
     """
     built_in_datasets = dict(downloaders.all_downloaders)
+    if fuel.config.extra_downloaders:
+        for name in fuel.config.extra_downloaders:
+            extra_datasets = dict(
+                importlib.import_module(name).all_downloaders)
+            if any(key in built_in_datasets for key in extra_datasets.keys()):
+                raise ValueError('extra downloaders conflict in name with '
+                                 'built-in downloaders')
+            built_in_datasets.update(extra_datasets)
     parser = argparse.ArgumentParser(
         description='Download script for built-in datasets.')
     parent_parser = argparse.ArgumentParser(add_help=False)

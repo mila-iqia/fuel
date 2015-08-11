@@ -51,6 +51,18 @@ The following configurations are supported:
    The default :class:`~numpy.dtype` to use for floating point numbers. The
    default value is ``float64``. A lower value can save memory.
 
+.. option:: extra_downloaders
+
+   A list of package names which, like fuel.downloaders, define an
+   `all_downloaders` attribute listing available downloaders. By default,
+   an empty list.
+
+.. option:: extra_converters
+
+   A list of package names which, like fuel.converters, define an
+   `all_converters` attribute listing available converters. By default,
+   an empty list.
+
 .. _YAML: http://yaml.org/
 .. _environment variables:
    https://en.wikipedia.org/wiki/Environment_variable
@@ -144,6 +156,8 @@ config = Configuration()
 # Define configuration options
 config.add_config('data_path', type_=str, env_var='FUEL_DATA_PATH')
 config.add_config('default_seed', type_=int, default=1)
+config.add_config('extra_downloaders', type_=list, default=[])
+config.add_config('extra_converters', type_=list, default=[])
 
 # Default to Theano's floatX if possible
 try:

@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 """Fuel dataset conversion utility."""
 import argparse
+import importlib
 import os
 import sys
 
 import h5py
 
+import fuel
 from fuel import converters
 from fuel.converters.base import MissingInputFiles
 from fuel.datasets import H5PYDataset
@@ -34,6 +36,14 @@ def main(args=None):
 
     """
     built_in_datasets = dict(converters.all_converters)
+    if fuel.config.extra_converters:
+        for name in fuel.config.extra_converters:
+            extra_datasets = dict(
+                importlib.import_module(name).all_converters)
+            if any(key in built_in_datasets for key in extra_datasets.keys()):
+                raise ValueError('extra converters conflict in name with '
+                                 'built-in converters')
+            built_in_datasets.update(extra_datasets)
     parser = argparse.ArgumentParser(
         description='Conversion script for built-in datasets.')
     subparsers = parser.add_subparsers()
