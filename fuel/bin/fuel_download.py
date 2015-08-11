@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Fuel dataset downloading utility."""
 import argparse
+import importlib
 import os
 
 from fuel import downloaders
@@ -44,7 +45,11 @@ def main(args=None):
     args = parser.parse_args()
     args_dict = vars(args)
     try:
-        func = args_dict.pop('func')
+        # Import downloading function by module and name
+        func_path = args_dict.pop('func').split('.')
+        module_path = '.'.join(func_path[:-1])
+        func_name = func_path[-1]
+        func = getattr(importlib.import_module(module_path), func_name)
     except KeyError:
         parser.print_usage()
         parser.exit()

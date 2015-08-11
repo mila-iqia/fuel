@@ -35,4 +35,4 @@ def fill_subparser(subparser):
         "size", type=int, choices=(16, 28),
         help="height/width of the datapoints")
     subparser.set_defaults(
-        func=silhouettes_downloader)
+        func='fuel.downloaders.caltech101_silhouettes.silhouettes_downloader')

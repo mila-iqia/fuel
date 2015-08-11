@@ -1,6 +1,3 @@
-from fuel.downloaders.base import default_downloader
-
-
 def fill_subparser(subparser):
     """Sets up a subparser to download the binarized MNIST dataset files.
 
@@ -21,5 +18,5 @@ def fill_subparser(subparser):
     urls = ['http://www.cs.toronto.edu/~larocheh/public/datasets/' +
             'binarized_mnist/binarized_mnist_{}.amat'.format(s) for s in sets]
     filenames = ['binarized_mnist_{}.amat'.format(s) for s in sets]
-    subparser.set_defaults(
-        func=default_downloader, urls=urls, filenames=filenames)
+    subparser.set_defaults(func='fuel.downloaders.base.default_downloader',
+                           urls=urls, filenames=filenames)
