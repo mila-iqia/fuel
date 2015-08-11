@@ -55,4 +55,4 @@ def convert_iris(directory, output_directory, output_filename='iris.hdf5'):
 
 
 def fill_subparser(subparser):
-    subparser.set_defaults(func=convert_iris)
+    subparser.set_defaults(func='fuel.converters.iris.convert_iris')

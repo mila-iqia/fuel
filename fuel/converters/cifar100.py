@@ -104,4 +104,4 @@ def fill_subparser(subparser):
         Subparser handling the `cifar100` command.
 
     """
-    subparser.set_defaults(func=convert_cifar100)
+    subparser.set_defaults(func='fuel.converters.cifar100.convert_cifar100')

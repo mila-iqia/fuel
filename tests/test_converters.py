@@ -22,6 +22,7 @@ from fuel.converters import (binarized_mnist, caltech101_silhouettes,
                              iris, cifar10, cifar100, mnist, svhn)
 from fuel.downloaders.caltech101_silhouettes import silhouettes_downloader
 from fuel.downloaders.base import default_downloader
+from fuel.utils import import_function_by_name
 
 if six.PY3:
     getbuffer = memoryview
@@ -144,7 +145,7 @@ class TestMNIST(object):
         mnist.fill_subparser(subparser)
         args = parser.parse_args(['mnist'])
         args_dict = vars(args)
-        func = args_dict.pop('func')
+        func = import_function_by_name(args_dict.pop('func'))
         filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
@@ -170,7 +171,7 @@ class TestMNIST(object):
         mnist.fill_subparser(subparser)
         args = parser.parse_args(['mnist'])
         args_dict = vars(args)
-        func = args_dict.pop('func')
+        func = import_function_by_name(args_dict.pop('func'))
         filename, = func(**args_dict)
         assert_equal(os.path.basename(filename), 'mnist.hdf5')
 
@@ -183,7 +184,7 @@ class TestMNIST(object):
         mnist.fill_subparser(subparser)
         args = parser.parse_args(['mnist', '--dtype', 'bool'])
         args_dict = vars(args)
-        func = args_dict.pop('func')
+        func = import_function_by_name(args_dict.pop('func'))
         filename, = func(**args_dict)
         assert_equal(os.path.basename(filename), 'mnist_bool.hdf5')
 
@@ -239,7 +240,7 @@ class TestBinarizedMNIST(object):
         binarized_mnist.fill_subparser(subparser)
         args = parser.parse_args(['binarized_mnist'])
         args_dict = vars(args)
-        func = args_dict.pop('func')
+        func = import_function_by_name(args_dict.pop('func'))
         filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(h5file['features'][...],
@@ -295,7 +296,7 @@ class TestCIFAR10(object):
         cifar10.fill_subparser(subparser)
         args = parser.parse_args(['cifar10'])
         args_dict = vars(args)
-        func = args_dict.pop('func')
+        func = import_function_by_name(args_dict.pop('func'))
         filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
@@ -360,7 +361,7 @@ class TestCIFAR100(object):
         cifar100.fill_subparser(subparser)
         args = parser.parse_args(['cifar100'])
         args_dict = vars(args)
-        func = args_dict.pop('func')
+        func = import_function_by_name(args_dict.pop('func'))
         filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(
@@ -397,8 +398,9 @@ class TestCalTech101Silhouettes(object):
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('caltech101_silhouettes')
         caltech101_silhouettes.fill_subparser(subparser)
-        assert (parser.parse_args(['caltech101_silhouettes', '16']).func is
-                caltech101_silhouettes.convert_silhouettes)
+        assert_equal(
+            parser.parse_args(['caltech101_silhouettes', '16']).func,
+            'fuel.converters.caltech101_silhouettes.convert_silhouettes')
 
     def test_download_and_convert(self, size=16):
         tempdir = self.tempdir
@@ -445,7 +447,8 @@ class TestIris(object):
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('iris')
         iris.fill_subparser(subparser)
-        assert parser.parse_args(['iris']).func is iris.convert_iris
+        assert_equal(parser.parse_args(['iris']).func,
+                     'fuel.converters.iris.convert_iris')
 
     def test_download_and_convert(self):
         tempdir = self.tempdir
@@ -568,7 +571,7 @@ class TestSVHN(object):
             output_filename='svhn_format_1.hdf5')
         args = parser.parse_args(['svhn', '1'])
         args_dict = vars(args)
-        func = args_dict.pop('func')
+        func = import_function_by_name(args_dict.pop('func'))
         filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
 
@@ -598,7 +601,7 @@ class TestSVHN(object):
             output_filename='svhn_format_2.hdf5')
         args = parser.parse_args(['svhn', '2'])
         args_dict = vars(args)
-        func = args_dict.pop('func')
+        func = import_function_by_name(args_dict.pop('func'))
         filename, = func(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(

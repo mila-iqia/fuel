@@ -9,6 +9,7 @@ import h5py
 from fuel import converters
 from fuel.converters.base import MissingInputFiles
 from fuel.datasets import H5PYDataset
+from fuel.utils import import_function_by_name
 
 
 class CheckDirectoryAction(argparse.Action):
@@ -52,7 +53,7 @@ def main(args=None):
     args = parser.parse_args(args)
     args_dict = vars(args)
     try:
-        func = args_dict.pop('func')
+        func = import_function_by_name(args_dict.pop('func'))
     except KeyError:
         parser.print_usage()
         parser.exit()
