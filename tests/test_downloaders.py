@@ -13,6 +13,7 @@ from fuel.downloaders import (binarized_mnist, caltech101_silhouettes,
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix,
                                    ensure_directory_exists)
+from fuel.utils import import_function_by_name
 from picklable_itertools import chain
 from six.moves import range
 
@@ -185,10 +186,7 @@ class TestSVHNDownloader(object):
     def test_svhn_downloader_format_1(self, mock_default_downloader):
         args = self.parser.parse_args(['svhn', '1'])
         args_dict = vars(args)
-        func_path = args_dict.pop('func').split('.')
-        module_path = '.'.join(func_path[:-1])
-        func_name = func_path[-1]
-        func = getattr(importlib.import_module(module_path), func_name)
+        func = import_function_by_name(args_dict.pop('func'))
         func(**args_dict)
         mock_default_downloader.assert_called_with(
             directory='./',
@@ -201,10 +199,7 @@ class TestSVHNDownloader(object):
     def test_svhn_downloader_format_2(self, mock_default_downloader):
         args = self.parser.parse_args(['svhn', '2'])
         args_dict = vars(args)
-        func_path = args_dict.pop('func').split('.')
-        module_path = '.'.join(func_path[:-1])
-        func_name = func_path[-1]
-        func = getattr(importlib.import_module(module_path), func_name)
+        func = import_function_by_name(args_dict.pop('func'))
         func(**args_dict)
         mock_default_downloader.assert_called_with(
             directory='./',
