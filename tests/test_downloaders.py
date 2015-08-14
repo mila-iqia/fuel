@@ -1,5 +1,4 @@
 import argparse
-import importlib
 import mock
 import os
 import shutil

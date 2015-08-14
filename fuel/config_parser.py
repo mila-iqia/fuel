@@ -88,7 +88,7 @@ def extra_downloader_converter(value):
     ----------
     value : iterable or str
         If the value is a string, it is split into a list using spaces
-        as delimitors. Otherwise, it is returned as is.
+        as delimiters. Otherwise, it is returned as is.
 
     """
     if isinstance(value, six.string_types):
