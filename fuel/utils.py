@@ -1,5 +1,4 @@
 import collections
-import importlib
 import os
 
 import six
@@ -13,22 +12,6 @@ if six.PY3:
     buffer_ = memoryview
 else:
     buffer_ = buffer  # noqa
-
-
-def import_function_by_name(name):
-    """Import function by name, e.g. 'fuel.utils.find_in_data_path'.
-
-    Parameters
-    ----------
-    name : str
-        Name of the function to import, including the module it's
-        defined in.
-
-    """
-    name = name.split('.')
-    module_name = '.'.join(name[:-1])
-    function_name = name[-1]
-    return getattr(importlib.import_module(module_name), function_name)
 
 
 def iterable_fancy_indexing(iterable, request):

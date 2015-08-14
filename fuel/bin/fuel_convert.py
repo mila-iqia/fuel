@@ -11,7 +11,6 @@ import fuel
 from fuel import converters
 from fuel.converters.base import MissingInputFiles
 from fuel.datasets import H5PYDataset
-from fuel.utils import import_function_by_name
 
 
 class CheckDirectoryAction(argparse.Action):
@@ -51,24 +50,23 @@ def main(args=None):
     parent_parser.add_argument(
         "-d", "--directory", help="directory in which input files reside",
         type=str, default=os.getcwd())
-    for name, subparser_fn in built_in_datasets.items():
+    convert_functions = {}
+    for name, fill_subparser in built_in_datasets.items():
         subparser = subparsers.add_parser(
             name, parents=[parent_parser],
             help='Convert the {} dataset'.format(name))
         subparser.add_argument(
             "-o", "--output-directory", help="where to save the dataset",
             type=str, default=os.getcwd(), action=CheckDirectoryAction)
-        subparser_fn(subparser)
+        # Allows the parser to know which subparser was called.
+        subparser.set_defaults(which_=name)
+        convert_functions[name] = fill_subparser(subparser)
 
     args = parser.parse_args(args)
     args_dict = vars(args)
+    convert_function = convert_functions[args_dict.pop('which_')]
     try:
-        func = import_function_by_name(args_dict.pop('func'))
-    except KeyError:
-        parser.print_usage()
-        parser.exit()
-    try:
-        output_paths = func(**args_dict)
+        output_paths = convert_function(**args_dict)
     except MissingInputFiles as e:
         intro = "The following required files were not found:\n"
         message = "\n".join([intro] + ["   * " + f for f in e.filenames])

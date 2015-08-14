@@ -1,3 +1,6 @@
+from fuel.downloaders.base import default_downloader
+
+
 def fill_subparser(subparser):
     """Sets up a subparser to download the CIFAR-100 dataset file.
 
@@ -14,5 +17,5 @@ def fill_subparser(subparser):
     """
     url = 'http://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz'
     filename = 'cifar-100-python.tar.gz'
-    subparser.set_defaults(func='fuel.downloaders.base.default_downloader',
-                           urls=[url], filenames=[filename])
+    subparser.set_defaults(urls=[url], filenames=[filename])
+    return default_downloader

@@ -7,7 +7,6 @@ import os
 import fuel
 from fuel import downloaders
 from fuel.downloaders.base import NeedURLPrefix
-from fuel.utils import import_function_by_name
 
 url_prefix_message = """
 Some files for this dataset do not have a download URL.
@@ -48,19 +47,19 @@ def main(args=None):
     parent_parser.add_argument(
         "--clear", help="clear the downloaded files", action='store_true')
     subparsers = parser.add_subparsers()
-    for name, subparser_fn in built_in_datasets.items():
-        subparser_fn(subparsers.add_parser(
+    download_functions = {}
+    for name, fill_subparser in built_in_datasets.items():
+        subparser = subparsers.add_parser(
             name, parents=[parent_parser],
-            help='Download the {} dataset'.format(name)))
+            help='Download the {} dataset'.format(name))
+        # Allows the parser to know which subparser was called.
+        subparser.set_defaults(which_=name)
+        download_functions[name] = fill_subparser(subparser)
     args = parser.parse_args()
     args_dict = vars(args)
+    download_function = download_functions[args_dict.pop('which_')]
     try:
-        func = import_function_by_name(args_dict.pop('func'))
-    except KeyError:
-        parser.print_usage()
-        parser.exit()
-    try:
-        func(**args_dict)
+        download_function(**args_dict)
     except NeedURLPrefix:
         parser.error(url_prefix_message)
 

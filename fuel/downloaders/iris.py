@@ -1,3 +1,6 @@
+from fuel.downloaders.base import default_downloader
+
+
 def fill_subparser(subparser):
     """Set up a subparser to download the Iris dataset file.
 
@@ -13,7 +16,7 @@ def fill_subparser(subparser):
 
     """
     subparser.set_defaults(
-        func='fuel.downloaders.base.default_downloader',
         urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
               'iris/iris.data'],
         filenames=['iris.data'])
+    return default_downloader
