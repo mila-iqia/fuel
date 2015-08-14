@@ -7,7 +7,6 @@ from fuel.config_parser import (Configuration, ConfigurationError,
                                 extra_downloader_converter)
 
 
-
 class TestExtraDownloaderConverter(object):
     def test_iterable(self):
         assert_equal(extra_downloader_converter(['a.b.c', 'd.e.f']),
