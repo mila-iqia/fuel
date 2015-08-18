@@ -26,7 +26,7 @@ OSX, ``;`` for Windows):
 When looking for data, Fuel will go through this sequence and use the first
 matching file it finds.
 
-This configuration variable can be overriden by setting the ``FUEL_DATA_PATH``
+This configuration variable can be overridden by setting the ``FUEL_DATA_PATH``
 environment variable:
 
 .. code-block:: bash
