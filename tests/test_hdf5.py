@@ -154,6 +154,10 @@ class TestH5PYDataset(object):
             h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
             dataset = cPickle.loads(
                 cPickle.dumps(H5PYDataset(h5file, which_sets=('train',))))
+            # Make sure _out_of_memory_{open,close} accesses
+            # external_file_handle rather than _external_file_handle
+            dataset._out_of_memory_open()
+            dataset._out_of_memory_close()
             assert dataset.data_sources is None
         finally:
             os.remove('file.hdf5')
