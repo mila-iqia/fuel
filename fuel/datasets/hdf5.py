@@ -581,7 +581,7 @@ class H5PYDataset(Dataset):
         return None if self.load_in_memory else self._out_of_memory_open()
 
     def _out_of_memory_open(self):
-        if not self._external_file_handle:
+        if not self.external_file_handle:
             if self.path not in self._file_handles:
                 handle = h5py.File(
                     name=self.path, mode="r", driver=self.driver)
@@ -593,7 +593,7 @@ class H5PYDataset(Dataset):
             self._out_of_memory_close()
 
     def _out_of_memory_close(self):
-        if not self._external_file_handle:
+        if not self.external_file_handle:
             self._ref_counts[self.path] -= 1
             if not self._ref_counts[self.path]:
                 del self._ref_counts[self.path]
@@ -602,8 +602,8 @@ class H5PYDataset(Dataset):
 
     @property
     def _file_handle(self):
-        if self._external_file_handle:
-            return self._external_file_handle
+        if self.external_file_handle:
+            return self.external_file_handle
         elif self.path in self._file_handles:
             return self._file_handles[self.path]
         else:
