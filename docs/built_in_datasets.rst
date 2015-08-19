@@ -166,8 +166,12 @@ You should include the following in your ``~/.fuelrc``:
 .. code-block:: yaml
 
     # ~/.fuelrc
-    extra_downloaders: ['package1.extra_downloaders', 'package2.extra_downloaders']
-    extra_converters: ['package1.extra_converters', 'package2.extra_converters']
+    extra_downloaders:
+    - package1.extra_downloaders
+    - package2.extra_downloaders
+    extra_converters:
+    - package1.extra_converters
+    - package2.extra_converters
 
 These configuration variables can be overridden through the
 ``FUEL_EXTRA_DOWNLOADERS`` and ``FUEL_EXTRA_CONVERTERS`` environment variables,
