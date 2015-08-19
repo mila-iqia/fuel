@@ -16,6 +16,9 @@ class TestExtraDownloaderConverter(object):
         assert_equal(extra_downloader_converter("a.b.c d.e.f"),
                      ['a.b.c', 'd.e.f'])
 
+    def test_str_one_element(self):
+        assert_equal(extra_downloader_converter("a.b.c"), ['a.b.c'])
+
 
 def test_config_parser():
     _environ = dict(os.environ)
