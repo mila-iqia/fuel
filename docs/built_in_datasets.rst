@@ -23,8 +23,8 @@ OSX, ``;`` for Windows):
     # ~/.fuelrc
     data_path: "/first/path/to/my/data:/second/path/to/my/data"
 
-When looking for data, Fuel will go through this sequence and use the first
-matching file it finds.
+When looking for a specific file (e.g. ``mnist.hdf5``), Fuel will search each of
+these paths in sequence, using the first matching file that it finds.
 
 This configuration variable can be overridden by setting the ``FUEL_DATA_PATH``
 environment variable:
