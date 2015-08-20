@@ -3,6 +3,7 @@ from fuel.datasets.base import (Dataset, IterableDataset,
                                 IndexableDataset)
 
 from fuel.datasets.hdf5 import H5PYDataset
+from fuel.datasets.adult import Adult
 from fuel.datasets.binarized_mnist import BinarizedMNIST
 from fuel.datasets.cifar10 import CIFAR10
 from fuel.datasets.cifar100 import CIFAR100
