@@ -55,4 +55,12 @@ def convert_iris(directory, output_directory, output_filename='iris.hdf5'):
 
 
 def fill_subparser(subparser):
-    subparser.set_defaults(func=convert_iris)
+    """Sets up a subparser to convert the Iris dataset file.
+
+    Parameters
+    ----------
+    subparser : :class:`argparse.ArgumentParser`
+        Subparser handling the `iris` command.
+
+    """
+    return convert_iris

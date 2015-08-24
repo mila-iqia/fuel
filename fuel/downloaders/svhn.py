@@ -28,4 +28,4 @@ def fill_subparser(subparser):
     """
     subparser.add_argument(
         "which_format", help="which dataset format", type=int, choices=(1, 2))
-    subparser.set_defaults(func=svhn_downloader)
+    return svhn_downloader

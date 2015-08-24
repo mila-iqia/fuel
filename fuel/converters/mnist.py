@@ -105,7 +105,7 @@ def fill_subparser(subparser):
         "--dtype", help="dtype to save to; by default, images will be " +
         "returned in their original unsigned byte format",
         choices=('float32', 'float64', 'bool'), type=str, default=None)
-    subparser.set_defaults(func=convert_mnist)
+    return convert_mnist
 
 
 def read_mnist_images(filename, dtype=None):

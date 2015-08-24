@@ -21,5 +21,5 @@ def fill_subparser(subparser):
     urls = ['http://www.cs.toronto.edu/~larocheh/public/datasets/' +
             'binarized_mnist/binarized_mnist_{}.amat'.format(s) for s in sets]
     filenames = ['binarized_mnist_{}.amat'.format(s) for s in sets]
-    subparser.set_defaults(
-        func=default_downloader, urls=urls, filenames=filenames)
+    subparser.set_defaults(urls=urls, filenames=filenames)
+    return default_downloader

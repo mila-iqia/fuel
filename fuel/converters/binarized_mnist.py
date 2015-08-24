@@ -83,4 +83,4 @@ def fill_subparser(subparser):
         Subparser handling the `binarized_mnist` command.
 
     """
-    subparser.set_defaults(func=convert_binarized_mnist)
+    return convert_binarized_mnist

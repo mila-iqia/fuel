@@ -73,4 +73,4 @@ def fill_subparser(subparser):
     subparser.add_argument(
         "size", type=int, choices=(16, 28),
         help="height/width of the datapoints")
-    subparser.set_defaults(func=convert_silhouettes)
+    return convert_silhouettes

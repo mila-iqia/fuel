@@ -1,9 +1,23 @@
 import os
 import tempfile
 
-from numpy.testing import assert_raises
+from numpy.testing import assert_equal, assert_raises
 
-from fuel.config_parser import Configuration, ConfigurationError
+from fuel.config_parser import (Configuration, ConfigurationError,
+                                extra_downloader_converter)
+
+
+class TestExtraDownloaderConverter(object):
+    def test_iterable(self):
+        assert_equal(extra_downloader_converter(['a.b.c', 'd.e.f']),
+                     ['a.b.c', 'd.e.f'])
+
+    def test_str(self):
+        assert_equal(extra_downloader_converter("a.b.c d.e.f"),
+                     ['a.b.c', 'd.e.f'])
+
+    def test_str_one_element(self):
+        assert_equal(extra_downloader_converter("a.b.c"), ['a.b.c'])
 
 
 def test_config_parser():

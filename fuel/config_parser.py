@@ -51,6 +51,18 @@ The following configurations are supported:
    The default :class:`~numpy.dtype` to use for floating point numbers. The
    default value is ``float64``. A lower value can save memory.
 
+.. option:: extra_downloaders
+
+   A list of package names which, like fuel.downloaders, define an
+   `all_downloaders` attribute listing available downloaders. By default,
+   an empty list.
+
+.. option:: extra_converters
+
+   A list of package names which, like fuel.converters, define an
+   `all_converters` attribute listing available converters. By default,
+   an empty list.
+
 .. _YAML: http://yaml.org/
 .. _environment variables:
    https://en.wikipedia.org/wiki/Environment_variable
@@ -59,6 +71,7 @@ The following configurations are supported:
 import logging
 import os
 
+import six
 import yaml
 
 from .exceptions import ConfigurationError
@@ -66,6 +79,21 @@ from .exceptions import ConfigurationError
 logger = logging.getLogger(__name__)
 
 NOT_SET = object()
+
+
+def extra_downloader_converter(value):
+    """Parses extra_{downloader,converter} arguments.
+
+    Parameters
+    ----------
+    value : iterable or str
+        If the value is a string, it is split into a list using spaces
+        as delimiters. Otherwise, it is returned as is.
+
+    """
+    if isinstance(value, six.string_types):
+        value = value.split(" ")
+    return value
 
 
 class Configuration(object):
@@ -144,6 +172,10 @@ config = Configuration()
 # Define configuration options
 config.add_config('data_path', type_=str, env_var='FUEL_DATA_PATH')
 config.add_config('default_seed', type_=int, default=1)
+config.add_config('extra_downloaders', type_=extra_downloader_converter,
+                  default=[], env_var='FUEL_EXTRA_DOWNLOADERS')
+config.add_config('extra_converters', type_=extra_downloader_converter,
+                  default=[], env_var='FUEL_EXTRA_CONVERTERS')
 
 # Default to Theano's floatX if possible
 try:

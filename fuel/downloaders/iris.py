@@ -16,7 +16,7 @@ def fill_subparser(subparser):
 
     """
     subparser.set_defaults(
-        func=default_downloader,
         urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
               'iris/iris.data'],
         filenames=['iris.data'])
+    return default_downloader

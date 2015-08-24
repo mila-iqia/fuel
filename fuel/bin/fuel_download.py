@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """Fuel dataset downloading utility."""
 import argparse
+import importlib
 import os
 
+import fuel
 from fuel import downloaders
 from fuel.downloaders.base import NeedURLPrefix
 
@@ -28,6 +30,14 @@ def main(args=None):
 
     """
     built_in_datasets = dict(downloaders.all_downloaders)
+    if fuel.config.extra_downloaders:
+        for name in fuel.config.extra_downloaders:
+            extra_datasets = dict(
+                importlib.import_module(name).all_downloaders)
+            if any(key in built_in_datasets for key in extra_datasets.keys()):
+                raise ValueError('extra downloaders conflict in name with '
+                                 'built-in downloaders')
+            built_in_datasets.update(extra_datasets)
     parser = argparse.ArgumentParser(
         description='Download script for built-in datasets.')
     parent_parser = argparse.ArgumentParser(add_help=False)
@@ -37,19 +47,19 @@ def main(args=None):
     parent_parser.add_argument(
         "--clear", help="clear the downloaded files", action='store_true')
     subparsers = parser.add_subparsers()
-    for name, subparser_fn in built_in_datasets.items():
-        subparser_fn(subparsers.add_parser(
+    download_functions = {}
+    for name, fill_subparser in built_in_datasets.items():
+        subparser = subparsers.add_parser(
             name, parents=[parent_parser],
-            help='Download the {} dataset'.format(name)))
+            help='Download the {} dataset'.format(name))
+        # Allows the parser to know which subparser was called.
+        subparser.set_defaults(which_=name)
+        download_functions[name] = fill_subparser(subparser)
     args = parser.parse_args()
     args_dict = vars(args)
+    download_function = download_functions[args_dict.pop('which_')]
     try:
-        func = args_dict.pop('func')
-    except KeyError:
-        parser.print_usage()
-        parser.exit()
-    try:
-        func(**args_dict)
+        download_function(**args_dict)
     except NeedURLPrefix:
         parser.error(url_prefix_message)
 
