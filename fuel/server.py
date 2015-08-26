@@ -10,6 +10,15 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level='INFO')
 
 
+def ascontiguousarray(array):
+    """Works around https://github.com/numpy/numpy/issues/5300."""
+    array = numpy.array(array)
+    if array.flags['C_CONTIGUOUS']:
+        return array
+    else:
+        return numpy.ascontiguousarray(array)
+
+
 def send_arrays(socket, arrays, stop=False):
     """Send NumPy arrays using the buffer interface and some metadata.
 
@@ -34,7 +43,7 @@ def send_arrays(socket, arrays, stop=False):
     """
     if arrays:
         # The buffer protocol only works on contiguous arrays
-        arrays = [numpy.ascontiguousarray(array) for array in arrays]
+        arrays = [ascontiguousarray(array) for array in arrays]
     if stop:
         headers = {'stop': True}
         socket.send_json(headers)
