@@ -28,8 +28,6 @@ if six.PY3:
 else:
     getbuffer = numpy.getbuffer
 
-import pdb
-
 
 class TestFillHDF5File(object):
     def setUp(self):
