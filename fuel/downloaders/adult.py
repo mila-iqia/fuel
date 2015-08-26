@@ -4,7 +4,7 @@ from fuel.downloaders.base import default_downloader
 def fill_subparser(subparser):
     """Set up a subparser to download the adult dataset file.
 
-    The Iris dataset file `adult.data` and `adult.test` is downloaded from
+    The Adult dataset file `adult.data` and `adult.test` is downloaded from
     the UCI Machine Learning Repository [UCI].
 
     .. [UCI] https://archive.ics.uci.edu/ml/datasets/Adult

@@ -6,9 +6,33 @@ import numpy
 from fuel.converters.base import fill_hdf5_file
 
 
+def convert_to_one_hot(y):
+    """
+    converts y into one hot reprsentation.
+
+    Parameters
+    ----------
+    y : list
+        A list containing continous integer values.
+
+    Returns
+    -------
+    one_hot : numpy.ndarray
+        A numpy.ndarray object, which is one-hot representation of y.
+
+    """
+    max_value = max(y)
+    min_value = min(y)
+    length = len(y)
+    one_hot = numpy.zeros((length, (max_value - min_value + 1)))
+    one_hot[numpy.arange(length), y] = 1
+    return one_hot
+
+
 def convert_adult(directory, output_directory,
                   output_filename='adult.hdf5'):
-    """Convert the Adult dataset to HDF5.
+    """
+    Convert the Adult dataset to HDF5.
 
     Converts the Adult dataset to an HDF5 dataset compatible with
     :class:`fuel.datasets.Adult`. The converted dataset is saved as
@@ -23,13 +47,13 @@ def convert_adult(directory, output_directory,
     output_directory : str
         Directory in which to save the converted dataset.
     output_filename : str, optional
-        Name of the saved dataset. Defaults to `None`, in which case a name
-        based on `dtype` will be used.
+        Name of the saved dataset. Defaults to `adult.hdf5`.
 
     Returns
     -------
     output_paths : tuple of str
         Single-element tuple containing the path to the converted dataset.
+
     """
     # classes = {b'>50K': 0, b'<50K': 1}
     train_path = os.path.join(directory, 'adult.data')
@@ -85,6 +109,15 @@ def convert_adult(directory, output_directory,
         features_list.append(X)
         targets_list.append(y)
 
+    # the largets value in the last variable of test set is only 40, thus
+    # the one hot representation has 40 at the second dimention. While in
+    # training set it is 41. Since it lies in the last variable, so it is
+    # safe to simply add a last column with zeros.
+    features_list[1] = numpy.concatenate(
+        (features_list[1],
+         numpy.zeros((features_list[1].shape[0], 1),
+                     dtype=features_list[1].dtype)),
+        axis=1)
     h5file = h5py.File(output_path, mode='w')
     data = (('train', 'features', features_list[0]),
             ('train', 'targets', targets_list[0]),
