@@ -209,6 +209,52 @@ class TestMNIST(object):
                       self.train_images_path, 'int32')
 
 
+class TestAdult(object):
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_fill_subparser(self):
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('adult')
+        adult.fill_subparser(subparser)
+        assert parser.parse_args(['adult']).func is adult.convert_adult
+
+    def test_convert(self):
+        tempdir = self.tempdir
+
+        cwd = os.getcwd()
+        os.chdir(tempdir)
+
+        assert_raises(IOError,
+                      adult.convert_adult,
+                      directory=tempdir,
+                      output_directory=tempdir)
+
+        default_downloader(
+            directory=tempdir,
+            urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
+                  'adult/adult.data',
+                  'https://archive.ics.uci.edu/ml/machine-learning-databases/'
+                  'adult/adult.test'],
+            filenames=['adult.data', 'adult.test'])
+
+        adult.convert_adult(directory=tempdir,
+                            output_directory=tempdir)
+
+        os.chdir(cwd)
+
+        output_file = "adult.hdf5"
+        output_file = os.path.join(tempdir, output_file)
+
+        with h5py.File(output_file, 'r') as h5:
+            assert h5['features'].shape == (30162 + 15060, 104)
+            assert h5['targets'].shape[0] == h5['features'].shape[0]
+
+
 class TestBinarizedMNIST(object):
     def setUp(self):
         numpy.random.seed(9 + 5 + 2015)
@@ -432,52 +478,6 @@ class TestCalTech101Silhouettes(object):
         with h5py.File(output_file, 'r') as h5:
             assert h5['features'].shape == (8641, 1, size, size)
             assert h5['targets'].shape == (8641, 1)
-
-
-class TestAdult(object):
-    def setUp(self):
-        self.tempdir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
-
-    def test_fill_subparser(self):
-        parser = argparse.ArgumentParser()
-        subparsers = parser.add_subparsers()
-        subparser = subparsers.add_parser('adult')
-        adult.fill_subparser(subparser)
-        assert parser.parse_args(['adult']).func is adult.convert_adult
-
-    def test_convert(self):
-        tempdir = self.tempdir
-
-        cwd = os.getcwd()
-        os.chdir(tempdir)
-
-        assert_raises(IOError,
-                      adult.convert_adult,
-                      directory=tempdir,
-                      output_directory=tempdir)
-
-        default_downloader(
-            directory=tempdir,
-            urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
-                  'adult/adult.data',
-                  'https://archive.ics.uci.edu/ml/machine-learning-databases/'
-                  'adult/adult.test'],
-            filenames=['adult.data', 'adult.test'])
-
-        adult.convert_adult(directory=tempdir,
-                            output_directory=tempdir)
-
-        os.chdir(cwd)
-
-        output_file = "adult.hdf5"
-        output_file = os.path.join(tempdir, output_file)
-
-        with h5py.File(output_file, 'r') as h5:
-            assert h5['features'].shape == (30162 + 15060, 104)
-            assert h5['targets'].shape[0] == h5['features'].shape[0]
 
 
 class TestIris(object):
