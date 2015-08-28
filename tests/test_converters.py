@@ -428,6 +428,7 @@ class TestCalTech101Silhouettes(object):
 
         output_file = "caltech101_silhouettes{}.hdf5".format(size)
         output_file = os.path.join(tempdir, output_file)
+
         with h5py.File(output_file, 'r') as h5:
             assert h5['features'].shape == (8641, 1, size, size)
             assert h5['targets'].shape == (8641, 1)
@@ -458,6 +459,14 @@ class TestAdult(object):
                       directory=tempdir,
                       output_directory=tempdir)
 
+        default_downloader(
+            directory=tempdir,
+            urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
+                  'adult/adult.data',
+                  'https://archive.ics.uci.edu/ml/machine-learning-databases/'
+                  'adult/adult.test'],
+            filenames=['adult.data', 'adult.test'])
+
         adult.convert_adult(directory=tempdir,
                             output_directory=tempdir)
 
@@ -465,7 +474,7 @@ class TestAdult(object):
 
         output_file = "adult.hdf5"
         output_file = os.path.join(tempdir, output_file)
-        
+
         with h5py.File(output_file, 'r') as h5:
             assert h5['features'].shape == (30162 + 15060, 104)
             assert h5['targets'].shape[0] == h5['features'].shape[0]
