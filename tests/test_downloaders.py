@@ -7,8 +7,9 @@ from functools import wraps
 
 from numpy.testing import assert_equal, assert_raises
 
-from fuel.downloaders import (binarized_mnist, caltech101_silhouettes,
-                              cifar10, cifar100, iris, mnist, svhn)
+from fuel.downloaders import (adult, binarized_mnist,
+                              caltech101_silhouettes, cifar10, cifar100,
+                              iris, mnist, svhn)
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix,
                                    ensure_directory_exists)
@@ -102,6 +103,21 @@ def test_mnist():
     assert_equal(args.filenames, filenames)
     assert_equal(args.urls, urls)
     assert download_function is default_downloader
+
+
+def test_adult():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    func_got = adult.fill_subparser(subparsers.add_parser('adult'))
+    args = parser.parse_args(['adult'])
+    urls = ['https://archive.ics.uci.edu/ml/machine-learning-databases/'
+            'adult/adult.data',
+            'https://archive.ics.uci.edu/ml/machine-learning-databases/'
+            'adult/adult.test']
+    filenames = ['adult.data', 'adult.test']
+    assert_equal(args.filenames, filenames)
+    assert_equal(args.urls, urls)
+    assert func_got is default_downloader
 
 
 def test_binarized_mnist():

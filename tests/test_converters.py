@@ -18,7 +18,7 @@ from six.moves import range, zip, cPickle
 
 from fuel.converters.base import (fill_hdf5_file, check_exists,
                                   MissingInputFiles)
-from fuel.converters import (binarized_mnist, caltech101_silhouettes,
+from fuel.converters import (adult, binarized_mnist, caltech101_silhouettes,
                              iris, cifar10, cifar100, mnist, svhn)
 from fuel.downloaders.caltech101_silhouettes import silhouettes_downloader
 from fuel.downloaders.base import default_downloader
@@ -204,6 +204,52 @@ class TestMNIST(object):
     def test_read_image_value_error(self):
         assert_raises(ValueError, mnist.read_mnist_images,
                       self.train_images_path, 'int32')
+
+
+class TestAdult(object):
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_fill_subparser(self):
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('adult')
+        returned_conversion_func = adult.fill_subparser(subparser)
+        assert returned_conversion_func is adult.convert_adult
+
+    def test_convert(self):
+        tempdir = self.tempdir
+
+        cwd = os.getcwd()
+        os.chdir(tempdir)
+
+        assert_raises(IOError,
+                      adult.convert_adult,
+                      directory=tempdir,
+                      output_directory=tempdir)
+
+        default_downloader(
+            directory=tempdir,
+            urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
+                  'adult/adult.data',
+                  'https://archive.ics.uci.edu/ml/machine-learning-databases/'
+                  'adult/adult.test'],
+            filenames=['adult.data', 'adult.test'])
+
+        adult.convert_adult(directory=tempdir,
+                            output_directory=tempdir)
+
+        os.chdir(cwd)
+
+        output_file = "adult.hdf5"
+        output_file = os.path.join(tempdir, output_file)
+
+        with h5py.File(output_file, 'r') as h5:
+            assert h5['features'].shape == (30162 + 15060, 104)
+            assert h5['targets'].shape[0] == h5['features'].shape[0]
 
 
 class TestBinarizedMNIST(object):
@@ -421,6 +467,7 @@ class TestCalTech101Silhouettes(object):
 
         output_file = "caltech101_silhouettes{}.hdf5".format(size)
         output_file = os.path.join(tempdir, output_file)
+
         with h5py.File(output_file, 'r') as h5:
             assert h5['features'].shape == (8641, 1, size, size)
             assert h5['targets'].shape == (8641, 1)
