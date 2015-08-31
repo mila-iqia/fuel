@@ -55,7 +55,6 @@ def convert_adult(directory, output_directory,
         Single-element tuple containing the path to the converted dataset.
 
     """
-    # classes = {b'>50K': 0, b'<50K': 1}
     train_path = os.path.join(directory, 'adult.data')
     test_path = os.path.join(directory, 'adult.test')
     output_path = os.path.join(output_directory, output_filename)
