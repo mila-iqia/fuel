@@ -220,8 +220,8 @@ class TestAdult(object):
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()
         subparser = subparsers.add_parser('adult')
-        adult.fill_subparser(subparser)
-        assert parser.parse_args(['adult']).func is adult.convert_adult
+        returned_conversion_func = adult.fill_subparser(subparser)
+        assert returned_conversion_func is adult.convert_adult
 
     def test_convert(self):
         tempdir = self.tempdir

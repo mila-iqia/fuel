@@ -108,7 +108,7 @@ def test_mnist():
 def test_adult():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
-    adult.fill_subparser(subparsers.add_parser('adult'))
+    func_got = adult.fill_subparser(subparsers.add_parser('adult'))
     args = parser.parse_args(['adult'])
     urls = ['https://archive.ics.uci.edu/ml/machine-learning-databases/'
             'adult/adult.data',
@@ -117,7 +117,7 @@ def test_adult():
     filenames = ['adult.data', 'adult.test']
     assert_equal(args.filenames, filenames)
     assert_equal(args.urls, urls)
-    assert args.func is default_downloader
+    assert func_got is default_downloader
 
 
 def test_binarized_mnist():
