@@ -16,9 +16,9 @@ def fill_subparser(subparser):
 
     """
     subparser.set_defaults(
-        func=default_downloader,
         urls=['https://archive.ics.uci.edu/ml/machine-learning-databases/'
               'adult/adult.data',
               'https://archive.ics.uci.edu/ml/machine-learning-databases/'
               'adult/adult.test'],
         filenames=['adult.data', 'adult.test'])
+    return default_downloader

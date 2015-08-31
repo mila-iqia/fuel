@@ -40,7 +40,7 @@ install:
         python setup.py build_ext --inplace
       fi
 script:
-  - ./.travis-data.sh mnist binarized_mnist "caltech101_silhouettes 16" cifar10 cifar100 iris
+  - ./.travis-data.sh adult mnist binarized_mnist "caltech101_silhouettes 16" cifar10 cifar100 iris
   - function fail { export FAILED=1; }
   - |
       if [[ $TESTS == 'blocks' ]]; then

@@ -71,12 +71,12 @@ def convert_adult(directory, output_directory,
         # strip out examples with missing features
         content = [line for line in content if line.find('?') == -1]
         # strip off endlines, separate entries
-        content = map(lambda l: l[:-1].split(', '), content)
+        content = list(map(lambda l: l[:-1].split(', '), content))
 
-        features = map(lambda l: l[:-1], content)
-        targets = map(lambda l: l[-1], content)
+        features = list(map(lambda l: l[:-1], content))
+        targets = list(map(lambda l: l[-1], content))
         del content
-        y = map(lambda l: [l[0] == '>'], targets)
+        y = list(map(lambda l: [l[0] == '>'], targets))
         y = numpy.array(y)
         del targets
 
@@ -93,14 +93,14 @@ def convert_adult(directory, output_directory,
 
         pieces = []
         for i, var in enumerate(variables):
-            data = map(lambda l: l[i], features)
+            data = list(map(lambda l: l[i], features))
             if var in continuous:
-                data = map(lambda l: float(l), data)
+                data = list(map(lambda l: float(l), data))
                 data = numpy.array(data)
                 data = data.reshape(data.shape[0], 1)
             else:
                 unique_values = list(set(data))
-                data = map(lambda l: unique_values.index(l), data)
+                data = list(map(lambda l: unique_values.index(l), data))
                 data = convert_to_one_hot(data)
             pieces.append(data)
 
@@ -137,4 +137,4 @@ def convert_adult(directory, output_directory,
 
 
 def fill_subparser(subparser):
-    subparser.set_defaults(func=convert_adult)
+    return convert_adult
