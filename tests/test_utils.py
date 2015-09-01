@@ -39,6 +39,8 @@ class TestSubset(object):
     def test_raises_value_error_on_empty_slice(self):
         # Subset should not support slices that lead to an empty subset
         assert_raises(ValueError, Subset, slice(11, 10, None), 15)
+        assert_raises(ValueError, Subset, slice(13, 18, None), 10)
+        assert_raises(ValueError, Subset, slice(10, 10, None), 10)
 
     def test_list_num_examples(self):
         assert_equal(Subset([0, 3, 8, 13], 15).num_examples, 4)
