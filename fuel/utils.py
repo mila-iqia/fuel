@@ -3,6 +3,7 @@ import os
 
 import six
 import numpy
+from six.moves import range
 
 from fuel import config
 
@@ -12,6 +13,171 @@ if six.PY3:
     buffer_ = memoryview
 else:
     buffer_ = buffer  # noqa
+
+
+class Subset(object):
+    """A description of a subset of examples.
+
+    Parameters
+    ----------
+    list_or_slice : :class:`list` or :class:`slice`
+        List of positive integer indices or slice that describes which
+        examples are part of the subset.
+    original_num_examples: int
+        Number of examples in the dataset this subset belongs to.
+
+    """
+    def __init__(self, list_or_slice, original_num_examples):
+        self._sanity_check(list_or_slice, original_num_examples)
+        if self._is_list(list_or_slice):
+            list_or_slice = self._beautify_list(list_or_slice)
+        self.list_or_slice = list_or_slice
+        self.original_num_examples = original_num_examples
+
+    def __add__(self, other):
+        if self.original_num_examples != other.original_num_examples:
+            raise ValueError("trying to add two Subset instances with "
+                             "different numbers of original examples, they "
+                             "can't possibly belong to the same dataset")
+        if self.is_list:
+            if other.is_list:
+                return self.__class__(self.list_or_slice + other.list_or_slice,
+                                      self.original_num_examples)
+            else:
+                return self.__class__(self.list_or_slice +
+                                      other[list(range(other.num_examples))],
+                                      self.original_num_examples)
+        else:
+            if other.is_list:
+                return self.__class__(self[list(range(self.num_examples))] +
+                                      other.list_or_slice,
+                                      self.original_num_examples)
+            else:
+                self_sss = self._get_start_stop_step(
+                    self.list_or_slice, self.original_num_examples)
+                self_start, self_stop, self_step = self_sss
+                other_sss = self._get_start_stop_step(
+                    other.list_or_slice, other.original_num_examples)
+                other_start, other_stop, other_step = other_sss
+                # Single-step slices can be merged into a slice if they
+                # overlap.
+                overlap = not (self_stop < other_start or
+                               self_start > other_stop)
+                if overlap and self_step == other_step == 1:
+                    # In case of overlap, the solution is to choose the
+                    # smallest start value and largest stop value.
+                    return self.__class__(slice(min(self_start, other_start),
+                                                max(self_stop, other_stop),
+                                                self_step),
+                                          self.original_num_examples)
+                # Everything else is transformed into lists before merging.
+                else:
+                    return self.__class__(
+                        self[list(range(self.num_examples))] +
+                        other[list(range(other.num_examples))],
+                        self.original_num_examples)
+
+    def __getitem__(self, key):
+        if self._is_list(key):
+            self._list_sanity_check(key, self.num_examples)
+            if self.is_list:
+                return [self.list_or_slice[index] for index in key]
+            else:
+                start, stop, step = self._get_start_stop_step(
+                    self.list_or_slice, self.original_num_examples)
+                return [start + (index * step) for index in key]
+        else:
+            self._slice_sanity_check(key, self.num_examples)
+            if self.is_list:
+                return self.list_or_slice[key]
+            else:
+                start, stop, step = self._get_start_stop_step(
+                    self.list_or_slice, self.original_num_examples)
+                key_start, key_stop, key_step = self._get_start_stop_step(
+                    key, self.num_examples)
+                return slice(start + step * key_start,
+                             start + step * key_stop,
+                             step * key_step)
+
+    def _get_start_stop_step(self, slice_, num_examples):
+        start = slice_.start if slice_.start is not None else 0
+        stop = slice_.stop if slice_.stop is not None else num_examples
+        step = slice_.step if slice_.step is not None else 1
+        return start, stop, step
+
+    def _is_list(self, list_or_slice):
+        return not hasattr(list_or_slice, 'step')
+
+    @property
+    def is_list(self):
+        return self._is_list(self.list_or_slice)
+
+    @property
+    def is_slice(self):
+        return not self._is_list(self.list_or_slice)
+
+    @property
+    def num_examples(self):
+        if self.is_list:
+            return len(self.list_or_slice)
+        else:
+            start, stop, step = self._get_start_stop_step(
+                self.list_or_slice, self.original_num_examples)
+            # The problem of finding the number of examples with start > 0
+            # reduces to the problem of finding the number of examples with
+            # start' = 0 and stop' = stop - start (assuming start < stop, which
+            # is enforced in _slice_sanity_check).
+            stop = stop - start
+            start = 0
+            # We count the number of times (stop - 1) is divisible by step
+            # (because stop is defined exclusively), plus 1 (because we count
+            # the zero index).
+            return (stop - 1) // step + 1
+
+    def _sanity_check(self, list_or_slice, original_num_examples):
+        if self._is_list(list_or_slice):
+            self._list_sanity_check(list_or_slice, original_num_examples)
+        else:
+            self._slice_sanity_check(list_or_slice, original_num_examples)
+
+    def _list_sanity_check(self, indices, original_num_examples):
+        if len(indices) == 0:
+            raise ValueError('Subset instances cannot be defined by an empty '
+                             'list (it would be an empty subset)')
+        if any(index < 0 for index in indices):
+            raise ValueError('Subset instances cannot be defined by a list '
+                             'containing negative indices')
+        if max(indices) >= original_num_examples:
+            raise ValueError('Subset instances cannot be defined by a list '
+                             'containing indices greater than or equal to the '
+                             'original number of examples')
+
+    def _slice_sanity_check(self, slice_, original_num_examples):
+        numeric_args = (arg for arg in (slice_.start, slice_.stop, slice_.step)
+                        if arg is not None)
+        if any(arg < 0 for arg in numeric_args):
+            raise ValueError('Subset instances cannot be defined by a slice '
+                             'with negative start, stop or step arguments')
+        if slice_.stop is not None and slice_.stop > original_num_examples:
+            raise ValueError('Subset instances cannot be defined by a slice '
+                             'whose stop value is greater than the original '
+                             'number of examples')
+        if (slice_.start is not None and slice_.stop is not None and
+                slice_.start >= slice_.stop):
+            raise ValueError('Subset instances cannot be defined by a slice '
+                             'whose start value is greater than or equal to '
+                             'its stop value (it would be an empty subset)')
+
+    def _beautify_list(self, indices):
+        # List elements should be unique and sorted
+        indices = list(sorted(set(indices)))
+        # If indices are contiguous, convert them into a slice
+        contiguous_indices = all(
+            indices[i] + 1 == indices[i + 1] for i in range(len(indices) - 1))
+        if contiguous_indices:
+            return slice(indices[0], indices[-1] + 1, None)
+        else:
+            return indices
 
 
 def iterable_fancy_indexing(iterable, request):
