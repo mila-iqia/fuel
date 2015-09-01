@@ -131,15 +131,6 @@ class TestH5PYDataset(object):
         assert (all(source in all_sources for source in sources) and
                 all(source in sources for source in all_sources))
 
-    def test_unsorted_fancy_index_1(self):
-        indexable = numpy.arange(10)
-        assert_equal(H5PYDataset.unsorted_fancy_index([0], indexable), [0])
-
-    def test_unsorted_fancy_index_gt_1(self):
-        indexable = numpy.arange(10)
-        assert_equal(H5PYDataset.unsorted_fancy_index([0, 5, 2], indexable),
-                     [0, 5, 2])
-
     def test_axis_labels(self):
         dataset = H5PYDataset(self.h5file, which_sets=('train',))
         assert dataset.axis_labels == {'features': ('batch', 'feature'),

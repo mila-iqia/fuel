@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 
+import numpy
 from numpy.testing import assert_raises, assert_equal
 from six.moves import range, cPickle
 
@@ -65,6 +66,10 @@ class TestSubset(object):
     def test_contiguous_lists_are_transformed_into_slices(self):
         assert_equal(Subset([1, 2, 3], 10).list_or_slice, slice(1, 4, None))
 
+    def test_none_slice_request(self):
+        assert_equal(Subset([1, 3, 5, 7], 8)[slice(None)], [1, 3, 5, 7])
+        assert_equal(Subset(slice(0, 8, 2), 8)[slice(None)], slice(0, 8, 2))
+
     def test_list_subset_list_request(self):
         assert_equal(Subset([0, 2, 5, 7, 10, 15], 16)[[3, 2, 4]], [7, 5, 10])
 
@@ -121,6 +126,15 @@ class TestSubset(object):
         assert_equal((Subset(slice(0, 8, 3), 20) +
                       Subset(slice(12, 19, 2), 20)).list_or_slice,
                       [0, 3, 6, 12, 14, 16, 18])
+
+    def test_unsorted_fancy_index_1(self):
+        indexable = numpy.arange(10)
+        assert_equal(Subset.unsorted_fancy_index([0], indexable), [0])
+
+    def test_unsorted_fancy_index_gt_1(self):
+        indexable = numpy.arange(10)
+        assert_equal(Subset.unsorted_fancy_index([0, 5, 2], indexable),
+                     [0, 5, 2])
 
 
 @do_not_pickle_attributes("non_picklable", "bulky_attr")

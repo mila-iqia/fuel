@@ -78,7 +78,11 @@ class Subset(object):
                         self.original_num_examples)
 
     def __getitem__(self, key):
-        if self._is_list(key):
+        # slice(None, None, None) selects the whole subset, no need to index
+        # anything
+        if key == slice(None, None, None):
+            return self.list_or_slice
+        elif self._is_list(key):
             self._list_sanity_check(key, self.num_examples)
             if self.is_list:
                 return [self.list_or_slice[index] for index in key]
@@ -98,6 +102,46 @@ class Subset(object):
                 return slice(start + step * key_start,
                              start + step * key_stop,
                              step * key_step)
+
+    @classmethod
+    def subset_of(cls, subset, list_or_slice):
+        return cls(subset[list_or_slice], subset.original_num_examples)
+
+    @staticmethod
+    def unsorted_fancy_index(request, indexable):
+        """Safe unsorted list indexing.
+
+        Some objects, such as h5py datasets, only support list indexing
+        if the list is sorted.
+
+        This static method adds support for unsorted list indexing by
+        sorting the requested indices, accessing the corresponding
+        elements and re-shuffling the result.
+
+        Parameters
+        ----------
+        request : list of int
+            Unsorted list of example indices.
+        indexable : any fancy-indexable object
+            Indexable we'd like to do unsorted fancy indexing on.
+
+        """
+        if len(request) > 1:
+            indices = numpy.argsort(request)
+            data = numpy.empty(shape=(len(request),) + indexable.shape[1:],
+                               dtype=indexable.dtype)
+            data[indices] = indexable[numpy.array(request)[indices], ...]
+        else:
+            data = indexable[request]
+        return data
+
+    def index_within_subset(self, indexable, list_or_slice,
+                            sort_indices=False):
+        request = self[list_or_slice]
+        if self._is_list(request) and sort_indices:
+            return self.unsorted_fancy_index(request, indexable)
+        else:
+            return indexable[request]
 
     def _get_start_stop_step(self, slice_, num_examples):
         start = slice_.start if slice_.start is not None else 0
