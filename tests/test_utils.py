@@ -127,13 +127,13 @@ class TestSubset(object):
                       Subset(slice(12, 19, 2), 20)).list_or_slice,
                       [0, 3, 6, 12, 14, 16, 18])
 
-    def test_unsorted_fancy_index_1(self):
+    def test_safe_unsorted_fancy_index_1(self):
         indexable = numpy.arange(10)
-        assert_equal(Subset.unsorted_fancy_index([0], indexable), [0])
+        assert_equal(Subset.safe_unsorted_fancy_index(indexable, [0]), [0])
 
-    def test_unsorted_fancy_index_gt_1(self):
+    def test_safe_unsorted_fancy_index_gt_1(self):
         indexable = numpy.arange(10)
-        assert_equal(Subset.unsorted_fancy_index([0, 5, 2], indexable),
+        assert_equal(Subset.safe_unsorted_fancy_index(indexable, [0, 5, 2]),
                      [0, 5, 2])
 
 
