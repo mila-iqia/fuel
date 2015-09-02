@@ -51,10 +51,6 @@ class TestSubset(object):
         assert_equal(Subset(slice(2, 37, 7), 50).num_examples, 5)
         assert_equal(Subset(slice(2, 37, 8), 50).num_examples, 5)
 
-    def test_is_slice_property(self):
-        assert Subset(slice(None, None, None), 2).is_slice
-        assert not Subset([0, 1, 3], 4).is_slice
-
     def test_is_list_property(self):
         assert not Subset(slice(None, None, None), 2).is_list
         assert Subset([0, 1, 3], 4).is_list

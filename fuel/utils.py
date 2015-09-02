@@ -27,6 +27,16 @@ class Subset(object):
     original_num_examples: int
         Number of examples in the dataset this subset belongs to.
 
+    Attributes
+    ----------
+    is_list : bool
+        Whether the Subset is a list-based subset (as opposed to a
+        slice-based subset).
+    num_examples : int
+        Number of examples the Subset spans.
+    original_num_examples : int
+        Number of examples in the dataset this subset is part of.
+
     """
     def __init__(self, list_or_slice, original_num_examples):
         self._sanity_check(list_or_slice, original_num_examples)
@@ -54,10 +64,10 @@ class Subset(object):
                                       other.list_or_slice,
                                       self.original_num_examples)
             else:
-                self_sss = self._get_start_stop_step(
+                self_sss = self.slice_to_numerical_args(
                     self.list_or_slice, self.original_num_examples)
                 self_start, self_stop, self_step = self_sss
-                other_sss = self._get_start_stop_step(
+                other_sss = self.slice_to_numerical_args(
                     other.list_or_slice, other.original_num_examples)
                 other_start, other_stop, other_step = other_sss
                 # Single-step slices can be merged into a slice if they
@@ -88,7 +98,7 @@ class Subset(object):
             if self.is_list:
                 return [self.list_or_slice[index] for index in key]
             else:
-                start, stop, step = self._get_start_stop_step(
+                start, stop, step = self.slice_to_numerical_args(
                     self.list_or_slice, self.original_num_examples)
                 return [start + (index * step) for index in key]
         else:
@@ -96,9 +106,9 @@ class Subset(object):
             if self.is_list:
                 return self.list_or_slice[key]
             else:
-                start, stop, step = self._get_start_stop_step(
+                start, stop, step = self.slice_to_numerical_args(
                     self.list_or_slice, self.original_num_examples)
-                key_start, key_stop, key_step = self._get_start_stop_step(
+                key_start, key_stop, key_step = self.slice_to_numerical_args(
                     key, self.num_examples)
                 return slice(start + step * key_start,
                              start + step * key_stop,
@@ -106,6 +116,17 @@ class Subset(object):
 
     @classmethod
     def subset_of(cls, subset, list_or_slice):
+        """Construct a Subset that is a subset of another Subset.
+
+        Parameters
+        ----------
+        subset : Subset
+            Subset to take the subset of.
+        list_or_slice : :class:`list` or :class:`slice`
+            List of positive integer indices or slice that describes which
+            examples are part of the subset's subset.
+
+        """
         return cls(subset[list_or_slice], subset.original_num_examples)
 
     @staticmethod
@@ -136,8 +157,46 @@ class Subset(object):
             data = indexable[request]
         return data
 
+    @staticmethod
+    def slice_to_numerical_args(slice_, num_examples):
+        """Translate a slice's attributes into numerical attributes.
+
+        Parameters
+        ----------
+        slice_ : :class:`slice`
+            Slice for which numerical attributes are wanted.
+        num_examples : int
+            Number of examples in the indexable that is to be sliced
+            through. This determines the numerical value for the `stop`
+            attribute in case it's `None`.
+
+        """
+        start = slice_.start if slice_.start is not None else 0
+        stop = slice_.stop if slice_.stop is not None else num_examples
+        step = slice_.step if slice_.step is not None else 1
+        return start, stop, step
+
     def index_within_subset(self, indexable, subset_request,
                             safe_hdf5_indexing=True):
+        """Index an indexable object within the context of this subset.
+
+        Parameters
+        ----------
+        indexable : indexable object
+            The object to index through.
+        subset_request : :class:`list` or :class:`slice`
+            List of positive integer indices or slice that constitutes
+            the request *within the context of this subset*. This
+            request will be translated to a request on the indexable
+            object.
+        safe_hdf5_indexing : bool, optional
+            If the indexable is an HDF5 dataset and the request is a list
+            of indices, work around the fancy indexing limitation that
+            requires lists of indices to be sorted by indexing in sorted
+            order and reshuffling the result in the original order.
+            Default to `True`.
+
+        """
         # Translate the request within the context of this subset to a
         # request to the indexable object
         if isinstance(subset_request, int):
@@ -169,29 +228,34 @@ class Subset(object):
             else:
                 return iterable_fancy_indexing(indexable, request)
 
-    def _get_start_stop_step(self, slice_, num_examples):
-        start = slice_.start if slice_.start is not None else 0
-        stop = slice_.stop if slice_.stop is not None else num_examples
-        step = slice_.step if slice_.step is not None else 1
-        return start, stop, step
-
     def _is_list(self, list_or_slice):
+        """Determines if an object is a list or a slice.
+
+        Parameters
+        ----------
+        list_or_slice : :class:`list` or :class:`slice`
+            It is assumed to be one or the other, **and nothing else**.
+
+        Returns
+        -------
+        rval : bool
+            `True` if the object is a list, `False` if it's a slice.
+
+        """
         return not hasattr(list_or_slice, 'step')
 
     @property
     def is_list(self):
+        """Whether this subset is list-based (as opposed to slice-based)."""
         return self._is_list(self.list_or_slice)
 
     @property
-    def is_slice(self):
-        return not self._is_list(self.list_or_slice)
-
-    @property
     def num_examples(self):
+        """The number of examples this subset spans."""
         if self.is_list:
             return len(self.list_or_slice)
         else:
-            start, stop, step = self._get_start_stop_step(
+            start, stop, step = self.slice_to_numerical_args(
                 self.list_or_slice, self.original_num_examples)
             # The problem of finding the number of examples with start > 0
             # reduces to the problem of finding the number of examples with
