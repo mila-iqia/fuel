@@ -132,10 +132,45 @@ class TestSubset(object):
         assert_equal(Subset.safe_unsorted_fancy_index(indexable, [0, 5, 2]),
                      [0, 5, 2])
 
-    def test_raises_value_error_on_slice_producing_empty_result(self):
-        indexable = numpy.arange(10)
-        assert_raises(ValueError, Subset(slice(0, 10), 10).index_within_subset,
-                      indexable, slice(11, 13))
+    def test_list_request_sanity_check_raises_error_on_empty_list(self):
+        assert_raises(ValueError, Subset([0], 8)._list_request_sanity_check,
+                      [], 1)
+
+    def test_list_request_sanity_check_raises_error_on_negative_index(self):
+        assert_raises(ValueError, Subset([0], 8)._list_request_sanity_check,
+                      [-1], 1)
+
+    def test_list_request_sanity_check_raises_error_on_index_geq_num_ex(self):
+        assert_raises(ValueError, Subset([0], 8)._list_request_sanity_check,
+                      [1], 1)
+        assert_raises(ValueError, Subset([0], 8)._list_request_sanity_check,
+                      [2], 1)
+
+    def test_slice_request_sanity_check_raises_error_on_negative_attr(self):
+        assert_raises(ValueError, Subset([0], 8)._slice_request_sanity_check,
+                      slice(-1, None, None), 1)
+        assert_raises(ValueError, Subset([0], 8)._slice_request_sanity_check,
+                      slice(None, -1, None), 1)
+        assert_raises(ValueError, Subset([0], 8)._slice_request_sanity_check,
+                      slice(None, None, -1), 1)
+
+    def test_slice_request_sanity_check_raises_error_on_stop_gt_num_ex(self):
+        assert_raises(ValueError, Subset([0], 8)._slice_request_sanity_check,
+                      slice(None, 2), 1)
+
+    def test_slice_request_sanity_check_raises_error_on_start_geq_num_ex(self):
+        assert_raises(ValueError, Subset([0], 8)._slice_request_sanity_check,
+                      slice(1, None), 1)
+        assert_raises(ValueError, Subset([0], 8)._slice_request_sanity_check,
+                      slice(2, None), 1)
+
+    def test_slice_request_sanity_check_raises_error_on_start_geq_stop(self):
+        assert_raises(ValueError,
+                      Subset([0, 1, 2], 8)._slice_request_sanity_check,
+                      slice(1, 1), 3)
+        assert_raises(ValueError,
+                      Subset([0, 1, 2], 8)._slice_request_sanity_check,
+                      slice(2, 1), 3)
 
 
 @do_not_pickle_attributes("non_picklable", "bulky_attr")
