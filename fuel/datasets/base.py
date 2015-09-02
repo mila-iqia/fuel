@@ -7,7 +7,7 @@ from picklable_itertools import iter_, izip
 
 from fuel.schemes import SequentialExampleScheme
 from fuel.streams import DataStream
-from fuel.utils import iterable_fancy_indexing, Subset
+from fuel.utils import Subset
 
 
 @add_metaclass(ABCMeta)

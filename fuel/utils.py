@@ -193,7 +193,7 @@ class Subset(object):
             of indices, work around the fancy indexing limitation that
             requires lists of indices to be sorted by indexing in sorted
             order and reshuffling the result in the original order.
-            Default to `True`.
+            Defaults to `True`.
 
         """
         # Translate the request within the context of this subset to a

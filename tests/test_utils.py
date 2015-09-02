@@ -93,35 +93,35 @@ class TestSubset(object):
     def test_add_list_slice(self):
         assert_equal((Subset([0, 3, 2, 8], 10) +
                       Subset(slice(1, 9, 3), 10)).list_or_slice,
-                      [0, 1, 2, 3, 4, 7, 8])
+                     [0, 1, 2, 3, 4, 7, 8])
 
     def test_add_slice_list(self):
         assert_equal((Subset(slice(1, 9, 3), 10) +
                       Subset([0, 3, 2, 8], 10)).list_or_slice,
-                      [0, 1, 2, 3, 4, 7, 8])
+                     [0, 1, 2, 3, 4, 7, 8])
 
     def test_add_contiguous_single_step_slice_slice(self):
         assert_equal((Subset(slice(0, 4, 1), 10) +
                       Subset(slice(4, 7, 1), 10)).list_or_slice,
-                      slice(0, 7, 1))
+                     slice(0, 7, 1))
         assert_equal((Subset(slice(4, 7, 1), 10) +
                       Subset(slice(0, 4, 1), 10)).list_or_slice,
-                      slice(0, 7, 1))
+                     slice(0, 7, 1))
 
     def test_add_overlapping_single_step_slice_slice(self):
         assert_equal((Subset(slice(0, 6, 1), 10) +
                       Subset(slice(4, 7, 1), 10)).list_or_slice,
-                      slice(0, 7, 1))
+                     slice(0, 7, 1))
         assert_equal((Subset(slice(4, 7, 1), 10) +
                       Subset(slice(0, 6, 1), 10)).list_or_slice,
-                      slice(0, 7, 1))
+                     slice(0, 7, 1))
 
     def test_adding_slice_slice_falls_back_to_list(self):
         # If Subset can't find a way to add two slices together, it must
         # return a list-based Subset.
         assert_equal((Subset(slice(0, 8, 3), 20) +
                       Subset(slice(12, 19, 2), 20)).list_or_slice,
-                      [0, 3, 6, 12, 14, 16, 18])
+                     [0, 3, 6, 12, 14, 16, 18])
 
     def test_safe_unsorted_fancy_index_1(self):
         indexable = numpy.arange(10)

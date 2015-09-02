@@ -8,8 +8,7 @@ import tables
 from six.moves import zip, range
 
 from fuel.datasets import Dataset
-from fuel.utils import (do_not_pickle_attributes, iterable_fancy_indexing,
-                        Subset)
+from fuel.utils import do_not_pickle_attributes, Subset
 
 
 @do_not_pickle_attributes('nodes', 'h5file')
@@ -499,7 +498,6 @@ class H5PYDataset(Dataset):
             data_sources = []
             source_shapes = []
             for source_name, subset in zip(self.sources, self.subsets):
-                list_or_slice = subset.list_or_slice
                 data_sources.append(
                     subset.index_within_subset(
                         handle[source_name], slice(None)))
