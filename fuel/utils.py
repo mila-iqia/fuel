@@ -39,7 +39,7 @@ class Subset(object):
 
     """
     def __init__(self, list_or_slice, original_num_examples):
-        self._sanity_check(list_or_slice, original_num_examples)
+        self._subset_sanity_check(list_or_slice, original_num_examples)
         if self._is_list(list_or_slice):
             list_or_slice = self._beautify_list(list_or_slice)
         self.list_or_slice = list_or_slice
@@ -89,12 +89,12 @@ class Subset(object):
                         self.original_num_examples)
 
     def __getitem__(self, key):
+        self._request_sanity_check(key, self.num_examples)
         # slice(None, None, None) selects the whole subset, no need to index
         # anything
         if key == slice(None, None, None):
             return self.list_or_slice
         elif self._is_list(key):
-            self._list_sanity_check(key, self.num_examples)
             if self.is_list:
                 return [self.list_or_slice[index] for index in key]
             else:
@@ -102,7 +102,6 @@ class Subset(object):
                     self.list_or_slice, self.original_num_examples)
                 return [start + (index * step) for index in key]
         else:
-            self._slice_sanity_check(key, self.num_examples)
             if self.is_list:
                 return self.list_or_slice[key]
             else:
@@ -260,7 +259,7 @@ class Subset(object):
             # The problem of finding the number of examples with start > 0
             # reduces to the problem of finding the number of examples with
             # start' = 0 and stop' = stop - start (assuming start < stop, which
-            # is enforced in _slice_sanity_check).
+            # is enforced in _slice_subset_sanity_check).
             stop = stop - start
             start = 0
             # We count the number of times (stop - 1) is divisible by step
@@ -268,39 +267,83 @@ class Subset(object):
             # the zero index).
             return (stop - 1) // step + 1
 
-    def _sanity_check(self, list_or_slice, original_num_examples):
+    def _subset_sanity_check(self, list_or_slice, num_examples):
         if self._is_list(list_or_slice):
-            self._list_sanity_check(list_or_slice, original_num_examples)
+            self._list_subset_sanity_check(list_or_slice, num_examples)
         else:
-            self._slice_sanity_check(list_or_slice, original_num_examples)
+            self._slice_subset_sanity_check(list_or_slice, num_examples)
 
-    def _list_sanity_check(self, indices, original_num_examples):
+    def _list_subset_sanity_check(self, indices, num_examples):
         if len(indices) == 0:
             raise ValueError('Subset instances cannot be defined by an empty '
                              'list (it would be an empty subset)')
         if any(index < 0 for index in indices):
             raise ValueError('Subset instances cannot be defined by a list '
                              'containing negative indices')
-        if max(indices) >= original_num_examples:
+        if max(indices) >= num_examples:
             raise ValueError('Subset instances cannot be defined by a list '
                              'containing indices greater than or equal to the '
                              'original number of examples')
 
-    def _slice_sanity_check(self, slice_, original_num_examples):
+    def _slice_subset_sanity_check(self, slice_, num_examples):
         numeric_args = (arg for arg in (slice_.start, slice_.stop, slice_.step)
                         if arg is not None)
         if any(arg < 0 for arg in numeric_args):
             raise ValueError('Subset instances cannot be defined by a slice '
                              'with negative start, stop or step arguments')
-        if slice_.stop is not None and slice_.stop > original_num_examples:
+        if slice_.stop is not None and slice_.stop > num_examples:
             raise ValueError('Subset instances cannot be defined by a slice '
                              'whose stop value is greater than the original '
                              'number of examples')
+        if slice_.start is not None and slice_.start >= num_examples:
+            raise ValueError('Subset instances cannot be defined by a slice '
+                             'whose start value is greater than or equal to '
+                             'the original number of examples')
         if (slice_.start is not None and slice_.stop is not None and
                 slice_.start >= slice_.stop):
             raise ValueError('Subset instances cannot be defined by a slice '
                              'whose start value is greater than or equal to '
                              'its stop value (it would be an empty subset)')
+
+    def _request_sanity_check(self, list_or_slice, num_examples):
+        if self._is_list(list_or_slice):
+            self._list_request_sanity_check(list_or_slice, num_examples)
+        else:
+            self._slice_request_sanity_check(list_or_slice, num_examples)
+
+    def _list_request_sanity_check(self, indices, num_examples):
+        if len(indices) == 0:
+            raise ValueError('list-based requests cannot be empty (this would '
+                             'produce an empty return value)')
+        if any(index < 0 for index in indices):
+            raise ValueError('Subset does not support list-based requests '
+                             'with negative indices')
+        if max(indices) >= num_examples:
+            raise ValueError('list-based requests cannot contain indices '
+                             'greater than or equal to the number of examples '
+                             'the subset spans')
+
+    def _slice_request_sanity_check(self, slice_, num_examples):
+        numeric_args = (arg for arg in (slice_.start, slice_.stop, slice_.step)
+                        if arg is not None)
+        if any(arg < 0 for arg in numeric_args):
+            raise ValueError('Subset does not support slice-based requests '
+                             'with negative start, stop or step arguments')
+        if slice_.stop is not None and slice_.stop > num_examples:
+            raise ValueError('slice-based requests cannot have a stop value '
+                             'greater than the number of examples the subset '
+                             'spans (this would produce a return value with '
+                             'smaller length than expected')
+        if slice_.start is not None and slice_.start >= num_examples:
+            raise ValueError('slice-based requests cannot have a start value '
+                             'greater than the number of examples the subset '
+                             'spans (this would produce an empty return '
+                             'value)')
+        if (slice_.start is not None and slice_.stop is not None and
+                slice_.start >= slice_.stop):
+            raise ValueError('slice-based requests cannot have a start value '
+                             'greater than or equal to its stop value (this '
+                             'would produce an empty return value)')
 
     def _beautify_list(self, indices):
         # List elements should be unique and sorted

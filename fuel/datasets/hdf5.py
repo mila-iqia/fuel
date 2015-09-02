@@ -89,7 +89,7 @@ class PytablesDataset(Dataset):
 
 
 @do_not_pickle_attributes('data_sources', 'external_file_handle',
-                          'source_shapes', 'subsets')
+                          'source_shapes', 'in_memory_subset', 'subsets')
 class H5PYDataset(Dataset):
     """An h5py-fueled HDF5 dataset.
 
@@ -512,9 +512,13 @@ class H5PYDataset(Dataset):
                 source_shapes.append(shapes)
             self.data_sources = tuple(data_sources)
             self.source_shapes = tuple(source_shapes)
+            # This exists only for request sanity checking purposes.
+            self.in_memory_subset = Subset(
+                slice(None), len(self.data_sources[0]))
         else:
             self.data_sources = None
             self.source_shapes = None
+            self.in_memory_subset = None
 
         self._out_of_memory_close()
 
@@ -568,8 +572,10 @@ class H5PYDataset(Dataset):
     def _in_memory_get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
-        data = [data_source[request] for data_source in self.data_sources]
-        shapes = [shape[request] if shape is not None else None
+        data = [self.in_memory_subset.index_within_subset(data_source, request)
+                for data_source in self.data_sources]
+        shapes = [self.in_memory_subset.index_within_subset(shape, request)
+                  if shape is not None else None
                   for shape in self.source_shapes]
         return data, shapes
 

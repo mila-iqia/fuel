@@ -132,6 +132,11 @@ class TestSubset(object):
         assert_equal(Subset.safe_unsorted_fancy_index(indexable, [0, 5, 2]),
                      [0, 5, 2])
 
+    def test_raises_value_error_on_slice_producing_empty_result(self):
+        indexable = numpy.arange(10)
+        assert_raises(ValueError, Subset(slice(0, 10), 10).index_within_subset,
+                      indexable, slice(11, 13))
+
 
 @do_not_pickle_attributes("non_picklable", "bulky_attr")
 class DummyClass(object):
