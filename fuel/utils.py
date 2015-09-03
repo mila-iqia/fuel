@@ -44,7 +44,7 @@ def find_in_data_path(filename):
         If the file doesn't appear in Fuel's data path.
 
     """
-    for path in config.data_path.split(os.path.pathsep):
+    for path in config.data_path:
         path = os.path.expanduser(os.path.expandvars(path))
         file_path = os.path.join(path, filename)
         if os.path.isfile(file_path):
