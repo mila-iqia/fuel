@@ -9,6 +9,7 @@ Welcome to Fuel's documentation!
    built_in_datasets
    h5py_dataset
    new_dataset
+   extending_fuel
    api/index
 
 Fuel is a data pipeline framework which provides your machine learning models
@@ -57,85 +58,10 @@ processing.
 .. _skdata: https://github.com/jaberg/skdata
 
 Quickstart
-----------
+==========
 
-Once you have :doc:`installed <setup>` Fuel, you can
-begin by telling Fuel where to find the data it needs. You can do this by
-creating a ``.fuelrc`` file:
-
-.. code-block:: bash
-
-   echo "data_path: /home/your_data" >> ~/.fuelrc
-
-or by setting the environment variable ``FUEL_DATA_PATH``
-
-.. code-block:: bash
-
-   export FUEL_DATA_PATH=/home/your_data
-
-This data path is a sequence of paths separated by an os-specific delimiter
-(':' for Linux and OSX, ';' for Windows).
-
-For example, after downloading the MNIST data to ``/home/your_data/mnist`` we
-construct a handle to the data.
-
->>> from fuel.datasets import MNIST
->>> mnist = MNIST(which_sets=('train',))
-
-In order to start reading the data, we need to initialize a *data stream*. A
-data stream combines a dataset with a particular iteration scheme to read data
-in a particular way. Let's say that in this case we want retrieve random
-minibatches of size 512.
-
->>> from fuel.streams import DataStream
->>> from fuel.transformers import Flatten
->>> from fuel.schemes import ShuffledScheme
->>> stream = Flatten(
-...     DataStream.default_stream(
-...         mnist, iteration_scheme=ShuffledScheme(mnist.num_examples, 512)),
-...     which_sources=('features',))
-
-Datasets can apply various default transformations on the original
-data stream if their ``apply_default_transformers`` method is called. A
-convenient way to do so is to instantiate the data stream through the
-``default_stream`` class method. In this case, MNIST rescaled pixel values in
-the unit interval and flattened the images into vectors.
-
-This stream can now provide us with a Python iterator which will provide a
-total of 60,000 examples (``mnist.num_examples``) in the form of batches of
-size 512. We call a single pass over the data an *epoch*, and hence the
-iterator is called an *epoch iterator*.
-
->>> epoch = stream.get_epoch_iterator()
-
-This iterator behaves like any other Python iterator, so we call :func:`next` on it
-
->>> next(epoch)  # doctest: +ELLIPSIS
-(array([[ 0.,  0.,  0., ...,  0.,  0.,  0.],...
-
-and we can use a ``for`` loop
-
->>> for batch in epoch:
-...     pass
-
-Once we have completed the epoch, the iterator will be exhausted
-
->>> next(epoch)
-Traceback (most recent call last):
-  ...
-StopIteration
-
-but we can ask the stream for a new one, which will provide a complete
-different set of minibatches.
-
->>> new_epoch = stream.get_epoch_iterator()
-
-We can iterate over epochs as well, providing our model with an endless stream
-of MNIST batches.
-
->>> for epoch in stream.iterate_epochs():  # doctest: +SKIP
-...     for batch in epoch:
-...         pass
+The best way to get started with Fuel is to have a look at the
+:doc:`overview <overview>` documentation section.
 
 Indices and tables
 ==================
