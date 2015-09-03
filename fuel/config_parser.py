@@ -68,6 +68,25 @@ logger = logging.getLogger(__name__)
 NOT_SET = object()
 
 
+def multiple_paths_parser(value):
+    """
+    Parses data_path argument.
+
+    Parameters:
+    -----------
+    value : str
+        a string of data paths separated by  ":".
+
+    Returns:
+    -----------
+    value : list
+        a list of strings indicating each data paths.
+
+    """
+    value = value.split(":")
+    return value
+
+
 class Configuration(object):
     def __init__(self):
         self.config = {}
@@ -142,7 +161,7 @@ class Configuration(object):
 config = Configuration()
 
 # Define configuration options
-config.add_config('data_path', type_=str, env_var='FUEL_DATA_PATH')
+config.add_config('data_path', type_=multiple_paths_parser, env_var='FUEL_DATA_PATH')
 config.add_config('default_seed', type_=int, default=1)
 
 # Default to Theano's floatX if possible

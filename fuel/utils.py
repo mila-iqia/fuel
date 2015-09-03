@@ -44,7 +44,7 @@ def find_in_data_path(filename):
         If the file doesn't appear in Fuel's data path.
 
     """
-    for path in config.data_path.split(os.path.pathsep):
+    for path in config.data_path:
         path = os.path.expanduser(os.path.expandvars(path))
         file_path = os.path.join(path, filename)
         if os.path.isfile(file_path):
@@ -68,7 +68,7 @@ def lazy_property_factory(lazy_property):
 
 
 def do_not_pickle_attributes(*lazy_properties):
-    r"""Decorator to assign non-pickable properties.
+    """Decorator to assign non-pickable properties.
 
     Used to assign properties which will not be pickled on some class.
     This decorator creates a series of properties whose values won't be
