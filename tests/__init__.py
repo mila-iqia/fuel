@@ -35,7 +35,11 @@ def skip_if_not_available(modules=None, datasets=None, configurations=None):
     if datasets and not hasattr(config, 'data_path'):
         raise SkipTest
     for dataset in datasets:
-        if not os.path.exists(os.path.join(config.data_path, dataset)):
+        flag = False
+        for data_path in config.data_path:
+            if os.path.exists(os.path.join(data_path, dataset)):
+                flag = True
+        if not flag:
             raise SkipTest
     for configuration in configurations:
         if not hasattr(config, configuration):
