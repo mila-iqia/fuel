@@ -39,4 +39,6 @@ class CalTech101Silhouettes(H5PYDataset):
 
     @property
     def data_path(self):
-        return os.path.join(config.data_path, self.filename)
+        for data_path in config.data_path:
+            if os.path.exists(os.path.join(data_path, self.filename)):
+                return os.path.join(data_path, self.filename)
