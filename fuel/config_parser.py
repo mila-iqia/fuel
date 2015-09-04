@@ -97,8 +97,7 @@ def extra_downloader_converter(value):
 
 
 def multiple_paths_parser(value):
-    """
-    Parses data_path argument.
+    """Parses data_path argument.
 
     Parameters
     ----------
