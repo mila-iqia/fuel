@@ -2,6 +2,7 @@
 import os
 
 from fuel import config
+from fuel.utils import find_in_data_path
 from fuel.datasets import H5PYDataset
 
 
@@ -39,6 +40,4 @@ class CalTech101Silhouettes(H5PYDataset):
 
     @property
     def data_path(self):
-        for data_path in config.data_path:
-            if os.path.exists(os.path.join(data_path, self.filename)):
-                return os.path.join(data_path, self.filename)
+        return find_in_data_path(self.filename)

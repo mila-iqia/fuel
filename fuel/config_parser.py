@@ -110,7 +110,8 @@ def multiple_paths_parser(value):
         a list of strings indicating each data paths.
 
     """
-    value = value.split(os.path.pathsep)
+    if isinstance(value, six.string_types):
+        value = value.split(os.path.pathsep)
     return value
 
 
