@@ -96,6 +96,25 @@ def extra_downloader_converter(value):
     return value
 
 
+def multiple_paths_parser(value):
+    """Parses data_path argument.
+
+    Parameters
+    ----------
+    value : str
+        a string of data paths separated by  ":".
+
+    Returns
+    -------
+    value : list
+        a list of strings indicating each data paths.
+
+    """
+    if isinstance(value, six.string_types):
+        value = value.split(os.path.pathsep)
+    return value
+
+
 class Configuration(object):
     def __init__(self):
         self.config = {}
@@ -170,7 +189,8 @@ class Configuration(object):
 config = Configuration()
 
 # Define configuration options
-config.add_config('data_path', type_=str, env_var='FUEL_DATA_PATH')
+config.add_config('data_path', type_=multiple_paths_parser,
+                  env_var='FUEL_DATA_PATH')
 config.add_config('default_seed', type_=int, default=1)
 config.add_config('extra_downloaders', type_=extra_downloader_converter,
                   default=[], env_var='FUEL_EXTRA_DOWNLOADERS')

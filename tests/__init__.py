@@ -1,7 +1,7 @@
-import os
 from importlib import import_module
 from unittest.case import SkipTest
 
+from fuel.utils import find_in_data_path
 from fuel import config
 
 
@@ -35,7 +35,9 @@ def skip_if_not_available(modules=None, datasets=None, configurations=None):
     if datasets and not hasattr(config, 'data_path'):
         raise SkipTest
     for dataset in datasets:
-        if not os.path.exists(os.path.join(config.data_path, dataset)):
+        try:
+            find_in_data_path(dataset)
+        except IOError:
             raise SkipTest
     for configuration in configurations:
         if not hasattr(config, configuration):

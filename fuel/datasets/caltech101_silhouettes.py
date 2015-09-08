@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-import os
-
-from fuel import config
+from fuel.utils import find_in_data_path
 from fuel.datasets import H5PYDataset
 
 
@@ -39,4 +37,4 @@ class CalTech101Silhouettes(H5PYDataset):
 
     @property
     def data_path(self):
-        return os.path.join(config.data_path, self.filename)
+        return find_in_data_path(self.filename)
