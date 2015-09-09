@@ -13,7 +13,7 @@ New dataset classes
 New dataset classes are implemented by subclassing :class:`Dataset` and
 implementing its :meth:`get_data` method. If your dataset interacts with
 stateful objects (e.g. files on disk), then you should also override the
-:class:`open` and :class:`close` methods.
+:meth:`open` and :meth:`close` methods.
 
 If your data fits in memory, you can save yourself some time by inheriting from
 :class:`IndexableDataset`. In that case, all you need to do is load the data as
@@ -113,7 +113,7 @@ If you were to build a transformer that only works on batches, you would pass
 anyone tried to use your transformer on an example data stream, an error would
 automatically be raised.
 
-Let's test our doubler on some dummy dataset. **Note that the this implementation
+Let's test our doubler on some dummy dataset. **Note that this implementation
 is for illustration purposes only: it is brittle and only works on numpy
 arrays.**
 
