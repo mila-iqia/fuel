@@ -379,7 +379,7 @@ def other_set_producer(socket, which_set, image_archive, patch_archive,
             if patched:
                 num_patched += 1
             socket.send_pyobj((filename, class_index), zmq.SNDMORE)
-            socket.send(image_data)
+            socket.send(image_data, copy=False)
     if num_patched != len(patch_images):
         raise Exception
 
