@@ -1,3 +1,4 @@
+from collections import deque
 import io
 import os
 import tarfile
@@ -16,6 +17,48 @@ from fuel.converters.ilsvrc2010 import (extract_patch_images,
                                         load_from_tar_or_patch,
                                         read_devkit)
 from tests import skip_if_not_available
+
+class MockSocket(object):
+    """Mock of a ZeroMQ PUSH or PULL socket."""
+    def __init__(self, socket_type, to_recv):
+        self.socket_type = socket_type
+        if self.socket_type not in (zmq.PUSH, zmq.PULL):
+            raise NotImplementedError('only PUSH and PULL currently supported')
+        self.sent = deque()
+        self.to_recv = deque(to_recv)
+
+    def send(data, flags=0, copy=True, track=False):
+        assert self.socket_type == zmq.PUSH
+        if track:
+            # We don't emulate the behaviour required by this flag.
+            raise NotImplementedError
+        message = {'type': 'send', 'data': data, 'flags': flags, 'copy': copy}
+        self.sent.append(message)
+
+    def send_pyobj(obj, flags=0, protocol=2):
+        assert self.socket_type == zmq.PUSH
+        message = {'type': 'send_pyobj', 'obj': obj, 'flags': flags,
+                   'protocol': protocol}
+        self.sent.append(message)
+
+    def recv(flags=0, copy=True, track=False):
+        if track:
+            # We don't emulate the behaviour required by this flag.
+            raise NotImplementedError
+        message = self.to_recv.popleft()
+        assert message['type'] == 'recv'
+        if 'flags' in message:
+            assert message['flags'] == flags, 'flags did not match expected'
+        if 'copy' in message:
+            assert message['copy'] == copy, 'copy did not match expected'
+        return message['data']
+
+    def recv_pyobj(flags=0):
+        message = self.to_recv.popleft()
+        assert message['type'] == 'recv_pyobj'
+        if 'flags' in message:
+            assert flags == message['flags']
+        return message['obj']
 
 
 class MockH5PYData(object):
@@ -280,7 +323,7 @@ def test_train_set_producer():
     raise unittest.SkipTest("TODO")
 
 
-def test_train_image_consumer():
+def test_image_consumer():
     raise unittest.SkipTest("TODO")
 
 
