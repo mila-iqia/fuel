@@ -525,8 +525,14 @@ class TestMerge(object):
         assert_equal(self.transformer.sources, ('english', 'french'))
 
     def test_merge(self):
-        assert_equal(next(self.transformer.get_epoch_iterator()),
-                     ('Hello world!', 'Bonjour le monde!'))
+        it = self.transformer.get_epoch_iterator()
+        assert_equal(next(it), ('Hello world!', 'Bonjour le monde!'))
+        assert_raises(StopIteration, next, it)
+        # There used to be problems with reseting Merge, for which
+        # reason we regression-test it as follows:
+        it = self.transformer.get_epoch_iterator()
+        assert_equal(next(it), ('Hello world!', 'Bonjour le monde!'))
+        assert_raises(StopIteration, next, it)
 
     def test_as_dict(self):
         assert_equal(
