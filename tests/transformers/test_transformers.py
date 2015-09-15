@@ -519,14 +519,52 @@ class TestMerge(object):
         self.streams = (
             DataStream(IterableDataset(['Hello world!'])),
             DataStream(IterableDataset(['Bonjour le monde!'])))
-        self.transformer = Merge(self.streams, ('english', 'french'))
+        self.batch_streams = (
+            Batch(DataStream(IterableDataset(['Hello world!', 'Hi!'])),
+                  iteration_scheme=ConstantScheme(2)),
+            Batch(DataStream(IterableDataset(['Bonjour le monde!', 'Salut!'])),
+                  iteration_scheme=ConstantScheme(2)))
+        self.transformer = Merge(
+            self.streams, ('english', 'french'))
+        self.batch_transformer = Merge(
+            self.batch_streams, ('english', 'french'))
 
     def test_sources(self):
         assert_equal(self.transformer.sources, ('english', 'french'))
 
     def test_merge(self):
-        assert_equal(next(self.transformer.get_epoch_iterator()),
-                     ('Hello world!', 'Bonjour le monde!'))
+        it = self.transformer.get_epoch_iterator()
+        assert_equal(next(it), ('Hello world!', 'Bonjour le monde!'))
+        assert_raises(StopIteration, next, it)
+        # There used to be problems with reseting Merge, for which
+        # reason we regression-test it as follows:
+        it = self.transformer.get_epoch_iterator()
+        assert_equal(next(it), ('Hello world!', 'Bonjour le monde!'))
+        assert_raises(StopIteration, next, it)
+
+    def test_batch_merge(self):
+        it = self.batch_transformer.get_epoch_iterator()
+        assert_equal(next(it),
+                     (('Hello world!', 'Hi!'),
+                      ('Bonjour le monde!', 'Salut!')))
+        assert_raises(StopIteration, next, it)
+        # There used to be problems with reseting Merge, for which
+        # reason we regression-test it as follows:
+        it = self.batch_transformer.get_epoch_iterator()
+        assert_equal(next(it),
+                     (('Hello world!', 'Hi!'),
+                      ('Bonjour le monde!', 'Salut!')))
+        assert_raises(StopIteration, next, it)
+
+    def test_merge_batch_streams(self):
+        it = self.transformer.get_epoch_iterator()
+        assert_equal(next(it), ('Hello world!', 'Bonjour le monde!'))
+        assert_raises(StopIteration, next, it)
+        # There used to be problems with reseting Merge, for which
+        # reason we regression-test it as follows:
+        it = self.transformer.get_epoch_iterator()
+        assert_equal(next(it), ('Hello world!', 'Bonjour le monde!'))
+        assert_raises(StopIteration, next, it)
 
     def test_as_dict(self):
         assert_equal(

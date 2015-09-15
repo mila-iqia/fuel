@@ -773,14 +773,17 @@ class Merge(AbstractDataStream):
             data_stream.next_epoch()
 
     def get_epoch_iterator(self, **kwargs):
+        self.child_epoch_iterators = [data_stream.get_epoch_iterator()
+                                      for data_stream in self.data_streams]
         return super(Merge, self).get_epoch_iterator(**kwargs)
 
     def get_data(self, request=None):
         if request is not None:
             raise ValueError
-        return sum(
-            (data_stream.get_data() for data_stream in self.data_streams),
-            tuple())
+        result = []
+        for child_epoch_iterator in self.child_epoch_iterators:
+            result.extend(next(child_epoch_iterator))
+        return tuple(result)
 
 
 class BackgroundProcess(object):
