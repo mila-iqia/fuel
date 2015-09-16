@@ -4,11 +4,30 @@ Extending Fuel
 In this section, we'll cover how to extend three important components of Fuel:
 
 * Dataset classes
-* Transformers
 * Iteration schemes
+* Transformers
+
+.. warning::
+    The code presented in this section is for illustration purposes only and
+    is not intended to be used outside of this tutorial.
 
 New dataset classes
 -------------------
+
+.. admonition:: In summary
+    :class: tip
+
+    * Subclass from :class:`Dataset`.
+
+      - Implement the :meth:`get_data` method.
+      - If your dataset interacts with stateful objects (e.g. files on disk),
+        override the :meth:`open` and :meth:`close` methods.
+
+    * Subclass from :class:`IndexableDataset` if your data fits in memory.
+
+      - :class:`IndexableDataset` constructor accepts an ``indexables``
+        argument, which is expected to be a :class:`dict` mapping from source
+        names to their corresponding data.
 
 New dataset classes are implemented by subclassing :class:`Dataset` and
 implementing its :meth:`get_data` method. If your dataset interacts with
@@ -61,8 +80,118 @@ Here's this class in action:
    >>> os.remove('npy_dataset_features.npy')
    >>> os.remove('npy_dataset_targets.npy')
 
+New iteration schemes
+---------------------
+
+.. admonition:: In summary
+    :class: tip
+
+    * Subclass from :class:`IterationScheme`.
+
+      - Implement the :meth:`get_request_iterator` method, which should return
+        an iterator object.
+
+    * Subclass from :class:`IndexScheme` for schemes requesting examples.
+
+      - :class:`IndexScheme` constructor accepts an ``examples`` argument,
+        which can either be an integer or a list of indices.
+
+    * Subclass from :class:`BatchScheme` for schemes requesting batches.
+
+      - :class:`BatchScheme` constructor accepts an ``examples`` argument,
+        which can either be an integer or a list of indices, and a
+        ``batch_size`` argument.
+
+New iteration schemes are implemented by subclassing :class:`IterationScheme`
+and implementing a :meth:`get_request_iterator` method, which should return an
+iterator that returns lists of indices.
+
+Two subclasses of :class:`IterationScheme` typically serve as a basis for other
+iteration schemes: :class:`IndexScheme` (for schemes requesting examples) and
+:class:`BatchScheme` (for schemes requesting batches). Both subclasses are
+instantiated by providing a list of indices or the number of examples to visit
+(meaning that examples 0 through ``examples - 1`` would be visited),
+and :class:`BatchScheme` accepts an additional ``batch_size`` argument.
+
+Here's how you would implement an iteration scheme that iterates over even
+examples:
+
+>>> from fuel.schemes import IndexScheme, BatchScheme
+>>> # `iter_` : A picklable version of `iter`
+>>> from picklable_itertools import iter_, imap
+>>> # Partition all elements of a sequence into tuples of length at most n
+>>> from picklable_itertools.extras import partition_all
+
+>>> class ExampleEvenScheme(IndexScheme):
+...     def get_request_iterator(self):
+...         indices = list(self.indices)[::2]
+...         return iter_(indices)
+>>> class BatchEvenScheme(BatchScheme):
+...     def get_request_iterator(self):
+...         indices = list(self.indices)[::2]
+...         return imap(list, partition_all(self.batch_size, indices))
+
+.. note::
+
+    The ``partition_all`` function splits a sequence into chunks of size
+    ``n`` (``self.batch_size``, in our case), with the last batch possibly being
+    shorter if the length of the sequence is not a multiple of ``n``. It
+    produces an iterator which returns these batches as tuples.
+
+    The ``imap`` function applies a function to all elements of a sequence. It
+    produces an iterator which returns the result of the function being applied
+    to elements of the sequence. In our case, this has the effect of casting
+    tuples into lists.
+
+    The reason why we go through all this trouble is to produce an iterator,
+    which is what :meth:`get_request_iterator` is supposed to return.
+
+Here are the two iteration scheme classes in action:
+
+>>> print(list(ExampleEvenScheme(10).get_request_iterator()))
+[0, 2, 4, 6, 8]
+>>> print(list(BatchEvenScheme(10, 2).get_request_iterator()))
+[[0, 2], [4, 6], [8]]
+
 New transformers
 ----------------
+
+.. admonition:: In summary
+    :class: tip
+
+    * Subclass from :class:`Transformer`.
+
+      - Implement :meth:`transform_example` if your transformer works on single
+        examples and/or :meth:`transform_batch` if it works on batches.
+
+    * Subclass from :class:`AgnosticTransformer` if the example and batch
+      implementations are the same.
+
+      - Implement the :meth:`transform_any` method.
+
+    * Subclass from :class:`SourcewiseTransformer` if your transformation is
+      applied sourcewise.
+
+      - :class:`SourcewiseTransformer` constructor takes an additional
+        ``which_sources`` keyword argument.
+      - If ``which_sources`` is ``None``, then the transformation is applied to
+        all sources.
+      - Implement the :meth:`transform_source_example` and/or
+        :meth:`transform_source_batch` methods.
+
+    * Subclass from :class:`AgnosticSourcewiseTransformer` if your
+      transformation is applied sourcewise and its example and batch
+      implementations are the same.
+
+      - Implement the :meth:`transform_any_source` method.
+
+    * Consider using the :class:`Mapping` transformer (the swiss-army knife of
+      transformers) for one-off transformations instead of implementing a
+      subclass.
+
+      - Its constructor accepts a ``mapping`` argument, which is expected to be
+        a function taking a tuple of sources as input and returning the
+        transformed sources.
 
 An important thing to know about data streams is that they distinguish
 between two types of outputs: single examples, and batches of examples.
@@ -103,8 +232,6 @@ data source.
 ...             batch = tuple(batch)
 ...         return batch
 
-Most transformers you'll implement will call their superclass constructor by
-passing the data stream and declaring whether they produce examples or batches.
 Since we wish to support both batches and examples, we'll declare our output
 type to be the same as our data stream's output type.
 
@@ -113,9 +240,13 @@ If you were to build a transformer that only works on batches, you would pass
 anyone tried to use your transformer on an example data stream, an error would
 automatically be raised.
 
-Let's test our doubler on some dummy dataset. **Note that this implementation
-is for illustration purposes only: it is brittle and only works on numpy
-arrays.**
+.. note::
+
+    When applicable, it is good practice that a new transformer's constructor
+    calls its superclass constructor by passing the data stream it receives and
+    declaring whether it produce examples or batches.
+
+Let's test our doubler on some dummy dataset.
 
 >>> from fuel.schemes import SequentialExampleScheme, SequentialScheme
 >>> from fuel.streams import DataStream
@@ -138,11 +269,10 @@ arrays.**
 >>> print([batch for batch in batch_stream.get_epoch_iterator()])
 [(array([2, 4]), array([-1,  1])), (array([6, 8]), array([-1,  1]))]
 
-If you think the :meth:`transform_example` and :meth:`transform_batch`
-implementations are repetitive, you're right! In cases where the example and
-batch implementations of a transformer are the same, you can subclass from
-:class:`AgnosticTransformer` instead. It requires that you implement a
-:meth:`transform_any` method, which will be called by both
+You may have noticed that in this example the :meth:`transform_example` and
+:meth:`transform_batch` implementations are the same. In such cases, you can
+subclass from :class:`AgnosticTransformer` instead. It requires that you
+implement a :meth:`transform_any` method, which will be called by both
 :meth:`transform_example` and :meth:`transform_batch`.
 
 >>> from fuel.transformers import AgnosticTransformer
@@ -162,8 +292,9 @@ batch implementations of a transformer are the same, you can subclass from
 ...             data = tuple(data)
 ...         return data
 
-So far so good, but our transformer could be more general: what if we want to
-double ``'features'`` and ``'targets'``, or only ``'targets'``?
+So far so good, but our transformer applies the same transformation to every
+source in the dataset. What if we want to be more general and be able to select
+which sources we want to process with our transformer?
 
 Transformers which are applied sourcewise like our doubler should usually
 subclass from :class:`SourcewiseTransformer`. Their constructor takes an
@@ -208,9 +339,11 @@ Let's try this implementation on our dummy dataset.
 >>> print([batch for batch in all_stream.get_epoch_iterator()])
 [(array([2, 4]), array([-2,  2])), (array([6, 8]), array([-2,  2]))]
 
-Finally, there exists a :class:`Mapping` transformer which acts as a swiss-army
-knife transformer. In addition to a data stream, its constructor accepts a
-function which will be applied to data coming from the stream.
+Finally, what if we not only want to select at runtime which sources the
+transformation applies to, but also the transformer itself? This is what
+the :class:`Mapping` transformer solves. In addition to a data stream, its
+constructor accepts a ``mapping`` argument, which is expected to be a function.
+This function which will be applied to data coming from the stream.
 
 Here's how you would implement the feature doubler using :class:`Mapping`.
 
@@ -227,42 +360,3 @@ Here's how you would implement the feature doubler using :class:`Mapping`.
 ...     mapping=double)
 >>> print([batch for batch in mapping_stream.get_epoch_iterator()])
 [(array([2, 4]), array([-1,  1])), (array([6, 8]), array([-1,  1]))]
-
-
-New iteration schemes
----------------------
-
-New iteration schemes are implemented by subclassing :class:`IterationScheme`
-and implementing a :meth:`get_request_iterator` method, which should return an
-iterator that returns lists of indices.
-
-Two subclasses of :class:`IterationScheme` typically serve as a basis for other
-iteration schemes: :class:`IndexScheme` (for schemes requesting examples) and
-:class:`BatchScheme` (for schemes requesting batches). Both subclasses are
-instantiated by providing a list of indices or a number of examples, and
-:class:`BatchScheme` accepts an additional ``batch_size`` argument.
-
-Here's how you would implement an iteration scheme that iterates over even
-examples:
-
->>> from fuel.schemes import IndexScheme, BatchScheme
->>> # `iter_` : A picklable version of `iter`
->>> from picklable_itertools import iter_, imap
->>> # Partition all elements of a sequence into tuples of length at most n
->>> from picklable_itertools.extras import partition_all
-
->>> class ExampleEvenScheme(IndexScheme):
-...     def get_request_iterator(self):
-...         indices = list(self.indices)[::2]
-...         return iter_(indices)
->>> class BatchEvenScheme(BatchScheme):
-...     def get_request_iterator(self):
-...         indices = list(self.indices)[::2]
-...         return imap(list, partition_all(self.batch_size, indices))
-
-Here are the two iteration scheme classes in action:
-
->>> print(list(ExampleEvenScheme(10).get_request_iterator()))
-[0, 2, 4, 6, 8]
->>> print(list(BatchEvenScheme(10, 2).get_request_iterator()))
-[[0, 2], [4, 6], [8]]
