@@ -13,9 +13,11 @@ import zmq
 
 from fuel import config
 # from fuel.server import recv_arrays, send_arrays
+from fuel.datasets import H5PYDataset
 from fuel.converters.ilsvrc2010 import (extract_patch_images,
                                         load_from_tar_or_patch,
-                                        read_devkit)
+                                        read_devkit,
+                                        prepare_hdf5_file)
 from tests import skip_if_not_available
 
 class MockSocket(object):
@@ -71,6 +73,17 @@ class MockH5PYData(object):
         self.data[where] = what
         self.written += len(what)
 
+    def __getitem__(self, index):
+        return self.data[index]
+
+    @property
+    def shape(self):
+        return self.data.shape
+
+    @property
+    def dtype(self):
+        return self.data.dtype
+
 
 class MockH5PYFile(dict):
     filename = 'NOT_A_REAL_FILE.hdf5'
@@ -78,12 +91,20 @@ class MockH5PYFile(dict):
     def __init__(self):
         self.attrs = {}
         self.flushed = 0
+        self.opened = False
+        self.closed = False
 
     def create_dataset(self, name, shape, dtype):
         self[name] = MockH5PYData(shape, dtype)
 
     def flush(self):
         self.flushed += 1
+
+    def __enter__(self):
+        self.opened = True
+
+    def __exit__(self, type, value, traceback):
+        self.closed = True
 
 
 class MockH5PYDim(object):
@@ -308,7 +329,39 @@ def test_prepare_metadata():
 
 
 def test_prepare_hdf5_file():
-    raise unittest.SkipTest("TODO")
+    hdf5_file = MockH5PYFile()
+    prepare_hdf5_file(hdf5_file, 10, 5, 2)
+
+    train_splits = H5PYDataset.get_start_stop(hdf5_file, 'train')
+    assert all(v == (0, 10) for v in train_splits.values())
+    assert train_splits.keys() == set(['encoded_images', 'targets',
+                                       'filenames'])
+
+    valid_splits = H5PYDataset.get_start_stop(hdf5_file, 'valid')
+    assert all(v == (10, 15) for v in valid_splits.values())
+    assert valid_splits.keys() == set(['encoded_images', 'targets',
+                                       'filenames'])
+
+    test_splits = H5PYDataset.get_start_stop(hdf5_file, 'test')
+    assert all(v == (15, 17) for v in test_splits.values())
+    assert test_splits.keys() == set(['encoded_images', 'targets',
+                                      'filenames'])
+
+    from numpy import dtype
+
+    assert hdf5_file['encoded_images'].shape[0] == 17
+    assert len(hdf5_file['encoded_images'].shape) == 1
+    assert hdf5_file['encoded_images'].dtype.kind == 'O'
+    assert hdf5_file['encoded_images'].dtype.metadata['vlen'] == dtype('uint8')
+
+    assert hdf5_file['filenames'].shape[0] == 17
+    assert len(hdf5_file['filenames'].shape) == 2
+    assert hdf5_file['filenames'].dtype == dtype('S32')
+
+    assert hdf5_file['targets'].shape[0] == 17
+    assert hdf5_file['targets'].shape[1] == 1
+    assert len(hdf5_file['targets'].shape) == 2
+    assert hdf5_file['targets'].dtype == dtype('int16')
 
 
 def test_process_train_set():
