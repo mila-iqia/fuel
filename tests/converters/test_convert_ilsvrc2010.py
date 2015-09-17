@@ -385,12 +385,15 @@ def test_other_set_producer():
 
 
 def test_load_from_tar_or_patch():
+    # Setup fake tar files.
     images, all_filenames = create_fake_jpeg_tar(3, min_num_images=200,
                                                  max_num_images=200,
                                                  gzip_probability=0.0)
     patch_data, _ = create_fake_patch_images(all_filenames[::4], num_train=50,
                                              num_valid=0, num_test=0)
+
     patches = extract_patch_images(io.BytesIO(patch_data), 'train')
+
     assert len(patches) == 50
     with tarfile.open(fileobj=io.BytesIO(images)) as tar:
         for fn in all_filenames:
@@ -408,19 +411,39 @@ def test_read_devkit():
     devkit_filename = 'ILSVRC2010_devkit-1.0.tar.gz'
     skip_if_not_available(datasets=[devkit_filename])
     synsets, cost_mat, raw_valid_gt = read_devkit(
-        os.path.join(config.data_path, devkit_filename))
+        find_in_data_path(devkit_filename))
+    # synset and cost_matrix sanity tests appear in test_read_metadata_mat_file
+    assert raw_valid_gt.min() == 1
+    assert raw_valid_gt.max() == 1000
+    assert raw_valid_gt.dtype.kind == 'i'
+    assert raw_valid_gt.shape == (50000,)
+
+
+def test_read_metadata_mat_file():
+    devkit_filename = 'ILSVRC2010_devkit-1.0.tar.gz'
+    skip_if_not_available(datasets=[devkit_filename])
+    with tarfile.open(find_in_data_path(devkit_filename)) as tar:
+        meta_mat = tar.extractfile(DEVKIT_META_PATH)
+        synsets, cost_mat = read_metadata_mat_file(meta_mat)
     assert (synsets['ILSVRC2010_ID'] ==
             numpy.arange(1, len(synsets) + 1)).all()
     assert synsets['num_train_images'][1000:].sum() == 0
     assert (synsets['num_train_images'][:1000] > 0).all()
     assert synsets.ndim == 1
+    assert synsets['wordnet_height'].min() == 0
+    assert synsets['wordnet_height'].max() == 19
+    assert synsets['WNID'].dtype == numpy.dtype('S9')
+    assert (synsets['num_children'][:1000] == 0).all()
+    assert (synsets['children'][:1000] == -1).all()
+
+    # Assert the basics about the cost matrix.
     assert cost_mat.shape == (1000, 1000)
     assert cost_mat.dtype == 'uint8'
+    assert cost_mat.min() == 0
+    assert cost_mat.max() == 18
+    assert (cost_mat == cost_mat.T).all()
+    # Assert that the diagonal is 0.
     assert (cost_mat.flat[::1001] == 0).all()
-
-
-def test_read_metadata_mat_file():
-    raise unittest.SkipTest("TODO")
 
 
 def test_extract_patch_images():
