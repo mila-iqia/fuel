@@ -326,16 +326,19 @@ def test_prepare_hdf5_file():
     hdf5_file = MockH5PYFile()
     prepare_hdf5_file(hdf5_file, 10, 5, 2)
 
+    # Verify properties of the train split.
     train_splits = H5PYDataset.get_start_stop(hdf5_file, 'train')
     assert all(v == (0, 10) for v in train_splits.values())
     assert train_splits.keys() == set(['encoded_images', 'targets',
                                        'filenames'])
 
+    # Verify properties of the valid split.
     valid_splits = H5PYDataset.get_start_stop(hdf5_file, 'valid')
     assert all(v == (10, 15) for v in valid_splits.values())
     assert valid_splits.keys() == set(['encoded_images', 'targets',
                                        'filenames'])
 
+    # Verify properties of the test split.
     test_splits = H5PYDataset.get_start_stop(hdf5_file, 'test')
     assert all(v == (15, 17) for v in test_splits.values())
     assert test_splits.keys() == set(['encoded_images', 'targets',
@@ -343,15 +346,18 @@ def test_prepare_hdf5_file():
 
     from numpy import dtype
 
+    # Verify properties of the encoded_images HDF5 dataset.
     assert hdf5_file['encoded_images'].shape[0] == 17
     assert len(hdf5_file['encoded_images'].shape) == 1
     assert hdf5_file['encoded_images'].dtype.kind == 'O'
     assert hdf5_file['encoded_images'].dtype.metadata['vlen'] == dtype('uint8')
 
+    # Verify properties of the filenames dataset.
     assert hdf5_file['filenames'].shape[0] == 17
     assert len(hdf5_file['filenames'].shape) == 2
     assert hdf5_file['filenames'].dtype == dtype('S32')
 
+    # Verify properties of the targets dataset.
     assert hdf5_file['targets'].shape[0] == 17
     assert hdf5_file['targets'].shape[1] == 1
     assert len(hdf5_file['targets'].shape) == 2
