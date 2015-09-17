@@ -7,6 +7,8 @@ import unittest
 import gzip
 
 import numpy
+from numpy.testing import assert_equal
+
 from PIL import Image
 from six.moves import xrange
 import zmq
@@ -376,8 +378,56 @@ def test_train_set_producer():
     raise unittest.SkipTest("TODO")
 
 
+MOCK_CONSUMER_MESSAGES = [
+    {'type': 'recv_pyobj', 'flags': zmq.SNDMORE, 'obj': ('foo.jpeg', 2)},
+    {'type': 'recv', 'flags': 0, 'data': numpy.cast['uint8']([6, 6, 6])},
+    {'type': 'recv_pyobj', 'flags': zmq.SNDMORE, 'obj': ('bar.jpeg', 3)},
+    {'type': 'recv', 'flags': 0, 'data': numpy.cast['uint8']([1, 8, 1, 2, 0])},
+    {'type': 'recv_pyobj', 'flags': zmq.SNDMORE, 'obj': ('baz.jpeg', 5)},
+    {'type': 'recv', 'flags': 0, 'data': numpy.cast['uint8']([1, 9, 7, 9])},
+    {'type': 'recv_pyobj', 'flags': zmq.SNDMORE, 'obj': ('bur.jpeg', 7)},
+    {'type': 'recv', 'flags': 0, 'data': numpy.cast['uint8']([1, 8, 6, 7])},
+]
+
+
 def test_image_consumer():
-    raise unittest.SkipTest("TODO")
+    mock_messages = MOCK_CONSUMER_MESSAGES
+    hdf5_file = MockH5PYFile()
+    prepare_hdf5_file(hdf5_file, 4, 5, 8)
+    socket = MockSocket(zmq.PULL, to_recv=mock_messages)
+    image_consumer(socket, hdf5_file, 4)
+
+    assert_equal(hdf5_file['encoded_images'][0], [6, 6, 6])
+    assert_equal(hdf5_file['encoded_images'][1], [1, 8, 1, 2, 0])
+    assert_equal(hdf5_file['encoded_images'][2], [1, 9, 7, 9])
+    assert_equal(hdf5_file['encoded_images'][3], [1, 8, 6, 7])
+    assert_equal(hdf5_file['filenames'][:4], [[b'foo.jpeg'], [b'bar.jpeg'],
+                                              [b'baz.jpeg'], [b'bur.jpeg']])
+    assert_equal(hdf5_file['targets'][:4], [[2], [3], [5], [7]])
+
+
+def test_images_consumer_randomized():
+    mock_messages = MOCK_CONSUMER_MESSAGES + [
+        {'type': 'recv_pyobj', 'flags': zmq.SNDMORE, 'obj': ('jenny.jpeg', 1)},
+        {'type': 'recv', 'flags': 0,
+         'data': numpy.cast['uint8']([8, 6, 7, 5, 3, 0, 9])}
+    ]
+    hdf5_file = MockH5PYFile()
+    prepare_hdf5_file(hdf5_file, 4, 5, 8)
+    socket = MockSocket(zmq.PULL, to_recv=mock_messages)
+    image_consumer(socket, hdf5_file, 5, offset=4, shuffle_seed=0)
+    written_data = set(tuple(s) for s in hdf5_file['encoded_images'][4:9])
+    expected_data = set(tuple(s['data']) for s in mock_messages[1::2])
+    assert written_data == expected_data
+
+    written_targets = set(hdf5_file['targets'][4:9].flatten())
+    expected_targets = set(s['obj'][1] for s in mock_messages[::2])
+    assert written_targets == expected_targets
+
+    written_filenames = set(hdf5_file['filenames'][4:9].flatten())
+    expected_filenames = set(bytes(s['obj'][0], encoding='ascii')
+                             for s in mock_messages[::2])
+    assert written_filenames == expected_filenames
 
 
 def test_other_set_producer():
