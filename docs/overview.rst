@@ -89,6 +89,19 @@ Datasets contain one or more **sources** of data, such as an array of images,
 a list of labels, a dictionary specifying an ontology, etc. Each source in a
 dataset is identified by a unique name.
 
+All datasets have the following attributes:
+
+* ``sources``: tuple of source names indicating what the dataset will provide
+  when queried for data.
+* ``provides_sources``: tuple of source names indicating what sources the
+  dataset *is able to* provide.
+* ``axis_labels``: :class:`dict` mapping each source name to a tuple of axis
+  labels, or ``None``. Not all source names need to appear in the axis labels
+  dictionary.
+
+Some datasets also have a ``num_examples`` attribute telling how many examples
+the dataset provides.
+
 IterableDataset
 ^^^^^^^^^^^^^^^
 
@@ -106,11 +119,11 @@ of axis labels.
 ...     axis_labels=OrderedDict([('features', ('batch', 'height', 'width')),
 ...                              ('targets', ('batch', 'index'))]))
 
-We can ask the dataset what sources of data it provides by accessing its
-``sources`` attribute. We can also know which axes correspond to what by
-accessing its ``axis_labels`` attribute. It also has a ``num_examples`` property
-telling us the number of examples it contains.
+We can access the ``sources``, ``provides_sources`` and ``axis_labels``
+attributes defined in all datasets, as well as ``num_examples``.
 
+>>> print('Provided sources are {}.'.format(dataset.provides_sources))
+Provided sources are ('features', 'targets').
 >>> print('Sources are {}.'.format(dataset.sources))
 Sources are ('features', 'targets').
 >>> print('Axis labels are {}.'.format(dataset.axis_labels))
@@ -215,6 +228,10 @@ dataset constructor. Here's an example:
 ...     axis_labels=OrderedDict([('features', ('batch', 'height', 'width')),
 ...                              ('targets', ('batch', 'index'))]),
 ...     sources=('features',))
+>>> print(restricted_dataset.provides_sources)
+('features', 'targets')
+>>> print(restricted_dataset.sources)
+('features',)
 >>> state = restricted_dataset.open()
 >>> print(restricted_dataset.get_data(state=state, request=[0, 1]))
 (array([[[ 47, 211],
