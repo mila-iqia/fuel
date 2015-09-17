@@ -10,7 +10,9 @@ import numpy
 from numpy.testing import assert_equal
 
 from PIL import Image
+import six
 from six.moves import xrange
+
 import zmq
 
 # from fuel.server import recv_arrays, send_arrays
@@ -19,9 +21,12 @@ from fuel.converters.ilsvrc2010 import (extract_patch_images,
                                         image_consumer,
                                         load_from_tar_or_patch,
                                         prepare_hdf5_file,
+                                        prepare_metadata,
                                         read_devkit,
                                         read_metadata_mat_file,
-                                        DEVKIT_META_PATH)
+                                        DEVKIT_META_PATH,
+                                        DEVKIT_ARCHIVE,
+                                        TEST_GROUNDTRUTH)
 from fuel.utils import find_in_data_path
 from tests import skip_if_not_available
 
@@ -321,7 +326,17 @@ def create_fake_patch_images(filenames=None, num_train=14, num_valid=15,
 
 
 def test_prepare_metadata():
-    raise unittest.SkipTest("TODO")
+    skip_if_not_available(datasets=[DEVKIT_ARCHIVE, TEST_GROUNDTRUTH])
+    devkit_path = find_in_data_path(DEVKIT_ARCHIVE)
+    test_gt_path = find_in_data_path(TEST_GROUNDTRUTH)
+    n_train, v_gt, t_gt, wnid_map = prepare_metadata(devkit_path,
+                                                     test_gt_path)
+    assert n_train == 1261406
+    assert len(v_gt) == 50000
+    assert len(t_gt) == 150000
+    assert sorted(wnid_map.values()) == list(range(1000))
+    assert all(isinstance(k, six.string_types) and len(k) == 9
+               for k in wnid_map)
 
 
 def test_prepare_hdf5_file():
@@ -458,10 +473,9 @@ def test_load_from_tar_or_patch():
 
 
 def test_read_devkit():
-    devkit_filename = 'ILSVRC2010_devkit-1.0.tar.gz'
-    skip_if_not_available(datasets=[devkit_filename])
+    skip_if_not_available(datasets=[DEVKIT_ARCHIVE])
     synsets, cost_mat, raw_valid_gt = read_devkit(
-        find_in_data_path(devkit_filename))
+        find_in_data_path(DEVKIT_ARCHIVE))
     # synset and cost_matrix sanity tests appear in test_read_metadata_mat_file
     assert raw_valid_gt.min() == 1
     assert raw_valid_gt.max() == 1000
@@ -470,9 +484,8 @@ def test_read_devkit():
 
 
 def test_read_metadata_mat_file():
-    devkit_filename = 'ILSVRC2010_devkit-1.0.tar.gz'
-    skip_if_not_available(datasets=[devkit_filename])
-    with tarfile.open(find_in_data_path(devkit_filename)) as tar:
+    skip_if_not_available(datasets=[DEVKIT_ARCHIVE])
+    with tarfile.open(find_in_data_path(DEVKIT_ARCHIVE)) as tar:
         meta_mat = tar.extractfile(DEVKIT_META_PATH)
         synsets, cost_mat = read_metadata_mat_file(meta_mat)
     assert (synsets['ILSVRC2010_ID'] ==
