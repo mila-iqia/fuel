@@ -20,6 +20,7 @@ from fuel.datasets import H5PYDataset
 from fuel.converters.ilsvrc2010 import (extract_patch_images,
                                         image_consumer,
                                         load_from_tar_or_patch,
+                                        other_set_producer,
                                         prepare_hdf5_file,
                                         prepare_metadata,
                                         read_devkit,
@@ -171,7 +172,7 @@ def create_jpeg_data(image):
 
 def create_fake_jpeg_tar(seed, min_num_images=5, max_num_images=50,
                          min_size=20, size_range=30, filenames=None,
-                         random=True, gzip_probability=0.2):
+                         random=True, gzip_probability=0.5):
     """Create a TAR file of randomly generated JPEG files.
 
     Parameters
@@ -193,7 +194,7 @@ def create_fake_jpeg_tar(seed, min_num_images=5, max_num_images=50,
     random : bool, optional
         If `False`, substitute an image full of a single number,
         the order of that image in processing.
-    gzip_probability : float
+    gzip_probability : float, optional
         With this probability, randomly gzip the JPEG file without
         appending a gzip suffix.
 
@@ -308,8 +309,10 @@ def create_fake_tar_of_tars(seed, num_inner_tars, *args, **kwargs):
 def create_fake_patch_images(filenames=None, num_train=14, num_valid=15,
                              num_test=21):
     if filenames is None:
-        filenames = ['%x' % abs(hash(str(i))) + '.JPEG' for i in xrange(50)]
-    assert num_train + num_valid + num_test == len(filenames)
+        num = num_train + num_valid + num_test
+        filenames = ['%x' % abs(hash(str(i))) + '.JPEG' for i in xrange(num)]
+    else:
+        filenames = list(filenames)  # Copy, so list not modified in-place.
     filenames[:num_train] = ['train/' + f
                              for f in filenames[:num_train]]
     filenames[num_train:num_train + num_valid] = [
@@ -446,7 +449,55 @@ def test_images_consumer_randomized():
 
 
 def test_other_set_producer():
-    raise unittest.SkipTest("TODO")
+    # Create some fake data.
+    num = 21
+    image_archive, filenames = create_fake_jpeg_tar(seed=1979,
+                                                    min_num_images=num,
+                                                    max_num_images=num)
+    patches, _ = create_fake_patch_images(filenames=filenames,
+                                          num_train=7, num_valid=7, num_test=7)
+
+    valid_patches = extract_patch_images(io.BytesIO(patches), 'valid')
+    test_patches = extract_patch_images(io.BytesIO(patches), 'test')
+    assert len(valid_patches) == 7
+    assert len(test_patches) == 7
+
+    groundtruth = numpy.random.RandomState(1979).random_integers(0, 50,
+                                                                 size=num)
+    assert len(groundtruth) == 21
+    gt_lookup = dict(zip(sorted(filenames), groundtruth))
+    assert len(gt_lookup) == 21
+
+    def check(which_set, set_patches):
+        # Run other_set_producer and push to a fake socket.
+        socket = MockSocket(zmq.PUSH)
+        other_set_producer(socket, which_set, io.BytesIO(image_archive),
+                           io.BytesIO(patches), groundtruth)
+
+        # Now verify the data that socket received.
+        with tarfile.open(fileobj=io.BytesIO(image_archive)) as tar:
+            num_patched = 0
+            for im_fn in filenames:
+                # Verify the label and flags of the first (metadata)
+                # message.
+                label = gt_lookup[im_fn]
+                metadata_msg = socket.sent.popleft()
+                assert metadata_msg['type'] == 'send_pyobj'
+                assert metadata_msg['flags'] == zmq.SNDMORE
+                assert metadata_msg['obj'] == (im_fn, label)
+                # Verify that the second (data) message came from
+                # the right place, either a patch file or a
+                data_msg = socket.sent.popleft()
+                assert data_msg['type'] == 'send'
+                assert data_msg['flags'] == 0
+                expected, patched = load_from_tar_or_patch(tar, im_fn,
+                                                           set_patches)
+                num_patched += int(patched)
+                assert data_msg['data'] == expected
+            assert num_patched == len(set_patches)
+
+    check('valid', valid_patches)
+    check('test', test_patches)
 
 
 def test_load_from_tar_or_patch():
