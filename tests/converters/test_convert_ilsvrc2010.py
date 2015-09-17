@@ -14,21 +14,26 @@ import zmq
 # from fuel.server import recv_arrays, send_arrays
 from fuel.datasets import H5PYDataset
 from fuel.converters.ilsvrc2010 import (extract_patch_images,
+                                        image_consumer,
                                         load_from_tar_or_patch,
+                                        prepare_hdf5_file,
                                         read_devkit,
-                                        prepare_hdf5_file)
+                                        read_metadata_mat_file,
+                                        DEVKIT_META_PATH)
+from fuel.utils import find_in_data_path
 from tests import skip_if_not_available
+
 
 class MockSocket(object):
     """Mock of a ZeroMQ PUSH or PULL socket."""
-    def __init__(self, socket_type, to_recv):
+    def __init__(self, socket_type, to_recv=()):
         self.socket_type = socket_type
         if self.socket_type not in (zmq.PUSH, zmq.PULL):
             raise NotImplementedError('only PUSH and PULL currently supported')
         self.sent = deque()
         self.to_recv = deque(to_recv)
 
-    def send(data, flags=0, copy=True, track=False):
+    def send(self, data, flags=0, copy=True, track=False):
         assert self.socket_type == zmq.PUSH
         if track:
             # We don't emulate the behaviour required by this flag.
@@ -36,13 +41,13 @@ class MockSocket(object):
         message = {'type': 'send', 'data': data, 'flags': flags, 'copy': copy}
         self.sent.append(message)
 
-    def send_pyobj(obj, flags=0, protocol=2):
+    def send_pyobj(self, obj, flags=0, protocol=2):
         assert self.socket_type == zmq.PUSH
         message = {'type': 'send_pyobj', 'obj': obj, 'flags': flags,
                    'protocol': protocol}
         self.sent.append(message)
 
-    def recv(flags=0, copy=True, track=False):
+    def recv(self, flags=0, copy=True, track=False):
         if track:
             # We don't emulate the behaviour required by this flag.
             raise NotImplementedError
@@ -54,7 +59,7 @@ class MockSocket(object):
             assert message['copy'] == copy, 'copy did not match expected'
         return message['data']
 
-    def recv_pyobj(flags=0):
+    def recv_pyobj(self, flags=0):
         message = self.to_recv.popleft()
         assert message['type'] == 'recv_pyobj'
         if 'flags' in message:
@@ -66,11 +71,9 @@ class MockH5PYData(object):
     def __init__(self, shape, dtype):
         self.data = numpy.empty(shape, dtype)
         self.dims = MockH5PYDims(len(shape))
-        self.written = 0
 
     def __setitem__(self, where, what):
         self.data[where] = what
-        self.written += len(what)
 
     def __getitem__(self, index):
         return self.data[index]
