@@ -318,14 +318,6 @@ def create_fake_patch_images(filenames=None, num_train=14, num_valid=15,
     return tar, filenames
 
 
-def push_pull_socket_pair(context):
-    pull = context.socket(zmq.PULL)
-    pull_port = pull.bind_to_random_port('tcp://*')
-    push = context.socket(zmq.PUSH)
-    push.connect('tcp://localhost:{}'.format(pull_port))
-    return push, pull
-
-
 def test_prepare_metadata():
     raise unittest.SkipTest("TODO")
 
