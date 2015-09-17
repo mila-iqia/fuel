@@ -475,7 +475,7 @@ def read_metadata_mat_file(meta_mat):
          * `WNID`: A string identifier that uniquely identifies
            a synset in ImageNet and WordNet.
          * `wordnet_height`: The length of the longest path to
-           a leaf nodein the FULL ImageNet/WordNet hierarchy
+           a leaf node in the FULL ImageNet/WordNet hierarchy
            (leaf nodes in the FULL ImageNet/WordNet hierarchy
            have `wordnet_height` 0).
          * `gloss`: A string representation of an English
