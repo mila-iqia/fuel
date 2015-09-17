@@ -306,7 +306,7 @@ def image_consumer(socket, hdf5_file, num_expected, shuffle_seed=None,
             rng = numpy.random.RandomState(shuffle_seed)
             index_gen = iter(rng.permutation(num_expected))
         for i, num in enumerate(index_gen):
-            image_filename, class_index = socket.recv_pyobj()
+            image_filename, class_index = socket.recv_pyobj(zmq.SNDMORE)
             image_data = numpy.fromstring(socket.recv(), dtype='uint8')
             _write_to_hdf5(hdf5_file, num + offset, image_filename,
                            image_data, class_index)
