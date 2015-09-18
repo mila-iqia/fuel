@@ -253,7 +253,7 @@ class IterableDataset(Dataset):
 
     Notes
     -----
-    Internally, this method uses ``picklable iterools's``_ ``_iter``
+    Internally, this method uses picklable iterools's ``_iter``
     function, providing picklable alternatives to some iterators such as
     :func:`range`, :func:`tuple`, and even :class:`file`. However, if the
     iterable returns a different kind of iterator that is not picklable,
