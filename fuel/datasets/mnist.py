@@ -13,10 +13,6 @@ class MNIST(H5PYDataset):
     and 10,000 testing images. The images are grayscale and 28 x 28 pixels
     large. It is accessible through Yann LeCun's website [LECUN].
 
-    .. [LBBH] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner,
-       *Gradient-based learning applied to document recognition*,
-       Proceedings of the IEEE, November 1998, 86(11):2278-2324.
-
     .. [LECUN] http://yann.lecun.com/exdb/mnist/
 
     Parameters

@@ -14,9 +14,9 @@ class OneBillionWord(TextFile):
     [CMSG14].
 
     .. [CSMG14] Ciprian Chelba, Tomas Mikolov, Mike Schuster, Qi Ge, and
-    Thorsten Brants, *One Billion Word Benchmark for Measuring Progress in
-    Statistical Language Modeling*, `arXiv:1312.3005 [cs.CL]
-    <http://arxiv.org/abs/1312.3005>`.
+       Thorsten Brants, *One Billion Word Benchmark for Measuring Progress
+       in Statistical Language Modeling*, `arXiv:1312.3005 [cs.CL]
+       <http://arxiv.org/abs/1312.3005>`.
 
     Parameters
     ----------

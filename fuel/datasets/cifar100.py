@@ -6,7 +6,7 @@ from fuel.utils import find_in_data_path
 class CIFAR100(H5PYDataset):
     """The CIFAR100 dataset of natural images.
 
-    This dataset is a labeled subset of the ``80 million tiny images''
+    This dataset is a labeled subset of the ``80 million tiny images``
     dataset [TINY]. It consists of 60,000 32 x 32 colour images labelled
     into 100 fine-grained classes and 20 super-classes. There are
     600 images per fine-grained class. There are 50,000 training
