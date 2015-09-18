@@ -28,9 +28,9 @@ def convert_svhn_format_1(directory, output_directory,
 
     This method assumes the existence of the files
     `{train,test,extra}.tar.gz`, which are accessible through the
-    official website [SVHN].
+    official website [SVHNSITE].
 
-    .. [SVHN] http://ufldl.stanford.edu/housenumbers/
+    .. [SVHNSITE] http://ufldl.stanford.edu/housenumbers/
 
     Parameters
     ----------
@@ -268,9 +268,7 @@ def convert_svhn_format_2(directory, output_directory,
 
     This method assumes the existence of the files
     `{train,test,extra}_32x32.mat`, which are accessible through the
-    official website [SVHN].
-
-    .. [SVHN] http://ufldl.stanford.edu/housenumbers/
+    official website [SVHNSITE].
 
     Parameters
     ----------

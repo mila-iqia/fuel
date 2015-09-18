@@ -2,7 +2,7 @@ Downloaders
 ===========
 
 General converters
-----------------
+------------------
 
 .. automodule:: fuel.converters.base
     :members:
@@ -10,7 +10,7 @@ General converters
     :show-inheritance:
 
 Adult dataset converter
-------------------------
+-----------------------
 
 .. automodule:: fuel.converters.adult
     :members:
@@ -18,7 +18,7 @@ Adult dataset converter
     :show-inheritance:
 
 CalTech 101 Silhouettes dataset converter
-------------------------------------------
+-----------------------------------------
 
 .. automodule:: fuel.converters.caltech101_silhouettes
     :members:
@@ -26,7 +26,7 @@ CalTech 101 Silhouettes dataset converter
     :show-inheritance:
 
 Binarized MNIST dataset converter
-----------------------------------
+---------------------------------
 
 .. automodule:: fuel.converters.binarized_mnist
     :members:
@@ -34,7 +34,7 @@ Binarized MNIST dataset converter
     :show-inheritance:
 
 CIFAR100 dataset converter
----------------------------
+--------------------------
 
 .. automodule:: fuel.converters.cifar100
     :members:
@@ -42,7 +42,7 @@ CIFAR100 dataset converter
     :show-inheritance:
 
 CIFAR10 dataset converter
---------------------------
+-------------------------
 
 .. automodule:: fuel.converters.cifar10
     :members:
@@ -50,7 +50,7 @@ CIFAR10 dataset converter
     :show-inheritance:
 
 IRIS dataset converter
------------------------
+----------------------
 
 .. automodule:: fuel.converters.iris
     :members:
@@ -58,7 +58,7 @@ IRIS dataset converter
     :show-inheritance:
 
 MNIST dataset converter
-------------------------
+-----------------------
 
 .. automodule:: fuel.converters.mnist
     :members:
@@ -66,7 +66,7 @@ MNIST dataset converter
     :show-inheritance:
 
 SVHN dataset converter
------------------------
+----------------------
 
 .. automodule:: fuel.converters.svhn
     :members:
