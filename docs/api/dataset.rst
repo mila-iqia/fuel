@@ -1,6 +1,3 @@
-Datasets
-========
-
 General datasets
 ----------------
 
@@ -17,16 +14,16 @@ Adult dataset
     :undoc-members:
     :show-inheritance:
 
-billion dataset
----------------
+One Billion Word dataset
+------------------------
 
 .. automodule:: fuel.datasets.billion
     :members:
     :undoc-members:
     :show-inheritance:
 
-CalTech 101 dataset
--------------------
+CalTech 101 Silhouettes dataset
+-------------------------------
 
 .. automodule:: fuel.datasets.caltech101_silhouettes
     :members:
@@ -57,7 +54,7 @@ CIFAR10 dataset
     :undoc-members:
     :show-inheritance:
 
-iris dataset
+IRIS dataset
 ------------
 
 .. automodule:: fuel.datasets.iris
@@ -81,15 +78,15 @@ SVHN dataset
     :undoc-members:
     :show-inheritance:
 
-text dataset
-------------
+Text-based datasets
+-------------------
 
 .. automodule:: fuel.datasets.text
     :members:
     :undoc-members:
     :show-inheritance:
 
-Toy datasets 
+Toy datasets
 ------------
 
 .. automodule:: fuel.datasets.toy
