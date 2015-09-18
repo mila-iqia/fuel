@@ -322,12 +322,13 @@ class TestH5PYDataset(object):
         dataset.close(handle)
 
     def test_index_subset_unsorted(self):
+        # A subset should have the same ordering no matter how you specify it.
         dataset = H5PYDataset(
             self.h5file, which_sets=('train',), subset=[0, 4, 2])
         handle = dataset.open()
         request = slice(0, 3)
         assert_equal(dataset.get_data(handle, request),
-                     (self.features[[0, 4, 2]], self.targets[[0, 4, 2]]))
+                     (self.features[[0, 2, 4]], self.targets[[0, 2, 4]]))
         dataset.close(handle)
 
     def test_vlen_axis_labels(self):
