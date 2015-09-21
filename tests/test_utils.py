@@ -22,34 +22,31 @@ class TestSubset(object):
         # the original number of examples.
         assert_raises(ValueError, Subset, [0, 10], 2)
 
-    def test_raises_value_error_on_empty_list(self):
-        # Subset should not support empty lists
-        assert_raises(ValueError, Subset, [], 15)
-
     def test_raises_value_error_on_negative_slices(self):
         # Subset should not support slices with negative start, stop or step.
         assert_raises(ValueError, Subset, slice(-1, None, None), 2)
         assert_raises(ValueError, Subset, slice(None, -1, None), 2)
         assert_raises(ValueError, Subset, slice(None, None, -1), 2)
 
-    def test_raises_value_error_on_slice_out_of_bound(self):
-        # Subset should not support slices that go out of bound with respect to
-        # the original number of examples.
-        assert_raises(ValueError, Subset, slice(None, 10, None), 2)
+    def test_raises_value_error_on_slice_step_gt_1(self):
+        assert_raises(ValueError, Subset, slice(0, 4, 2), 4)
 
-    def test_raises_value_error_on_empty_slice(self):
-        # Subset should not support slices that lead to an empty subset
-        assert_raises(ValueError, Subset, slice(11, 10, None), 15)
+    def test_raises_value_error_on_slice_out_of_bound(self):
+        assert_raises(ValueError, Subset, slice(None, 10, None), 2)
         assert_raises(ValueError, Subset, slice(13, 18, None), 10)
         assert_raises(ValueError, Subset, slice(10, 10, None), 10)
+
+    def test_raises_value_error_on_slice_start_gt_stop(self):
+        assert_raises(ValueError, Subset, slice(11, 10, None), 15)
+
+    def test_raises_value_error_on_slice_step_gt_one(self):
+        assert_raises(ValueError, Subset, slice(5, 10, 2), 15)
 
     def test_list_num_examples(self):
         assert_equal(Subset([0, 3, 8, 13], 15).num_examples, 4)
 
     def test_slice_num_examples(self):
         assert_equal(Subset(slice(3, 18, 1), 50).num_examples, 15)
-        assert_equal(Subset(slice(2, 37, 7), 50).num_examples, 5)
-        assert_equal(Subset(slice(2, 37, 8), 50).num_examples, 5)
 
     def test_is_list_property(self):
         assert not Subset(slice(None, None, None), 2).is_list
@@ -64,7 +61,7 @@ class TestSubset(object):
 
     def test_none_slice_request(self):
         assert_equal(Subset([1, 3, 5, 7], 8)[slice(None)], [1, 3, 5, 7])
-        assert_equal(Subset(slice(0, 8, 2), 8)[slice(None)], slice(0, 8, 2))
+        assert_equal(Subset(slice(0, 8, 1), 8)[slice(None)], slice(0, 8, 1))
 
     def test_list_subset_list_request(self):
         assert_equal(Subset([0, 2, 5, 7, 10, 15], 16)[[3, 2, 4]], [7, 5, 10])
@@ -73,11 +70,11 @@ class TestSubset(object):
         assert_equal(Subset([0, 2, 5, 7, 10, 15], 16)[slice(1, 4, 2)], [2, 7])
 
     def test_slice_subset_list_request(self):
-        assert_equal(Subset(slice(1, 14, 3), 16)[[3, 2, 4]], [10, 7, 13])
+        assert_equal(Subset(slice(1, 14), 16)[[3, 2, 4]], [4, 3, 5])
 
     def test_slice_subset_slice_request(self):
-        assert_equal(Subset(slice(1, 14, 3), 16)[slice(1, 4, 2)],
-                     slice(4, 13, 6))
+        assert_equal(Subset(slice(1, 14), 16)[slice(1, 4, 2)],
+                     slice(2, 5, 2))
 
     def test_add_raises_value_error_when_incompatible(self):
         # Adding two Subset instances should only work when they have the same
@@ -92,13 +89,13 @@ class TestSubset(object):
 
     def test_add_list_slice(self):
         assert_equal((Subset([0, 3, 2, 8], 10) +
-                      Subset(slice(1, 9, 3), 10)).list_or_slice,
-                     [0, 1, 2, 3, 4, 7, 8])
+                      Subset(slice(1, 5), 10)).list_or_slice,
+                     [0, 1, 2, 3, 4, 8])
 
     def test_add_slice_list(self):
-        assert_equal((Subset(slice(1, 9, 3), 10) +
+        assert_equal((Subset(slice(1, 5), 10) +
                       Subset([0, 3, 2, 8], 10)).list_or_slice,
-                     [0, 1, 2, 3, 4, 7, 8])
+                     [0, 1, 2, 3, 4, 8])
 
     def test_add_contiguous_single_step_slice_slice(self):
         assert_equal((Subset(slice(0, 4, 1), 10) +
@@ -119,9 +116,9 @@ class TestSubset(object):
     def test_adding_slice_slice_falls_back_to_list(self):
         # If Subset can't find a way to add two slices together, it must
         # return a list-based Subset.
-        assert_equal((Subset(slice(0, 8, 3), 20) +
-                      Subset(slice(12, 19, 2), 20)).list_or_slice,
-                     [0, 3, 6, 12, 14, 16, 18])
+        assert_equal((Subset(slice(0, 4), 20) +
+                      Subset(slice(12, 16), 20)).list_or_slice,
+                     [0, 1, 2, 3, 12, 13, 14, 15])
 
     def test_safe_unsorted_fancy_index_1(self):
         indexable = numpy.arange(10)
@@ -171,6 +168,18 @@ class TestSubset(object):
         assert_raises(ValueError,
                       Subset([0, 1, 2], 8)._slice_request_sanity_check,
                       slice(2, 1), 3)
+
+    def test_raises_value_error_on_indexing_empty_subset(self):
+        assert_raises(
+            ValueError, Subset([], 2).index_within_subset, [1, 2], [1])
+        assert_raises(
+            ValueError, Subset([], 2).index_within_subset, [1, 2], slice(1, 2))
+        assert_raises(
+            ValueError, Subset(slice(0, 0), 2).index_within_subset,
+            [1, 2], [1])
+        assert_raises(
+            ValueError, Subset(slice(0, 0), 2).index_within_subset,
+            [1, 2], slice(1, 2))
 
 
 @do_not_pickle_attributes("non_picklable", "bulky_attr")

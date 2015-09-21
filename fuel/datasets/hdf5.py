@@ -468,7 +468,8 @@ class H5PYDataset(Dataset):
         handle = self._file_handle
 
         # Infer subsets based on `which_sets`
-        subsets = [None for source_name in self.sources]
+        subsets = [Subset.empty_subset(len(handle[source_name]))
+                   for source_name in self.sources]
         for split in self.which_sets:
             start_stop = self.get_start_stop(handle, split)
             indices = self.get_indices(handle, split)
@@ -480,10 +481,7 @@ class H5PYDataset(Dataset):
                     source_split_subset = Subset(
                         slice(*start_stop[source_name]),
                         len(handle[source_name]))
-                if subsets[i] is None:
-                    subsets[i] = source_split_subset
-                else:
-                    subsets[i] += source_split_subset
+                subsets[i] += source_split_subset
         # Sanity check to make sure that all sources have equal length
         if any(subset.num_examples != subsets[0].num_examples for subset in
                 subsets):

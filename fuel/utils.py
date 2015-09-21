@@ -46,49 +46,75 @@ class Subset(object):
         self.original_num_examples = original_num_examples
 
     def __add__(self, other):
+        """Merges two subsets together.
+
+        Parameters
+        ----------
+        other : Subset
+            Subset to merge with this subset.
+
+        """
+        # Adding two subsets only works if they're subsets of the same dataset,
+        # wich can't possibly be the case if their original number of examples
+        # differ.
         if self.original_num_examples != other.original_num_examples:
             raise ValueError("trying to add two Subset instances with "
                              "different numbers of original examples, they "
                              "can't possibly belong to the same dataset")
+        # An empty subset is a neutral element in subset algebra
+        if self.is_empty:
+            return other
+        # Merging list-based and slice-based subsets results in a list
+        # conversion
+        if self.is_list != other.is_list:
+            return self.__class__(
+                self.get_list_representation() +
+                other.get_list_representation(),
+                self.original_num_examples)
+        # List-based subsets are merged by concatenating their indices.
         if self.is_list:
-            if other.is_list:
-                return self.__class__(self.list_or_slice + other.list_or_slice,
-                                      self.original_num_examples)
-            else:
-                return self.__class__(self.list_or_slice +
-                                      other[list(range(other.num_examples))],
-                                      self.original_num_examples)
+            return self.__class__(self.list_or_slice + other.list_or_slice,
+                                  self.original_num_examples)
+        # Slice-based subsets are merged into a slice-based subset if they
+        # overlap, otherwise they're converted to a list-based subset.
         else:
-            if other.is_list:
-                return self.__class__(self[list(range(self.num_examples))] +
-                                      other.list_or_slice,
+            self_sss = self.slice_to_numerical_args(
+                self.list_or_slice, self.original_num_examples)
+            self_start, self_stop, self_step = self_sss
+            other_sss = self.slice_to_numerical_args(
+                other.list_or_slice, other.original_num_examples)
+            other_start, other_stop, other_step = other_sss
+            # In case of overlap, the solution is to choose the smallest start
+            # value and largest stop value.
+            if not (self_stop < other_start or self_start > other_stop):
+                return self.__class__(slice(min(self_start, other_start),
+                                            max(self_stop, other_stop),
+                                            self_step),
                                       self.original_num_examples)
+            # Everything else is transformed into lists before merging.
             else:
-                self_sss = self.slice_to_numerical_args(
-                    self.list_or_slice, self.original_num_examples)
-                self_start, self_stop, self_step = self_sss
-                other_sss = self.slice_to_numerical_args(
-                    other.list_or_slice, other.original_num_examples)
-                other_start, other_stop, other_step = other_sss
-                # Single-step slices can be merged into a slice if they
-                # overlap.
-                overlap = not (self_stop < other_start or
-                               self_start > other_stop)
-                if overlap and self_step == other_step == 1:
-                    # In case of overlap, the solution is to choose the
-                    # smallest start value and largest stop value.
-                    return self.__class__(slice(min(self_start, other_start),
-                                                max(self_stop, other_stop),
-                                                self_step),
-                                          self.original_num_examples)
-                # Everything else is transformed into lists before merging.
-                else:
-                    return self.__class__(
-                        self[list(range(self.num_examples))] +
-                        other[list(range(other.num_examples))],
-                        self.original_num_examples)
+                return self.__class__(
+                    self.get_list_representation() +
+                    other.get_list_representation(),
+                    self.original_num_examples)
 
     def __getitem__(self, key):
+        """Translates a request from this subset to the dataset.
+
+        A request made in the context of this subset is translated into a
+        request on the dataset itself.
+
+        Parameters
+        ----------
+        key : :class:`list` or :class:`slice`
+            A request made *within the context of this subset*.
+
+        Returns
+        -------
+        :class:`list` or :class:`slice`
+            The translated request to be used on the dataset.
+
+        """
         self._request_sanity_check(key, self.num_examples)
         # slice(None, None, None) selects the whole subset, no need to index
         # anything
@@ -119,7 +145,7 @@ class Subset(object):
 
         Parameters
         ----------
-        subset : Subset
+        subset : :class:`Subset`
             Subset to take the subset of.
         list_or_slice : :class:`list` or :class:`slice`
             List of positive integer indices or slice that describes which
@@ -127,6 +153,18 @@ class Subset(object):
 
         """
         return cls(subset[list_or_slice], subset.original_num_examples)
+
+    @classmethod
+    def empty_subset(cls, original_num_examples):
+        """Construct an empty Subset.
+
+        Parameters
+        ----------
+        original_num_examples : int
+            Number of examples in the dataset this subset is part of.
+
+        """
+        return cls([], original_num_examples)
 
     @staticmethod
     def safe_unsorted_fancy_index(indexable, request):
@@ -175,6 +213,13 @@ class Subset(object):
         step = slice_.step if slice_.step is not None else 1
         return start, stop, step
 
+    def get_list_representation(self):
+        """Returns this subset's representation as a list of indices."""
+        if self.is_list:
+            return self.list_or_slice
+        else:
+            return self[list(range(self.num_examples))]
+
     def index_within_subset(self, indexable, subset_request,
                             safe_hdf5_indexing=True):
         """Index an indexable object within the context of this subset.
@@ -205,27 +250,24 @@ class Subset(object):
         # Integer or slice requests can be processed directly.
         if isinstance(request, int) or hasattr(request, 'step'):
             return indexable[request]
-        # List requests are handled differently whether the indexable is
-        # an HDF5 dataset, a numpy array or another type of indexable.
+        # If the indexable is an HDF5 dataset, it only supports fancy
+        # indexing with sorted lists. As a workaround, if
+        # `safe_hdf5_indexing` is set to `True`, Subset will do the
+        # indexing in sorted order, and reshuffle the result in the
+        # original order.
+        if isinstance(indexable, h5py.Dataset) and safe_hdf5_indexing:
+            return self.safe_unsorted_fancy_index(indexable, request)
+        # If
+        #   a) the indexable is a numpy array, or
+        #   b) it's an HDF5 dataset and the request is a sorted list of
+        #      indices,
+        # then the request can be processed directly.
+        elif isinstance(indexable, (numpy.ndarray, h5py.Dataset)):
+            return indexable[request]
+        # Anything else (e.g. lists) isn't considered to support fancy
+        # indexing, so Subset does it manually.
         else:
-            # If the indexable is an HDF5 dataset, it only supports fancy
-            # indexing with sorted lists. As a workaround, if
-            # `safe_hdf5_indexing` is set to `True`, Subset will do the
-            # indexing in sorted order, and reshuffle the result in the
-            # original order.
-            if isinstance(indexable, h5py.Dataset) and safe_hdf5_indexing:
-                return self.safe_unsorted_fancy_index(indexable, request)
-            # If
-            #   a) the indexable is a numpy array, or
-            #   b) it's an HDF5 dataset and the request is a sorted list of
-            #      indices,
-            # then the request can be processed directly.
-            elif isinstance(indexable, (numpy.ndarray, h5py.Dataset)):
-                return indexable[request]
-            # Anything else (e.g. lists) isn't considered to support fancy
-            # indexing, so Subset does it manually.
-            else:
-                return iterable_fancy_indexing(indexable, request)
+            return iterable_fancy_indexing(indexable, request)
 
     def _is_list(self, list_or_slice):
         """Determines if an object is a list or a slice.
@@ -256,16 +298,17 @@ class Subset(object):
         else:
             start, stop, step = self.slice_to_numerical_args(
                 self.list_or_slice, self.original_num_examples)
-            # The problem of finding the number of examples with start > 0
-            # reduces to the problem of finding the number of examples with
-            # start' = 0 and stop' = stop - start (assuming start < stop, which
-            # is enforced in _slice_subset_sanity_check).
-            stop = stop - start
-            start = 0
-            # We count the number of times (stop - 1) is divisible by step
-            # (because stop is defined exclusively), plus 1 (because we count
-            # the zero index).
-            return (stop - 1) // step + 1
+            return stop - start
+
+    @property
+    def is_empty(self):
+        """Whether this subset is empty."""
+        if self.is_list:
+            return len(self.list_or_slice) == 0
+        else:
+            start, stop, step = self.slice_to_numerical_args(
+                self.list_or_slice, self.original_num_examples)
+            return stop - start == 0
 
     def _subset_sanity_check(self, list_or_slice, num_examples):
         if self._is_list(list_or_slice):
@@ -274,13 +317,10 @@ class Subset(object):
             self._slice_subset_sanity_check(list_or_slice, num_examples)
 
     def _list_subset_sanity_check(self, indices, num_examples):
-        if len(indices) == 0:
-            raise ValueError('Subset instances cannot be defined by an empty '
-                             'list (it would be an empty subset)')
-        if any(index < 0 for index in indices):
+        if indices and min(indices) < 0:
             raise ValueError('Subset instances cannot be defined by a list '
                              'containing negative indices')
-        if max(indices) >= num_examples:
+        if indices and max(indices) >= num_examples:
             raise ValueError('Subset instances cannot be defined by a list '
                              'containing indices greater than or equal to the '
                              'original number of examples')
@@ -291,6 +331,9 @@ class Subset(object):
         if any(arg < 0 for arg in numeric_args):
             raise ValueError('Subset instances cannot be defined by a slice '
                              'with negative start, stop or step arguments')
+        if slice_.step is not None and slice_.step != 1:
+            raise ValueError("Subset doesn't support slices with a step "
+                             "greater than 1")
         if slice_.stop is not None and slice_.stop > num_examples:
             raise ValueError('Subset instances cannot be defined by a slice '
                              'whose stop value is greater than the original '
@@ -300,10 +343,10 @@ class Subset(object):
                              'whose start value is greater than or equal to '
                              'the original number of examples')
         if (slice_.start is not None and slice_.stop is not None and
-                slice_.start >= slice_.stop):
+                slice_.start > slice_.stop):
             raise ValueError('Subset instances cannot be defined by a slice '
-                             'whose start value is greater than or equal to '
-                             'its stop value (it would be an empty subset)')
+                             'whose start value is greater than its stop '
+                             'value')
 
     def _request_sanity_check(self, list_or_slice, num_examples):
         if self._is_list(list_or_slice):
@@ -351,7 +394,7 @@ class Subset(object):
         # If indices are contiguous, convert them into a slice
         contiguous_indices = all(
             indices[i] + 1 == indices[i + 1] for i in range(len(indices) - 1))
-        if contiguous_indices:
+        if indices and contiguous_indices:
             return slice(indices[0], indices[-1] + 1, None)
         else:
             return indices
