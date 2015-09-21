@@ -51,7 +51,7 @@ def convert_weizmann_horses(directory, output_directory, output_filename=None,
         The size of the training and validation set, expressed as a percentage
         wrt the size of the dataset.
 
-    Return
+    Returns
     -------
     output_paths : tuple of str
         Single-element tuple containing the path to the converted dataset.
@@ -281,8 +281,7 @@ def fill_subparser(subparser):
 
 def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
                          crop=False, split=[.44, .22], rng=None):
-    """ Reads the Weizmann Horse Dataset compressed file and returns
-    the split data and some statistic over the dataset.
+    """Process the Weizmann Horse Dataset.
 
     Parameters
     ----------
@@ -310,6 +309,7 @@ def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
 
     Note: RGB images will be resized to the same size of the corresponding
     mask.
+
     """
     #############
     # LOAD DATA #
@@ -481,8 +481,7 @@ def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
     else:
 
         def compute_stats(data, color):
-            """Computes the mean and the standard deviation over images with
-            different shapes.
+            """Computes the stats over images with different shapes.
 
             Parameters
             ----------
@@ -491,12 +490,13 @@ def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
             color : bool
                 True if data are RGB images, False else
 
-            Return
-            ------
+            Returns
+            -------
             mean : int
                 The mean of data
             std : int
                 The standard deviation of data
+
             """
             # create a masked array
             max_size = [0, 0]
