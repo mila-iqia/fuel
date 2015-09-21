@@ -23,13 +23,6 @@ class BinarizedMNIST(H5PYDataset):
        *Gradient-based learning applied to document recognition*,
        Proceedings of the IEEE, November 1998, 86(11):2278-2324.
 
-    .. [DBN] Ruslan Salakhutdinov and Iain Murray, *On the Quantitative
-       Analysis of Deep Belief Networks*, Proceedings of the 25th
-       international conference on Machine learning, 2008, pp. 872-879.
-
-    .. [HUGO] http://www.cs.toronto.edu/~larocheh/public/datasets/
-       binarized_mnist/binarized_mnist_{train,valid,test}.amat
-
     Parameters
     ----------
     which_sets : tuple of str

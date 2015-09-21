@@ -1,72 +1,72 @@
-Downloaders
-===========
+Converters
+==========
 
-General converters
-------------------
+Base classes
+------------
 
 .. automodule:: fuel.converters.base
     :members:
     :undoc-members:
     :show-inheritance:
 
-Adult dataset converter
------------------------
+Adult
+-----
 
 .. automodule:: fuel.converters.adult
     :members:
     :undoc-members:
     :show-inheritance:
 
-CalTech 101 Silhouettes dataset converter
------------------------------------------
+CalTech 101 Silhouettes
+-----------------------
 
 .. automodule:: fuel.converters.caltech101_silhouettes
     :members:
     :undoc-members:
     :show-inheritance:
 
-Binarized MNIST dataset converter
----------------------------------
+Binarized MNIST
+---------------
 
 .. automodule:: fuel.converters.binarized_mnist
     :members:
     :undoc-members:
     :show-inheritance:
 
-CIFAR100 dataset converter
---------------------------
+CIFAR100
+--------
 
 .. automodule:: fuel.converters.cifar100
     :members:
     :undoc-members:
     :show-inheritance:
 
-CIFAR10 dataset converter
--------------------------
+CIFAR10
+-------
 
 .. automodule:: fuel.converters.cifar10
     :members:
     :undoc-members:
     :show-inheritance:
 
-IRIS dataset converter
-----------------------
+IRIS
+----
 
 .. automodule:: fuel.converters.iris
     :members:
     :undoc-members:
     :show-inheritance:
 
-MNIST dataset converter
------------------------
+MNIST
+-----
 
 .. automodule:: fuel.converters.mnist
     :members:
     :undoc-members:
     :show-inheritance:
 
-SVHN dataset converter
-----------------------
+SVHN
+----
 
 .. automodule:: fuel.converters.svhn
     :members:
