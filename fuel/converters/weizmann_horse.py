@@ -321,7 +321,7 @@ def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
     if rng is None:
         numpy.random.RandomState(0xbeef)
 
-    print "Extracting the data ..."
+    print("Extracting the data ...")
     base_path = os.path.dirname(os.path.abspath(filename))
     with tarfile.open(filename, 'r') as f:
         f.extractall(path=base_path)
@@ -329,14 +329,14 @@ def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
     im_path = os.path.join(base_path, 'rgb')
     bw_im_path = os.path.join(base_path, 'gray')
 
-    print "Processing the data ..."
+    print("Processing the data ...")
     filenames = []
     for directory, _, images in os.walk(im_path):
         filenames.extend([im for im in images])
     filenames = sorted(filenames)
 
     if resize and resize_size is -1:
-        print "Computing the mean image ..."
+        print("Computing the mean image ...")
         # compute the mean height and mean width
         from operator import add
         resize_size = [0, 0]
@@ -443,7 +443,7 @@ def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
         masks.append(mask)
 
     if crop:
-        print "Cropped pixels: {}".format(cropped_px)
+        print("Cropped pixels: {}".format(cropped_px))
     images = numpy.asarray(images)
     bw_images = numpy.asarray(bw_images)
     masks = numpy.asarray(masks)
@@ -463,7 +463,7 @@ def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
             numpy.array(bw_images[nvalid:]),
             numpy.array(masks[nvalid:]))
 
-    print "Computing the dataset statistics ..."
+    print("Computing the dataset statistics ...")
     if resize:
         # we can compute per pixel statistics
         mean = [train[0].mean(axis=0),
@@ -525,7 +525,7 @@ def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
         extend_stat(bw_mean, bw_std, compute_stats(train[1], True))
         extend_stat(bw_mean, bw_std, compute_stats(valid[1], True))
         extend_stat(bw_mean, bw_std, compute_stats(test[1], True))
-    print "load_data Done!"
+    print("load_data Done!")
     print('Tot images:{} Train:{}->{} Valid:{}->{} Test:{}->{}').format(
         ntot, 0, ntrain-1, ntrain, nvalid-1, nvalid,
         nvalid+len(test[0])-1)

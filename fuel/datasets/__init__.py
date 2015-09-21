@@ -11,6 +11,6 @@ from fuel.datasets.caltech101_silhouettes import CalTech101Silhouettes
 from fuel.datasets.iris import Iris
 from fuel.datasets.mnist import MNIST
 from fuel.datasets.svhn import SVHN
-from fuel.datasets.weizmann_horse import Weizmann_horse
+from fuel.datasets.weizmann_horse import WeizmannHorse
 from fuel.datasets.text import TextFile
 from fuel.datasets.billion import OneBillionWord
