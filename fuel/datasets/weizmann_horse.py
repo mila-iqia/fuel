@@ -4,7 +4,7 @@ from fuel.transformers.defaults import uint8_pixels_to_floatX
 from fuel.utils import find_in_data_path
 
 
-class Weizmann_horse(H5PYDataset):
+class WeizmannHorse(H5PYDataset):
     u"""Weizmann horses dataset.
 
     The Weizmann Horse Database [ECCV2002] consists of 328 side-view color
@@ -58,5 +58,5 @@ class Weizmann_horse(H5PYDataset):
                     filename += '_cropped'
             filename += '_' + str(split[0]) + '_' + str(split[1]) + '.hdf5'
 
-        super(Weizmann_horse, self).__init__(
+        super(WeizmannHorse, self).__init__(
             file_or_path=find_in_data_path(filename), **kwargs)
