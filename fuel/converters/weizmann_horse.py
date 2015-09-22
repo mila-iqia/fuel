@@ -15,7 +15,7 @@ COMPLETE_DATASET = 'weizmann_horse_db.tar.gz'
 def convert_weizmann_horses(directory, output_directory, output_filename=None,
                             resize=False, resize_size=-1, zero_pad=True,
                             crop=False, split=[.44, .22]):
-    """Converts the Weizmann Horse Dataset to HDF5.
+    """Convert the Weizmann Horse Dataset to HDF5.
 
     Converts the Weizmann Horse Dataset to an HDF5 dataset compatible with
     :class:`fuel.datasets.weizmann_horses`. The converted dataset is
@@ -194,41 +194,45 @@ def convert_weizmann_horses(directory, output_directory, output_filename=None,
         for i, el in enumerate(h5file.attrs['split']):
             split_array[i] = tuple(el)
 
+        ntotrain = len(train[0])
+        ntovalid = ntotrain + len(valid[0])
+        ntotest = ntovalid + len(test[0])
+
         split_array[15] = ('train'.encode('utf8'),
                            'color_images'.encode('utf8'), 0,
-                           len(train[0]), h5py.Reference(), True,
+                           ntotrain, h5py.Reference(), True,
                            '.'.encode('utf8'))
         split_array[16] = ('valid'.encode('utf8'),
-                           'color_images'.encode('utf8'), len(train[0]),
-                           len(valid[0]), h5py.Reference(), True,
+                           'color_images'.encode('utf8'), ntotrain,
+                           ntovalid, h5py.Reference(), True,
                            '.'.encode('utf8'))
         split_array[17] = ('test'.encode('utf8'),
-                           'color_images'.encode('utf8'), len(valid[0]),
-                           len(test[0]), h5py.Reference(), True,
+                           'color_images'.encode('utf8'), ntovalid,
+                           ntotest, h5py.Reference(), True,
                            '.'.encode('utf8'))
         split_array[18] = ('train'.encode('utf8'),
                            'gray_images'.encode('utf8'), 0,
-                           len(train[1]), h5py.Reference(), True,
+                           ntotrain, h5py.Reference(), True,
                            '.'.encode('utf8'))
         split_array[19] = ('valid'.encode('utf8'),
-                           'gray_images'.encode('utf8'), len(train[1]),
-                           len(valid[1]), h5py.Reference(), True,
+                           'gray_images'.encode('utf8'), ntotrain,
+                           ntovalid, h5py.Reference(), True,
                            '.'.encode('utf8'))
         split_array[20] = ('test'.encode('utf8'),
-                           'gray_images'.encode('utf8'), len(valid[1]),
-                           len(test[1]), h5py.Reference(), True,
+                           'gray_images'.encode('utf8'), ntovalid,
+                           ntotest, h5py.Reference(), True,
                            '.'.encode('utf8'))
         split_array[21] = ('train'.encode('utf8'),
                            'targets'.encode('utf8'), 0,
-                           len(train[2]), h5py.Reference(), True,
+                           ntotrain, h5py.Reference(), True,
                            '.'.encode('utf8'))
         split_array[22] = ('valid'.encode('utf8'),
-                           'targets'.encode('utf8'), len(train[2]),
-                           len(valid[2]), h5py.Reference(), True,
+                           'targets'.encode('utf8'), ntotrain,
+                           ntovalid, h5py.Reference(), True,
                            '.'.encode('utf8'))
         split_array[23] = ('test'.encode('utf8'),
-                           'targets'.encode('utf8'), len(valid[2]),
-                           len(test[2]), h5py.Reference(), True,
+                           'targets'.encode('utf8'), ntovalid,
+                           ntotest, h5py.Reference(), True,
                            '.'.encode('utf8'))
         h5file.attrs['split'] = split_array
 
@@ -239,7 +243,7 @@ def convert_weizmann_horses(directory, output_directory, output_filename=None,
 
 
 def fill_subparser(subparser):
-    """Sets up a subparser to convert the Weizmann Horse Dataset files.
+    """Set up a subparser to convert the Weizmann Horse Dataset files.
 
     Parameters
     ----------
@@ -481,7 +485,7 @@ def read_weizmann_horses(filename, resize=False, resize_size=-1, zero_pad=True,
     else:
 
         def compute_stats(data, color):
-            """Computes the stats over images with different shapes.
+            """Compute the stats over images with different shapes.
 
             Parameters
             ----------
