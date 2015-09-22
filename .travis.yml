@@ -34,8 +34,7 @@ install:
       fi
   - |
       if [[ $TESTS == 'fuel' ]]; then
-        conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl --file req-travis-conda.txt
-        conda install --force -q --yes -c https://conda.anaconda.org/bartvm scipy
+        conda install -q --yes python=$TRAVIS_PYTHON_VERSION --file req-travis-conda.txt
         conda uninstall -q --yes wheel
         pip install -r req-travis-pip.txt
         pip install . -r requirements.txt
