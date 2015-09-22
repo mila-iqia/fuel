@@ -1,8 +1,4 @@
 sudo: false
-addons:
-  apt:
-    packages:
-      - gfortran
 cache:
   directories:
     - $TRAVIS_BUILD_DIR/data
@@ -31,6 +27,7 @@ install:
       if [[ $TESTS == 'blocks' ]]; then
         curl -O https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-conda.txt
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION mkl --file req-travis-conda.txt
+        conda install --force -c https://conda.anaconda.org/bartvm scipy
         conda uninstall -q --yes wheel
         pip install -r https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-pip.txt
         pip install . -r requirements.txt
