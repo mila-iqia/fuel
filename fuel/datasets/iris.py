@@ -5,15 +5,15 @@ from fuel.utils import find_in_data_path
 class Iris(H5PYDataset):
     u"""Iris dataset.
 
-    Iris [LBBH] is a simple pattern recognition dataset, which consist of
+    Iris [IRIS] is a simple pattern recognition dataset, which consist of
     3 classes of 50 examples each having 4 real-valued features each, where
     each class refers to a type of iris plant. It is accessible through the
-    UCI Machine Learning repository [UCI].
+    UCI Machine Learning repository [UCIIRIS].
 
     .. [IRIS] Ronald A. Fisher, *The use of multiple measurements in
        taxonomic problems*, Annual Eugenics, 7, Part II, 179-188,
        September 1936.
-    .. [UCI] https://archive.ics.uci.edu/ml/datasets/Iris
+    .. [UCIIRIS] https://archive.ics.uci.edu/ml/datasets/Iris
 
     Parameters
     ----------

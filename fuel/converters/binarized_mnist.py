@@ -31,9 +31,6 @@ def convert_binarized_mnist(directory, output_directory,
        Analysis of Deep Belief Networks*, Proceedings of the 25th
        international conference on Machine learning, 2008, pp. 872-879.
 
-    .. [HUGO] http://www.cs.toronto.edu/~larocheh/public/datasets/
-       binarized_mnist/binarized_mnist_{train,valid,test}.amat
-
     Parameters
     ----------
     directory : str

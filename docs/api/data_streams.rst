@@ -1,8 +1,7 @@
-Toy datasets 
+Data streams
 ============
 
-.. automodule:: fuel.datasets.toy
+.. automodule:: fuel.streams
     :members:
     :undoc-members:
     :show-inheritance:
-

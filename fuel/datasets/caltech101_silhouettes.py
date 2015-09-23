@@ -15,8 +15,6 @@ class CalTech101Silhouettes(H5PYDataset):
     28x28 version contains 4100, 2264 and 2307 examples in the train, valid
     and test set.
 
-    .. [MARLIN] https://people.cs.umass.edu/~marlin/data.shtml
-
     Parameters
     ----------
     which_sets : tuple of str

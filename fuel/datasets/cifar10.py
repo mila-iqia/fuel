@@ -6,15 +6,10 @@ from fuel.utils import find_in_data_path
 class CIFAR10(H5PYDataset):
     """The CIFAR10 dataset of natural images.
 
-    This dataset is a labeled subset of the ``80 million tiny images''
+    This dataset is a labeled subset of the ``80 million tiny images``
     dataset [TINY]. It consists of 60,000 32 x 32 colour images in 10
     classes, with 6,000 images per class. There are 50,000 training
     images and 10,000 test images [CIFAR10].
-
-    .. [TINY] Antonio Torralba, Rob Fergus and William T. Freeman,
-       *80 million tiny images: a large dataset for non-parametric
-       object and scene recognition*, Pattern Analysis and Machine
-       Intelligence, IEEE Transactions on 30.11 (2008): 1958-1970.
 
     .. [CIFAR10] Alex Krizhevsky, *Learning Multiple Layers of Features
        from Tiny Images*, technical report, 2009.

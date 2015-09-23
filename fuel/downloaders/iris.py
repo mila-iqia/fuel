@@ -5,9 +5,7 @@ def fill_subparser(subparser):
     """Set up a subparser to download the Iris dataset file.
 
     The Iris dataset file `iris.data` is downloaded from the UCI
-    Machine Learning Repository [UCI].
-
-    .. [UCI] https://archive.ics.uci.edu/ml/datasets/Iris
+    Machine Learning Repository [UCIIRIS].
 
     Parameters
     ----------

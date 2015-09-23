@@ -7,8 +7,6 @@ def fill_subparser(subparser):
     The CIFAR-10 dataset file is downloaded from Alex Krizhevsky's
     website [ALEX].
 
-    .. [ALEX] http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
-
     Parameters
     ----------
     subparser : :class:`argparse.ArgumentParser`
