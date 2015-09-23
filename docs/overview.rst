@@ -28,19 +28,40 @@ There are four basic tasks that Fuel needs to handle:
 Each of those four tasks is delegated to a particular class of objects, which
 we'll be introducing in order.
 
+Schematic overview of Fuel
+--------------------------
+
+For the more visual people, here's a schematic view of how the different
+components of Fuel interact together. Dashed lines are optional.
+
+.. digraph:: datasets
+
+   Dataset -> DataStream [label=" Argument to"];
+   DataStream -> Dataset [label=" Gets data from"];
+   DataStream -> DataIterator [label=" Returns"];
+   IterationScheme -> DataStream [style=dashed, label=" Argument to"];
+   DataStream -> IterationScheme [style=dashed, label=" Gets request iterator"];
+   IterationScheme -> RequestIterator [label=" Returns"];
+   RequestIterator -> DataIterator [style=dashed, label=" Argument to"];
+   DataIterator -> DataStream [label=" Gets data from"];
+   DataStream -> DataStream [style=dashed, label=" Gets data from (transformer)"];
+   { rank=same; RequestIterator DataIterator }
+
 Datasets: interfacing with data
 -------------------------------
 
 .. admonition:: In summary
     :class: tip
 
-    * :class:`Dataset` subclasses are responsible for interfacing with your
-      data.
-    * A :class:`Dataset` instance has the following useful attributes:
+    * :class:`Dataset` is an abstract dataset. Its subclasses are responsible
+      for interfacing with your data.
+    * Any :class:`Dataset` instance has the following useful attributes:
 
       - ``sources``: tuple of strings indicating which sources are provided by
         the dataset, and their ordering (which determines the return order of
         :meth:`get_data`).
+      - ``provides_sources``: tuple of source names indicating what sources the
+        dataset *is able to* provide.
       - ``axis_labels``: :class:`dict` mapping from source names to tuples of
         strings or ``None``. Used to document the axis semantics of the dataset's
         sources. Can be set via the ``axis_labels`` constructor argument.
@@ -68,7 +89,7 @@ Datasets: interfacing with data
         corresponding iterable objects.
       - The state :meth:`IterableDataset.open` returns is an iterator object.
       - Its :meth:`get_data` method doesn't accept requests.
-      - As such, it can only iterate exaplewise and sequentially.
+      - As such, it can only iterate examplewise and sequentially.
 
     * Use :class:`IndexableDataset` to interface with indexable objects in
       general.
@@ -108,9 +129,9 @@ IterableDataset
 The simplest :class:`Dataset` subclass is :class:`IterableDataset`, which
 interfaces with iterable objects.
 
-It is created by passing a :class:`dict` mapping source names to their
-associated data and, optionally, a :class:`dict` mapping source names to tuples
-of axis labels.
+It is created by passing an ``iterables`` :class:`dict` mapping source names to
+their associated data and, optionally, an ``axis_labels`` :class:`dict` mapping
+source names to their corresponding tuple of axis labels.
 
 >>> from collections import OrderedDict
 >>> from fuel.datasets import IterableDataset
@@ -148,19 +169,32 @@ This is done through the :meth:`Dataset.open` method:
 >>> print(state.__class__.__name__)
 imap
 
-We see that in :class:`IterableDataset`'s case the state is an iterator object.
-We can now visit the examples this dataset contains using its
-:meth:`get_data` method.
+We can see that in :class:`IterableDataset`'s case the state is an iterator
+(:class:`imap`) object.  We can now visit the examples this dataset contains
+using its :meth:`get_data` method.
 
->>> print(dataset.get_data(state=state))
-(array([[ 47, 211],
-       [ 38,  53]]), array([0]))
 >>> while True:
 ...     try:
-...         __ = dataset.get_data(state=state)
+...         print(dataset.get_data(state=state))
 ...     except StopIteration:
 ...         print('Iteration over')
 ...         break
+(array([[ 47, 211],
+       [ 38,  53]]), array([0]))
+(array([[204, 116],
+       [152, 249]]), array([3]))
+(array([[143, 177],
+       [ 23, 233]]), array([0]))
+(array([[154,  30],
+       [171, 158]]), array([1]))
+(array([[236, 124],
+       [ 26, 118]]), array([2]))
+(array([[186, 120],
+       [112, 220]]), array([2]))
+(array([[ 69,  80],
+       [201, 127]]), array([2]))
+(array([[246, 254],
+       [175,  50]]), array([3]))
 Iteration over
 
 Eventually, the iterator is depleted and it raises a :class:`StopIteration`
@@ -293,6 +327,12 @@ We can therefore use an iteration scheme to visit a dataset in some order.
 (4, 2, 2) (4, 1)
 >>> dataset.close(state)
 
+.. note::
+
+    Not all iteration schemes work with all datasets. For instance,
+    :class:`IterableDataset` doesn't work with any iteration scheme,
+    since its :meth:`get_data` method doesn't accept requests.
+
 Data streams: automating the iteration process
 ----------------------------------------------
 
@@ -338,12 +378,12 @@ Transformers: apply some transformation on the fly
     * Transformers can be chained together to form complex data processing
       pipelines.
 
-Some data streams take data streams as input. We call them *transformers*, and
-they enable us to build complex data preprocessing pipelines.
+Some :class:`AbstractDataStream` subclasses take data streams as input. We call
+them *transformers*, and they enable us to build complex data preprocessing
+pipelines.
 
-Transformers are :class:`Transformer` subclasses. Most of the the transformers
-you'll encounter are located in the ``fuel.transformers`` module. Here are some
-commonly used ones:
+Transformers are :class:`Transformer` subclasses, which is itself an
+:class:`AbstractDataStream` subclass. Here are some commonly used ones:
 
 * :class:`Flatten`: flattens the input into a matrix (for batch input) or a
   vector (for examplewise input).
@@ -397,7 +437,8 @@ before, but this time features will be standardized on-the-fly.
        [2]]))
 
 Now, let's imagine that for some reason (e.g. running Theano code on GPU) we
-need features to have a data type of ``float32``.
+need features to have a data type of ``float32``. We can cast them on-the-fly
+with a :class:`Cast` transformer.
 
 >>> from fuel.transformers import Cast
 >>> cast_standardized_stream = Cast(
@@ -413,69 +454,6 @@ preprocessing pipeline. The complete pipeline now looks like this:
 ...             dataset=dataset, iteration_scheme=scheme),
 ...         scale=scale, shift=shift, which_sources=('features',)),
 ...     dtype='float32', which_sources=('features',))
-
-Schematic overview of Fuel
---------------------------
-
-For the more visual people, here's a schematic view of how the different
-components of Fuel interact together.
-
-.. digraph:: datasets
-   :caption: A simplified overview of the interactions between the different parts of the data-handling classes in Fuel. Dashed lines are optional.
-
-   Dataset -> DataStream [label=" Argument to"];
-   DataStream -> Dataset [label=" Gets data from"];
-   DataStream -> DataIterator [label=" Returns"];
-   IterationScheme -> DataStream [style=dashed, label=" Argument to"];
-   DataStream -> IterationScheme [style=dashed, label=" Gets request iterator"];
-   IterationScheme -> RequestIterator [label=" Returns"];
-   RequestIterator -> DataIterator [style=dashed, label=" Argument to"];
-   DataIterator -> DataStream [label=" Gets data from"];
-   DataStream -> DataStream [style=dashed, label=" Gets data from (transformer)"];
-   { rank=same; RequestIterator DataIterator }
-
-Datasets
-  Datasets provide an interface to the data we are trying to access. This data
-  is usually stored on disk, but can also be created on the fly (e.g. drawn
-  from a distribution), requested from a database or server, etc. Datasets are
-  largely *stateless*. Multiple data streams can be iterating over the same
-  dataset simultaneously, so the dataset couldn't have a single state to store
-  e.g. its location in a file. Instead, the dataset provides a set of methods
-  (:meth:`~.datasets.Dataset.open`, :meth:`~.datasets.Dataset.close`,
-  :meth:`~.datasets.Dataset.get_data`, etc.) that interact with a particular
-  state, which is managed by a data stream.
-
-Data stream
-  A data stream uses the interface of a dataset to e.g. iterate over the data.
-  Data streams can produce data set iterators (epoch iterators) which will use
-  the data stream's state to return actual data. Data streams can optionally
-  use an iteration scheme to describe in what way (e.g. in what order) they
-  will request data from the dataset.
-
-Transformer
-  A transformer is really just another data stream, except that it doesn't take
-  a dataset but another data stream as its input. This allows us to set up a
-  data processing pipeline, which can be quite powerful. For example, given a
-  data set that produces sentences from a text corpus, we could use a chain of
-  transformers to read groups of sentences into a cache, sort them by length,
-  group them into minibatches, and pad them to be of the same length.
-
-Iteration scheme
-  A iteration scheme describes *how* we should proceed to iterate over the
-  data. Iteration schemes will normally describe a sequence of batch sizes
-  (e.g.  a constant minibatch size), or a sequence of indices to our data (e.g.
-  indices of shuffled minibatches). Iteration schemes return request iterators.
-
-Request iterator
-  A request iterator implements the Python iteration protocol. It represents a
-  single epoch of requests, as determined by the iteration scheme that produced
-  it.
-
-Data iterator
-  A data iterator also implements the Python iteration protocol. It optionally
-  uses a request iterator and returns data at each step (requesting it from the
-  data stream). A single iteration over a data iterator represents a single
-  epoch.
 
 Going further
 -------------
