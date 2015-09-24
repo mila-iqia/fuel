@@ -532,7 +532,7 @@ def test_other_set_producer():
                 assert metadata_msg['flags'] == zmq.SNDMORE
                 assert metadata_msg['obj'] == (im_fn, label)
                 # Verify that the second (data) message came from
-                # the right place, either a patch file or a
+                # the right place, either a patch file or a TAR.
                 data_msg = socket.sent.popleft()
                 assert data_msg['type'] == 'send'
                 assert data_msg['flags'] == 0
