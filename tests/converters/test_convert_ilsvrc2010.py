@@ -1,4 +1,5 @@
 from collections import deque
+import hashlib
 import io
 import os
 import tarfile
@@ -172,7 +173,7 @@ def create_jpeg_data(image):
 
 def create_fake_jpeg_tar(seed, min_num_images=5, max_num_images=50,
                          min_size=20, size_range=30, filenames=None,
-                         random=True, gzip_probability=0.5):
+                         random=True, gzip_probability=0.5, offset=0):
     """Create a TAR file of randomly generated JPEG files.
 
     Parameters
@@ -197,6 +198,8 @@ def create_fake_jpeg_tar(seed, min_num_images=5, max_num_images=50,
     gzip_probability : float, optional
         With this probability, randomly gzip the JPEG file without
         appending a gzip suffix.
+    offset : int, optional
+        Where to start the hashes for filenames. Default: 0.
 
     Returns
     -------
@@ -222,7 +225,8 @@ def create_fake_jpeg_tar(seed, min_num_images=5, max_num_images=50,
         files = filenames
     for i in xrange(rng.random_integers(min_num_images, max_num_images)):
         if filenames is None:
-            files.append('%x.JPEG' % abs(hash(str(i))))
+            files.append('%s.JPEG' %
+                         hashlib.sha1(bytes(i + offset)).hexdigest())
         im = rng.random_integers(0, 255,
                                  size=(rng.random_integers(min_size,
                                                            min_size +
