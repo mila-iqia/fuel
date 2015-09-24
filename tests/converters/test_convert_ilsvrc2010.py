@@ -26,6 +26,7 @@ from fuel.converters.ilsvrc2010 import (extract_patch_images,
                                         prepare_metadata,
                                         read_devkit,
                                         read_metadata_mat_file,
+                                        train_set_producer,
                                         DEVKIT_META_PATH,
                                         DEVKIT_ARCHIVE,
                                         TEST_GROUNDTRUTH)
@@ -401,7 +402,44 @@ def test_process_other_set():
 
 
 def test_train_set_producer():
-    raise unittest.SkipTest("TODO")
+    tar_data, names, jpeg_names = create_fake_tar_of_tars(20150923, 5,
+                                                          min_num_images=45,
+                                                          max_num_images=55)
+    all_jpegs = numpy.array(sum(jpeg_names, []))
+    numpy.random.RandomState(20150923).shuffle(all_jpegs)
+    patched_files = all_jpegs[:10]
+    patches_data = create_fake_patch_images(filenames=patched_files,
+                                            num_train=10, num_valid=0,
+                                            num_test=0)
+    train_patches = extract_patch_images(io.BytesIO(patches_data), 'train')
+    socket = MockSocket(zmq.PUSH)
+    wnid_map = dict(zip((n.split('.')[0] for n in names), range(len(names))))
+
+    train_set_producer(socket, io.BytesIO(tar_data), io.BytesIO(patches_data),
+                       wnid_map)
+    tar_data, names, jpeg_names = create_fake_tar_of_tars(20150923, 5,
+                                                          min_num_images=45,
+                                                          max_num_images=55)
+    for tar_name in names:
+        with tarfile.open(fileobj=io.BytesIO(tar_data)) as outer_tar:
+            with tarfile.open(fileobj=outer_tar.extractfile(tar_name)) as tar:
+                for record in tar:
+                    jpeg = record.name
+                    metadata_msg = socket.sent.popleft()
+                    assert metadata_msg['type'] == 'send_pyobj'
+                    assert metadata_msg['flags'] == zmq.SNDMORE
+                    key = tar_name.split('.')[0]
+                    assert metadata_msg['obj'] == (jpeg, wnid_map[key])
+
+                    image_msg = socket.sent.popleft()
+                    assert image_msg['type'] == 'send'
+                    assert image_msg['flags'] == 0
+                    if jpeg in train_patches:
+                        assert image_msg['data'] == train_patches[jpeg]
+                    else:
+                        image_data, _ = load_from_tar_or_patch(tar, jpeg,
+                                                               train_patches)
+                        assert image_msg['data'] == image_data
 
 
 MOCK_CONSUMER_MESSAGES = [
