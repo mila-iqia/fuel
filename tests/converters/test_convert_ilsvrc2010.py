@@ -291,10 +291,14 @@ def create_fake_tar_of_tars(seed, num_inner_tars, *args, **kwargs):
     :func:`create_fake_jpeg_tars`.
 
     """
-    rng = numpy.random.RandomState(seed)
-    seeds = rng.random_integers(0, 500000, size=(num_inner_tars,))
-    tars, fns = list(zip(*[create_fake_jpeg_tar(s, *args, **kwargs)
-                           for s in seeds]))
+    seeds = numpy.arange(num_inner_tars) + seed
+    tars, fns = [], []
+    offset = 0
+    for s in seeds:
+        tar, fn = create_fake_jpeg_tar(s, *args, offset=offset, **kwargs)
+        tars.append(tar)
+        fns.append(fn)
+        offset += len(fn)
     names = sorted(str(abs(hash(str(-i - 1)))) + '.tar'
                    for i, t in enumerate(tars))
     data = io.BytesIO()
