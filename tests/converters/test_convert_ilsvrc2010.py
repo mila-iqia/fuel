@@ -333,7 +333,7 @@ def create_fake_patch_images(filenames=None, num_train=14, num_valid=15,
                                max_num_images=len(filenames),
                                filenames=filenames, random=False,
                                gzip_probability=0.0)[0]
-    return tar, filenames
+    return tar
 
 
 def test_prepare_metadata():
@@ -462,8 +462,8 @@ def test_other_set_producer():
     image_archive, filenames = create_fake_jpeg_tar(seed=1979,
                                                     min_num_images=num,
                                                     max_num_images=num)
-    patches, _ = create_fake_patch_images(filenames=filenames,
-                                          num_train=7, num_valid=7, num_test=7)
+    patches = create_fake_patch_images(filenames=filenames,
+                                       num_train=7, num_valid=7, num_test=7)
 
     valid_patches = extract_patch_images(io.BytesIO(patches), 'valid')
     test_patches = extract_patch_images(io.BytesIO(patches), 'test')
@@ -513,8 +513,8 @@ def test_load_from_tar_or_patch():
     images, all_filenames = create_fake_jpeg_tar(3, min_num_images=200,
                                                  max_num_images=200,
                                                  gzip_probability=0.0)
-    patch_data, _ = create_fake_patch_images(all_filenames[::4], num_train=50,
-                                             num_valid=0, num_test=0)
+    patch_data = create_fake_patch_images(all_filenames[::4], num_train=50,
+                                          num_valid=0, num_test=0)
 
     patches = extract_patch_images(io.BytesIO(patch_data), 'train')
 
@@ -569,7 +569,7 @@ def test_read_metadata_mat_file():
 
 
 def test_extract_patch_images():
-    tar, _ = create_fake_patch_images()
+    tar = create_fake_patch_images()
     assert len(extract_patch_images(io.BytesIO(tar), 'train')) == 14
     assert len(extract_patch_images(io.BytesIO(tar), 'valid')) == 15
     assert len(extract_patch_images(io.BytesIO(tar), 'test')) == 21
