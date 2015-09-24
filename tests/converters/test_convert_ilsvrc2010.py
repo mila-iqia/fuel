@@ -358,8 +358,8 @@ def test_prepare_hdf5_file():
     # Verify properties of the train split.
     train_splits = H5PYDataset.get_start_stop(hdf5_file, 'train')
     assert all(v == (0, 10) for v in train_splits.values())
-    assert train_splits.keys() == set(['encoded_images', 'targets',
-                                       'filenames'])
+    assert set(train_splits.keys()) == set(['encoded_images', 'targets',
+                                            'filenames'])
 
     # Verify properties of the valid split.
     valid_splits = H5PYDataset.get_start_stop(hdf5_file, 'valid')
@@ -489,7 +489,7 @@ def test_images_consumer_randomized():
     assert written_targets == expected_targets
 
     written_filenames = set(hdf5_file['filenames'][4:9].flatten())
-    expected_filenames = set(bytes(s['obj'][0], encoding='ascii')
+    expected_filenames = set(s['obj'][0].encode('ascii')
                              for s in mock_messages[::2])
     assert written_filenames == expected_filenames
 
