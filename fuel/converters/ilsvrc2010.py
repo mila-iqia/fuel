@@ -209,7 +209,7 @@ def process_train_set(hdf5_file, train_archive, patch_archive, n_train,
     hdf5_file : :class:`h5py.File` instance
         HDF5 file handle to which to write. Assumes `features`, `targets`
         and `filenames` already exist and have first dimension larger than
-        `sum(images_per_class)`.
+        `n_train`.
     train_archive :  str or file-like object
         Filename or file handle for the TAR archive of training images.
     patch_archive :  str or file-like object
@@ -220,7 +220,8 @@ def process_train_set(hdf5_file, train_archive, patch_archive, n_train,
         A dictionary mapping WordNet IDs to class indices.
     shuffle_seed : int or sequence, optional
         Seed for a NumPy random number generator that permutes the
-        training set on disk.
+        training set on disk. If `None`, no permutation is performed
+        (this is the default).
 
     """
     producer = partial(train_set_producer, train_archive=train_archive,
