@@ -24,6 +24,7 @@ from fuel.converters.ilsvrc2010 import (extract_patch_images,
                                         other_set_producer,
                                         prepare_hdf5_file,
                                         prepare_metadata,
+                                        process_train_set,
                                         read_devkit,
                                         read_metadata_mat_file,
                                         train_set_producer,
@@ -226,8 +227,9 @@ def create_fake_jpeg_tar(seed, min_num_images=5, max_num_images=50,
         files = filenames
     for i in xrange(rng.random_integers(min_num_images, max_num_images)):
         if filenames is None:
+            max_len = 27  # so that with suffix, 32 characters
             files.append('%s.JPEG' %
-                         hashlib.sha1(bytes(i + offset)).hexdigest())
+                         hashlib.sha1(bytes(i + offset)).hexdigest()[:max_len])
         im = rng.random_integers(0, 255,
                                  size=(rng.random_integers(min_size,
                                                            min_size +
@@ -394,7 +396,27 @@ def test_prepare_hdf5_file():
 
 
 def test_process_train_set():
-    raise unittest.SkipTest("TODO")
+    tar_data, names, jpeg_names = create_fake_tar_of_tars(20150925, 5,
+                                                          min_num_images=45,
+                                                          max_num_images=55)
+    all_jpegs = numpy.array(sum(jpeg_names, []))
+    numpy.random.RandomState(20150925).shuffle(all_jpegs)
+    patched_files = all_jpegs[:10]
+    patches_data = create_fake_patch_images(filenames=patched_files,
+                                            num_train=10, num_valid=0,
+                                            num_test=0)
+    hdf5_file = MockH5PYFile()
+    prepare_hdf5_file(hdf5_file, len(all_jpegs), 0, 0)
+    wnid_map = dict(zip((n.split('.')[0] for n in names), range(len(names))))
+
+    process_train_set(hdf5_file, io.BytesIO(tar_data),
+                      io.BytesIO(patches_data), len(all_jpegs),
+                      wnid_map)
+
+    # XXX TODO
+
+    assert set(all_jpegs) == set(s.decode('ascii')
+                                 for s in hdf5_file['filenames'][:, 0])
 
 
 def test_process_other_set():
