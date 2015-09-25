@@ -649,6 +649,9 @@ class TestSVHN(object):
             numpy.vstack([self.f2_train_targets_mock,
                           self.f2_test_targets_mock,
                           self.f2_extra_targets_mock]))
+        assert h5file['targets'][...].max() < 10
+        assert h5file['targets'][...].min() >= 0
+
         assert_equal(str(h5file['features'].dtype), 'uint8')
         assert_equal(str(h5file['targets'].dtype), 'uint8')
         assert_equal(tuple(dim.label for dim in h5file['features'].dims),
