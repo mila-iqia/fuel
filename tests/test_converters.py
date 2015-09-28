@@ -578,15 +578,15 @@ class TestSVHN(object):
         self.f2_train_features_mock = numpy.random.randint(
             0, 256, (32, 32, 3, 10)).astype('uint8')
         self.f2_train_targets_mock = numpy.random.randint(
-            0, 10, (10, 1)).astype('uint8')
+            1, 11, (10, 1)).astype('uint8')
         self.f2_test_features_mock = numpy.random.randint(
             0, 256, (32, 32, 3, 10)).astype('uint8')
         self.f2_test_targets_mock = numpy.random.randint(
-            0, 10, (10, 1)).astype('uint8')
+            1, 11, (10, 1)).astype('uint8')
         self.f2_extra_features_mock = numpy.random.randint(
             0, 256, (32, 32, 3, 10)).astype('uint8')
         self.f2_extra_targets_mock = numpy.random.randint(
-            0, 10, (10, 1)).astype('uint8')
+            1, 11, (10, 1)).astype('uint8')
         savemat('train_32x32.mat', {'X': self.f2_train_features_mock,
                                     'y': self.f2_train_targets_mock})
         savemat('test_32x32.mat', {'X': self.f2_test_features_mock,
@@ -644,11 +644,21 @@ class TestSVHN(object):
             numpy.vstack([self.f2_train_features_mock.transpose(3, 2, 0, 1),
                           self.f2_test_features_mock.transpose(3, 2, 0, 1),
                           self.f2_extra_features_mock.transpose(3, 2, 0, 1)]))
+
+        f2_train_targets_mock = self.f2_train_targets_mock
+        f2_train_targets_mock[f2_train_targets_mock == 10] = 0
+        f2_test_targets_mock = self.f2_test_targets_mock
+        f2_test_targets_mock[f2_test_targets_mock == 10] = 0
+        f2_extra_targets_mock = self.f2_extra_targets_mock
+        f2_extra_targets_mock[f2_extra_targets_mock == 10] = 0
         assert_equal(
             h5file['targets'][...],
-            numpy.vstack([self.f2_train_targets_mock,
-                          self.f2_test_targets_mock,
-                          self.f2_extra_targets_mock]))
+            numpy.vstack([f2_train_targets_mock,
+                          f2_test_targets_mock,
+                          f2_extra_targets_mock]))
+        assert h5file['targets'][...].max() < 10
+        assert h5file['targets'][...].min() >= 0
+
         assert_equal(str(h5file['features'].dtype), 'uint8')
         assert_equal(str(h5file['targets'].dtype), 'uint8')
         assert_equal(tuple(dim.label for dim in h5file['features'].dims),
