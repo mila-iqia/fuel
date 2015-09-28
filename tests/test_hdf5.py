@@ -140,6 +140,15 @@ class TestH5PYDataset(object):
         assert_equal(H5PYDataset.unsorted_fancy_index([0, 5, 2], indexable),
                      [0, 5, 2])
 
+    def test_example_scheme_support(self):
+        train_set = H5PYDataset(self.h5file, which_sets=('train',))
+        iterator = train_set.get_example_stream().get_epoch_iterator()
+        assert_equal(next(iterator), (self.features[0], self.targets[0]))
+        train_set = H5PYDataset(self.h5file, which_sets=('train',),
+                                load_in_memory=True)
+        iterator = train_set.get_example_stream().get_epoch_iterator()
+        assert_equal(next(iterator), (self.features[0], self.targets[0]))
+
     def test_axis_labels(self):
         dataset = H5PYDataset(self.h5file, which_sets=('train',))
         assert dataset.axis_labels == {'features': ('batch', 'feature'),
@@ -273,7 +282,8 @@ class TestH5PYDataset(object):
 
     def test_value_error_out_of_memory_get_data(self):
         dataset = H5PYDataset(self.h5file, which_sets=('train',))
-        assert_raises(ValueError, dataset._out_of_memory_get_data, None, True)
+        assert_raises(ValueError, dataset._out_of_memory_get_data,
+                      None, dict())
 
     def test_index_split_out_of_memory(self):
         features = numpy.arange(50, dtype='uint8').reshape((10, 5))
