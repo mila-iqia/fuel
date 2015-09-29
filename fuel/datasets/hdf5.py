@@ -525,13 +525,45 @@ class H5PYDataset(Dataset):
                 source_subset = indices[source_name]
             else:
                 source_subset = slice(*start_stop[source_name])
+
             if hasattr(subset, 'step') and hasattr(source_subset, 'step'):
-                subset = slice(
-                    source_subset.start
-                    if subset.start is None else subset.start,
-                    source_subset.stop
-                    if subset.stop is None else subset.stop,
-                    subset.step)
+                source_start = source_subset.start
+                if source_start is None:
+                    source_start = 0
+                if source_start < 0:
+                    source_start += len(handle[source_name])
+
+                source_step = source_subset.step
+                if source_step is not None:
+                    if source_step <= 0:
+                        raise ValueError("Negative step not supported")
+                if source_step is None:
+                    source_step = 1
+
+                if subset.step is not None and subset.step <= 0:
+                    raise ValueError("Negative step not supported")
+
+                if subset.start is None:
+                    new_start = source_start
+                else:
+                    new_start = source_start + (source_step * subset.start)
+
+                if subset.stop is None:
+                    new_stop = source_subset.stop
+                else:
+                    if subset.stop < 0:
+                        raise ValueError(
+                            "Negative stop for subset not supported")
+                    new_stop = source_start + (source_step * subset.stop)
+                    if source_subset.stop is not None:
+                        new_stop = min(new_stop, source_subset.stop)
+
+                if subset.step is None:
+                    new_step = source_step
+                else:
+                    new_step = source_step * subset.step
+
+                subset = slice(new_start, new_stop, new_step)
                 subsets.append(subset)
                 subset_num_examples = subset.stop - subset.start
             else:
