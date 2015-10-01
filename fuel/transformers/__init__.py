@@ -928,3 +928,68 @@ class FilterSources(AgnosticTransformer):
     def transform_any(self, data):
         return [d for d, s in izip(data, self.data_stream.sources)
                 if s in self.sources]
+
+
+class OneHotEncoding(SourcewiseTransformer):
+    """Converts integer target variables to one hot encoding.
+
+    It assumes that the targets are integer numbers from 0,... , N-1. Since it
+    works on the fly the number of classes N needs to be specified. The targets
+    are assumed to be in source_name 'targets', but can be specified otherwise.
+
+    Parameters
+    ----------
+    data_stream : :class:`DataStream` or :class:`Transformer`.
+        The data stream.
+    num_classes : int
+        The number of classes.
+    source_name : str, default 'targets'
+        The name of the source that will be transformed.
+    """
+    def __init__(self, data_stream, num_classes, source_name='targets',
+                 **kwargs):
+        self.num_classes = num_classes
+        self.source_name = source_name
+
+        super(ToOneOfK, self).__init__(
+            data_stream, data_stream.produces_examples, **kwargs)
+
+    def transform_source_example(self, source_example, source_name):
+        """
+        Transform a given example.
+
+        Parameters
+        ----------
+        source_example : a datapoint, here int
+            This would be the entry we want to transform.
+        source_name : str
+            The name of the source to transform.
+        """
+        if source_name == self.source_name:
+            assert source_example <= self.num_classes
+            output = numpy.zeros((1, self.num_classes))
+            output[0, source_example] = 1
+            return output
+        else:
+            return source_example
+
+    def transform_source_batch(self, source_batch, source_name):
+        """
+        Transform a given source_batch.
+
+        Parameters
+        ----------
+        source_batch : an iterable of datapoints, here int
+            A batch of examples.
+        source_name : str
+            The name of the source to transform.
+        """
+        if source_name==self.source_name:
+            assert numpy.max(source_batch) < self.num_classes
+            output = numpy.zeros((source_batch.shape[0], self.num_classes),
+                               dtype=source_batch.dtype)
+            for i in range(self.num_classes):
+                output[source_batch[:, 0] == i, i] = 1
+            return output
+        else:
+            return source_batch
