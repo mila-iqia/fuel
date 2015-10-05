@@ -944,34 +944,28 @@ class OneHotEncoding(SourcewiseTransformer):
         The data stream.
     num_classes : int
         The number of classes.
-    source_name : str, default 'targets'
-        The name of the source that will be transformed.
 
     """
-    def __init__(self, data_stream, num_classes, source_name='targets',
-                 **kwargs):
-        self.num_classes = num_classes
-        self.source_name = source_name
-
+    def __init__(self, data_stream, num_classes, **kwargs):
         super(OneHotEncoding, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
+        self.num_classes = num_classes
 
     def transform_source_example(self, source_example, source_name):
-        if source_name == self.source_name:
-            assert source_example <= self.num_classes
-            output = numpy.zeros((1, self.num_classes))
-            output[0, source_example] = 1
-            return output
-        else:
-            return source_example
+        if source_example >= self.num_classes:
+            raise ValueError("source_example ({}) must be lower than "
+                             "num_classes ({})".format(source_example,
+                                                       self.num_classes))
+        output = numpy.zeros((1, self.num_classes))
+        output[0, source_example] = 1
+        return output
 
     def transform_source_batch(self, source_batch, source_name):
-        if source_name == self.source_name:
-            assert numpy.max(source_batch) < self.num_classes
-            output = numpy.zeros((source_batch.shape[0], self.num_classes),
-                                 dtype=source_batch.dtype)
-            for i in range(self.num_classes):
-                output[source_batch[:, 0] == i, i] = 1
-            return output
-        else:
-            return source_batch
+        if numpy.max(source_batch) >= self.num_classes:
+            raise ValueError("all entries in source_batch must be lower than "
+                             "num_classes ({})".format(self.num_classes))
+        output = numpy.zeros((source_batch.shape[0], self.num_classes),
+                             dtype=source_batch.dtype)
+        for i in range(self.num_classes):
+            output[source_batch[:, 0] == i, i] = 1
+        return output
