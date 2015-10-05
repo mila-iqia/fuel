@@ -406,39 +406,40 @@ class H5PYDataset(Dataset):
         return axis_labels
 
     @staticmethod
-    def get_subset(h5file, split):
-        """Returns the subset spanned by a specific split.
+    def get_subsets(h5file, splits, sources):
+        """Returns the subsets for a given splits/sources combination.
 
         Parameters
         ----------
         h5file : HDF5 file handle
             An HDF5 dataset respecting the H5PYDataset interface.
-        split : str
-            Name of the split.
+        splits : :class:`tuple` of :class:`str`
+            Split names.
+        sources : :class:`tuple` of :class:`str`
+            Which sources should be considered.
 
         Returns
         -------
-        :class:`tuple`
-            A ``start_stop`` :class:`dict` mapping source names to their
-            corresponding :class:`tuple` of ``(start, stop)`` indices,
-            and an ``indices`` :class:`dict` mapping source names to
-            their corresponding list of indices, if applicable.
-
-        Notes
-        -----
-        Only sources for which indices are specified appear in the
-        ``indices`` :class:`dict`.
+        :class:`list` of :class:`fuel.utils.Subset`
+            The subsets, one per source in ``sources``, associated with
+            the splits/sources combination.
 
         """
-        start_stop = {}
-        indices = {}
-        for row in h5file.attrs['split']:
-            if row['split'].decode('utf8') == split:
-                source = row['source'].decode('utf8')
-                start_stop[source] = (row['start'], row['stop'])
+        subsets = [Subset.empty_subset(len(h5file[source_name]))
+                   for source_name in sources]
+        for split in splits:
+            for i, source in enumerate(sources):
+                row, = [r for r in h5file.attrs['split'] if
+                        (r['split'].decode('utf8') == split and
+                         r['source'].decode('utf8') == source)]
                 if row['indices']:
-                    indices[source] = h5file[row['indices']]
-        return start_stop, indices
+                    subsets[i] += Subset(
+                        h5file[row['indices']], len(h5file[source]))
+                else:
+                    subsets[i] += Subset(
+                        slice(row['start'], row['stop']), len(h5file[source]))
+
+        return subsets
 
     def load(self):
         # If the dataset is unpickled, it makes no sense to have an external
@@ -453,19 +454,7 @@ class H5PYDataset(Dataset):
         handle = self._file_handle
 
         # Infer subsets based on `which_sets`
-        subsets = [Subset.empty_subset(len(handle[source_name]))
-                   for source_name in self.sources]
-        for split in self.which_sets:
-            start_stop, indices = self.get_subset(handle, split)
-            for i, source_name in enumerate(self.sources):
-                if source_name in indices:
-                    source_split_subset = Subset(
-                        indices[source_name], len(handle[source_name]))
-                else:
-                    source_split_subset = Subset(
-                        slice(*start_stop[source_name]),
-                        len(handle[source_name]))
-                subsets[i] += source_split_subset
+        subsets = self.get_subsets(handle, self.which_sets, self.sources)
         # Sanity check to make sure that all sources have equal length
         if any(subset.num_examples != subsets[0].num_examples for subset in
                 subsets):
