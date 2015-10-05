@@ -178,7 +178,7 @@ class H5PYDataset(Dataset):
         if which_sets_invalid_value:
             raise ValueError('`which_sets` should be an iterable of strings')
         self.which_sets = which_sets
-        self._subset_within_sets = subset if subset else slice(None)
+        self.user_given_subset = subset if subset else slice(None)
         self.load_in_memory = load_in_memory
         self.driver = driver
         self.sort_indices = sort_indices
@@ -472,7 +472,7 @@ class H5PYDataset(Dataset):
             raise ValueError("sources have different lengths")
         # Produce the final subsets by taking the `subset` constructor argument
         # into account.
-        self.subsets = [Subset.subset_of(subset, self._subset_within_sets)
+        self.subsets = [Subset.subset_of(subset, self.user_given_subset)
                         for subset in subsets]
 
         # Load data sources and source shapes (if requested)
