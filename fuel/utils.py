@@ -117,24 +117,21 @@ class Subset(object):
         # anything
         if key == slice(None, None, None):
             return self.list_or_slice
-        elif self._is_list(key):
+        if self._is_list(key):
             if self.is_list:
                 return [self.list_or_slice[index] for index in key]
-            else:
-                start, stop, step = self.slice_to_numerical_args(
-                    self.list_or_slice, self.original_num_examples)
-                return [start + (index * step) for index in key]
-        else:
-            if self.is_list:
-                return self.list_or_slice[key]
-            else:
-                start, stop, step = self.slice_to_numerical_args(
-                    self.list_or_slice, self.original_num_examples)
-                key_start, key_stop, key_step = self.slice_to_numerical_args(
-                    key, self.num_examples)
-                return slice(start + step * key_start,
-                             start + step * key_stop,
-                             step * key_step)
+            start, stop, step = self.slice_to_numerical_args(
+                self.list_or_slice, self.original_num_examples)
+            return [start + (index * step) for index in key]
+        if self.is_list:
+            return self.list_or_slice[key]
+        start, stop, step = self.slice_to_numerical_args(
+            self.list_or_slice, self.original_num_examples)
+        key_start, key_stop, key_step = self.slice_to_numerical_args(
+            key, self.num_examples)
+        return slice(start + step * key_start,
+                     start + step * key_stop,
+                     step * key_step)
 
     @classmethod
     def subset_of(cls, subset, list_or_slice):
