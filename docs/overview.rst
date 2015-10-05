@@ -103,7 +103,7 @@ Datasets: interfacing with data
     * :class:`IndexableDataset`
 
       - Allows to interface with indexable objects.
-      - The state :meth:`IndexableDataset.open` returns ``None``.
+      - The state :meth:`IndexableDataset.open` returns is ``None``.
       - Its :meth:`get_data` method accepts requests.
       - Allows random access.
       - **Constructor arguments**:
