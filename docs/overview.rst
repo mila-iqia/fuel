@@ -53,54 +53,65 @@ Datasets: interfacing with data
 .. admonition:: In summary
     :class: tip
 
-    * :class:`Dataset` is an abstract dataset. Its subclasses are responsible
-      for interfacing with your data.
-    * Any :class:`Dataset` instance has the following useful attributes:
+    * :class:`Dataset`
 
-      - ``sources``: tuple of strings indicating which sources are provided by
-        the dataset, and their ordering (which determines the return order of
-        :meth:`get_data`).
-      - ``provides_sources``: tuple of source names indicating what sources the
-        dataset *is able to* provide.
-      - ``axis_labels``: :class:`dict` mapping from source names to tuples of
-        strings or ``None``. Used to document the axis semantics of the dataset's
-        sources. Can be set via the ``axis_labels`` constructor argument.
-      - ``num_examples``: when available, represents the number of examples the
-        dataset holds.
+      - Abstract class. Its subclasses are responsible for interfacing with
+        your data.
 
-    * To use only a subset of a dataset's sources, set the ``sources``
-      constructor argument.
-    * You can interact with a dataset via the following methods:
+      - **Constructor arguments**:
 
-      - :meth:`open`: returns a ``state`` object the dataset will interact with
-        (e.g. a file handle), or ``None`` if it doesn't need to interact with
-        anything.
-      - :meth:`get_data`: given the ``state`` object and an optional ``request``
-        argument, returns data.
-      - :meth:`close`: given the ``state`` object, properly closes it.
-      - :meth:`reset`: given the ``state`` object, properly closes it and
-        returns a fresh one.
+        - ``sources``: optional, use to restrict which data sources are returned
+          on data requests.
+        - ``axis_labels``: optional, use to document axis semantics.
 
-    * Use :class:`IterableDataset` to interface with iterable objects in
-      general.
+      - **Instance attributes**:
 
-      - :class:`IterableDataset` accepts an ``iterables`` argument, which is
-        expected to be a :class:`dict` mapping from source names to their
-        corresponding iterable objects.
+        - ``sources``: tuple of strings indicating which sources are provided by
+          the dataset, and their ordering (which determines the return order of
+          :meth:`get_data`).
+        - ``provides_sources``: tuple of source names indicating what sources
+          the dataset *is able to* provide.
+        - ``axis_labels``: :class:`dict` mapping from source names to tuples of
+          strings or ``None``. Used to document the axis semantics of the
+          dataset's sources.
+        - ``num_examples``: when implemented, represents the number of examples
+          the dataset holds.
+
+      - **Methods used to request data**:
+
+        - :meth:`open`: returns a ``state`` object the dataset will interact
+          with (e.g. a file handle), or ``None`` if it doesn't need to interact
+          with anything.
+        - :meth:`get_data`: given the ``state`` object and an optional
+          ``request`` argument, returns data.
+        - :meth:`close`: given the ``state`` object, properly closes it.
+        - :meth:`reset`: given the ``state`` object, properly closes it and
+          returns a fresh one.
+
+    * :class:`IterableDataset`
+
+      - Allows to interface with iterable objects.
       - The state :meth:`IterableDataset.open` returns is an iterator object.
       - Its :meth:`get_data` method doesn't accept requests.
-      - As such, it can only iterate examplewise and sequentially.
+      - Can only iterate examplewise and sequentially.
+      - **Constructor arguments**:
 
-    * Use :class:`IndexableDataset` to interface with indexable objects in
-      general.
+          - ``iterables``: a :class:`dict` mapping from source names to their
+            corresponding iterable objects. Use :class:`collections.OrderedDict`
+            instances if the source order is important to you.
 
-      - :class:`IndexableDataset` accepts an ``indexables`` argument, which is
-        expected to be a :class:`dict` mapping from source names to their
-        corresponding indexable objects.
-      - The state :meth:`IndexableDataset.open` returns is ``None``.
-      - Its :meth:`get_data` method expects a list of indices as its
-        ``request`` keyword argument.
-      - As such, it allows random access.
+    * :class:`IndexableDataset`
+
+      - Allows to interface with indexable objects.
+      - The state :meth:`IterableDataset.open` returns ``None``.
+      - Its :meth:`get_data` method accepts requests.
+      - Allows random access.
+      - **Constructor arguments**:
+
+          - ``indexables``: a :class:`dict` mapping from source names to their
+            corresponding indexable objects. Use
+            :class:`collections.OrderedDict` instances if the source order is
+            important to you.
 
 The :class:`Dataset` class is responsible for interfacing with the data and
 handling data access requests. Subclasses of :class:`Dataset` specialize in
@@ -284,15 +295,31 @@ Iteration schemes: which examples to visit
 .. admonition:: In summary
     :class: tip
 
-    * :class:`IterationScheme` subclasses are responsible for deciding in which
-      order examples are visited.
-    * :meth:`get_request_iterator` returns an iterator object that returns
-      requests.
-    * These requests can be fed to a dataset's :meth:`get_data` method.
-    * Common batchwise iteration schemes are :class:`SequentialScheme` and
-      :class:`ShuffledScheme`.
-    * Common examplewise iteration schemes are :class:`SequentialExampleScheme`
-      and :class:`ShuffledExampleScheme`.
+    * :class:`IterationScheme`
+
+      - Abstract class. Its subclasses are responsible for deciding in which
+        order examples are visited.
+      - **Methods**:
+
+        - :meth:`get_request_iterator`: returns an iterator object that returns
+          requests. These requests can be fed to a dataset's :meth:`get_data`
+          method.
+
+    * :class:`BatchScheme`
+
+      - Abstract class. Its subclasses return batch requests.
+      - Commonly used subclasses are:
+
+        - :class:`SequentialScheme`: requests batches sequentially.
+        - :class:`ShuffledScheme`: requests batches in shuffled order.
+
+    * :class:`IndexScheme`
+
+      - Abstract class. Its subclasses return example requests.
+      - Commonly used subclasses are:
+
+        - :class:`SequentialExampleScheme`: requests examples sequentially.
+        - :class:`ShuffledExampleScheme`: requests examples in shuffled order.
 
 Encapsulating and accessing our data is good, but if we're to integrate it into
 a training loop, we need to be able to iterate over the data. For that, we need
@@ -339,12 +366,27 @@ Data streams: automating the iteration process
 .. admonition:: In summary
     :class: tip
 
-    * :class:`AbstractDataStream` subclasses are responsible for coordinating
-      a dataset and an iteration scheme to iterate through the data.
-    * :class:`AbstractDataStream`'s :meth:`get_epoch_iterator` method returns
-      an iterator that returns examples or batches of examples.
-    * :class:`DataStream` is the most common data stream. Its constructor
-      accepts a ``dataset`` argument and an ``iteration_scheme`` argument.
+    * :class:`AbstractDataStream`
+
+      - Abstract class. Its subclasses are responsible for coordinating
+        a dataset and an iteration scheme to iterate through the data.
+      - **Methods for iterating**:
+
+        - :meth:`get_epoch_iterator`: returns an iterator that returns examples
+          or batches of examples.
+
+      - **Constructor arguments**:
+
+        - ``iteration_scheme``: :class:`IterationScheme` instance, optional, use
+          to specify the iteration order.
+        - ``axis_labels``: optional, use to document axis semantics.
+
+    * :class:`DataStream`
+
+      - The most common data stream.
+      - **Constructor arguments**:
+
+        - ``dataset``: :class:`Dataset` instance, which dataset to iterate over.
 
 Iteration schemes offer a more convenient way to visit the dataset than
 accessing the data by hand, but we can do better: the act of getting a fresh
@@ -372,11 +414,18 @@ Transformers: apply some transformation on the fly
 .. admonition:: In summary
     :class: tip
 
-    * :class:`Transformer` subclasses are responsible for taking data stream(s)
-      as input and producing a data stream as output, which applies some
-      transformation to the input stream(s).
-    * Transformers can be chained together to form complex data processing
-      pipelines.
+    * :class:`Transformer`
+
+      - :class:AbstractDataStream` subclass. Is itself an abstract class. Its
+        subclasses are responsible for taking data stream(s) as input and
+        producing a data stream as output, which applies some transformation to
+        the input stream(s).
+      - Transformers can be chained together to form complex data processing
+        pipelines.
+      - **Constructor arguments**:
+
+        - ``data_stream``: :class:`AbstractDataStream` instance, the input
+          stream.
 
 Some :class:`AbstractDataStream` subclasses take data streams as input. We call
 them *transformers*, and they enable us to build complex data preprocessing
