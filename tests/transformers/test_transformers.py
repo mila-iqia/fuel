@@ -706,7 +706,7 @@ class TestOneHotEncoding(object):
             DataStream(IndexableDataset(self.data),
                        iteration_scheme=SequentialExampleScheme(4)),
             num_classes=4,
-            source_name='targets')
+            which_sources='targets')
         assert_equal(
             list(wrapper.get_epoch_iterator()),
             [(numpy.ones((2, 2)), numpy.array([[1, 0, 0, 0]])),
@@ -727,7 +727,7 @@ class TestOneHotEncoding(object):
             DataStream(IndexableDataset(self.data),
                        iteration_scheme=SequentialScheme(4, 2)),
             num_classes=4,
-            source_name='targets')
+            which_sources='targets')
         assert_equal(
             list(wrapper.get_epoch_iterator()),
             [(numpy.ones((2, 2, 2)),
