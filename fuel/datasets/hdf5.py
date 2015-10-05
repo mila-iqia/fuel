@@ -8,7 +8,7 @@ import tables
 from six.moves import zip, range
 
 from fuel.datasets import Dataset
-from fuel.utils import do_not_pickle_attributes, iterable_fancy_indexing
+from fuel.utils import do_not_pickle_attributes, Subset
 
 
 @do_not_pickle_attributes('nodes', 'h5file')
@@ -88,7 +88,7 @@ class PytablesDataset(Dataset):
 
 
 @do_not_pickle_attributes('data_sources', 'external_file_handle',
-                          'source_shapes', 'subsets')
+                          'source_shapes', 'in_memory_subset', 'subsets')
 class H5PYDataset(Dataset):
     """An h5py-fueled HDF5 dataset.
 
@@ -178,7 +178,7 @@ class H5PYDataset(Dataset):
         if which_sets_invalid_value:
             raise ValueError('`which_sets` should be an iterable of strings')
         self.which_sets = which_sets
-        self._subset_template = subset if subset else slice(None)
+        self.user_given_subset = subset if subset else slice(None)
         self.load_in_memory = load_in_memory
         self.driver = driver
         self.sort_indices = sort_indices
@@ -406,82 +406,40 @@ class H5PYDataset(Dataset):
         return axis_labels
 
     @staticmethod
-    def get_start_stop(h5file, split):
-        """Returns start and stop indices for sources of a specific split.
+    def get_subsets(h5file, splits, sources):
+        """Returns the subsets for a given splits/sources combination.
 
         Parameters
         ----------
         h5file : HDF5 file handle
             An HDF5 dataset respecting the H5PYDataset interface.
-        split : str
-            Name of the split.
+        splits : :class:`tuple` of :class:`str`
+            Split names.
+        sources : :class:`tuple` of :class:`str`
+            Which sources should be considered.
 
         Returns
         -------
-        start_stop : dict
-            Maps source names to a tuple of ``(start, stop)`` indices.
+        :class:`list` of :class:`fuel.utils.Subset`
+            The subsets, one per source in ``sources``, associated with
+            the splits/sources combination.
 
         """
-        start_stop = {}
-        for row in h5file.attrs['split']:
-            if row['split'].decode('utf8') == split:
-                source = row['source'].decode('utf8')
-                start_stop[source] = (row['start'], row['stop'])
-        return start_stop
-
-    @staticmethod
-    def get_indices(h5file, split):
-        """Returns subset indices for sources of a specific split.
-
-        Parameters
-        ----------
-        h5file : HDF5 file handle
-            An HDF5 dataset respecting the H5PYDataset interface.
-        split : str
-            Name of the split.
-
-        Returns
-        -------
-        indices : dict
-            Maps source names to a list of indices. Note that only
-            sources for which indices are specified appear in this dict.
-
-        """
-        indices = {}
-        for row in h5file.attrs['split']:
-            if row['split'].decode('utf8') == split:
-                source = row['source'].decode('utf8')
+        subsets = [Subset.empty_subset(len(h5file[source_name]))
+                   for source_name in sources]
+        for split in splits:
+            for i, source in enumerate(sources):
+                row, = [r for r in h5file.attrs['split'] if
+                        (r['split'].decode('utf8') == split and
+                         r['source'].decode('utf8') == source)]
                 if row['indices']:
-                    indices[source] = h5file[row['indices']]
-        return indices
+                    subsets[i] += Subset(
+                        h5file[row['indices']], len(h5file[source]))
+                else:
+                    subsets[i] += Subset(
+                        slice(row['start'], row['stop']), len(h5file[source]))
 
-    @staticmethod
-    def unsorted_fancy_index(request, indexable):
-        """Safe unsorted list indexing.
-
-        Some objects, such as h5py datasets, only support list indexing
-        if the list is sorted.
-
-        This static method adds support for unsorted list indexing by
-        sorting the requested indices, accessing the corresponding
-        elements and re-shuffling the result.
-
-        Parameters
-        ----------
-        request : list of int
-            Unsorted list of example indices.
-        indexable : any fancy-indexable object
-            Indexable we'd like to do unsorted fancy indexing on.
-
-        """
-        if len(request) > 1:
-            indices = numpy.argsort(request)
-            data = numpy.empty(shape=(len(request),) + indexable.shape[1:],
-                               dtype=indexable.dtype)
-            data[indices] = indexable[numpy.array(request)[indices], ...]
-        else:
-            data = indexable[request]
-        return data
+        return subsets
 
     def load(self):
         # If the dataset is unpickled, it makes no sense to have an external
@@ -495,87 +453,47 @@ class H5PYDataset(Dataset):
         self._out_of_memory_open()
         handle = self._file_handle
 
-        # Load subset slices / indices
-        subsets = []
-        if len(self.which_sets) > 1:
-            indices = defaultdict(list)
-            for split in self.which_sets:
-                split_start_stop = self.get_start_stop(handle, split)
-                split_indices = self.get_indices(handle, split)
-                for source_name in self.sources:
-                    if source_name in split_indices:
-                        ind = split_indices[source_name]
-                    else:
-                        ind = list(range(*split_start_stop[source_name]))
-                    indices[source_name] = sorted(
-                        set(indices[source_name] + ind))
-        else:
-            start_stop = self.get_start_stop(handle, self.which_sets[0])
-            indices = self.get_indices(handle, self.which_sets[0])
-        num_examples = None
-        for source_name in self.sources:
-            subset = self._subset_template
-            # If subset has a step greater than 1, we convert it to a list,
-            # otherwise we won't be able to take that subset within the context
-            # of a split defined by a slice.
-            if hasattr(subset, 'step') and subset.step not in (1, None):
-                subset = list(range(len(handle[source_name])))[subset]
-            self._subset_template = subset
-            if source_name in indices:
-                source_subset = indices[source_name]
-            else:
-                source_subset = slice(*start_stop[source_name])
-            if hasattr(subset, 'step') and hasattr(source_subset, 'step'):
-                subset = slice(
-                    source_subset.start
-                    if subset.start is None else subset.start,
-                    source_subset.stop
-                    if subset.stop is None else subset.stop,
-                    subset.step)
-                subsets.append(subset)
-                subset_num_examples = subset.stop - subset.start
-            else:
-                if hasattr(source_subset, 'step'):
-                    source_subset = numpy.arange(
-                        source_subset.start, source_subset.stop)
-                subset = source_subset[subset]
-                subsets.append(subset)
-                subset_num_examples = len(subset)
-            if num_examples is None:
-                num_examples = subset_num_examples
-            if num_examples != subset_num_examples:
-                raise ValueError("sources have different lengths")
-        self.subsets = subsets
+        # Infer subsets based on `which_sets`
+        subsets = self.get_subsets(handle, self.which_sets, self.sources)
+        # Sanity check to make sure that all sources have equal length
+        if any(subset.num_examples != subsets[0].num_examples for subset in
+                subsets):
+            raise ValueError("sources have different lengths")
+        # Produce the final subsets by taking the `subset` constructor argument
+        # into account.
+        self.subsets = [Subset.subset_of(subset, self.user_given_subset)
+                        for subset in subsets]
 
-        # Load data sources and source shapes
+        # Load data sources and source shapes (if requested)
         if self.load_in_memory:
             data_sources = []
             source_shapes = []
             for source_name, subset in zip(self.sources, self.subsets):
-                if hasattr(subset, 'step'):
-                    data_source = handle[source_name][subset]
-                else:
-                    data_source = handle[source_name][list(subset)]
-                data_sources.append(data_source)
+                data_sources.append(
+                    subset.index_within_subset(
+                        handle[source_name], slice(None)))
                 if source_name in self.vlen_sources:
-                    shapes = handle[source_name].dims[0]['shapes'][subset]
+                    shapes = subset.index_within_subset(
+                        handle[source_name].dims[0]['shapes'],
+                        slice(None))
                 else:
                     shapes = None
                 source_shapes.append(shapes)
             self.data_sources = tuple(data_sources)
             self.source_shapes = tuple(source_shapes)
+            # This exists only for request sanity checking purposes.
+            self.in_memory_subset = Subset(
+                slice(None), len(self.data_sources[0]))
         else:
             self.data_sources = None
             self.source_shapes = None
+            self.in_memory_subset = None
 
         self._out_of_memory_close()
 
     @property
     def num_examples(self):
-        if hasattr(self.subsets[0], 'step'):
-            return self.subsets[0].stop - self.subsets[0].start
-        else:
-            return len(self.subsets[0])
+        return self.subsets[0].num_examples
 
     def open(self):
         return None if self.load_in_memory else self._out_of_memory_open()
@@ -623,8 +541,10 @@ class H5PYDataset(Dataset):
     def _in_memory_get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
-        data = [data_source[request] for data_source in self.data_sources]
-        shapes = [shape[request] if shape is not None else None
+        data = [self.in_memory_subset.index_within_subset(data_source, request)
+                for data_source in self.data_sources]
+        shapes = [self.in_memory_subset.index_within_subset(shape, request)
+                  if shape is not None else None
                   for shape in self.source_shapes]
         return data, shapes
 
@@ -635,34 +555,18 @@ class H5PYDataset(Dataset):
         shapes = []
         handle = self._file_handle
         for source_name, subset in zip(self.sources, self.subsets):
-            if hasattr(subset, 'step'):
-                if hasattr(request, 'step'):
-                    req = slice(request.start + subset.start,
-                                request.stop + subset.start, request.step)
-                else:
-                    req = [index + subset.start for index in request]
+            # Process the data request within the context of the data source
+            # subset
+            data.append(
+                subset.index_within_subset(
+                    handle[source_name], request,
+                    sort_indices=self.sort_indices))
+            # If this source has variable length, get the shapes as well
+            if source_name in self.vlen_sources:
+                shapes.append(
+                    subset.index_within_subset(
+                        handle[source_name].dims[0]['shapes'], request,
+                        sort_indices=self.sort_indices))
             else:
-                req = iterable_fancy_indexing(subset, request)
-            if hasattr(req, 'step'):
-                val = handle[source_name][req]
-                if source_name in self.vlen_sources:
-                    shape = handle[source_name].dims[0]['shapes'][req]
-                else:
-                    shape = None
-            else:
-                if self.sort_indices:
-                    val = self.unsorted_fancy_index(req, handle[source_name])
-                    if source_name in self.vlen_sources:
-                        shape = self.unsorted_fancy_index(
-                            req, handle[source_name].dims[0]['shapes'])
-                    else:
-                        shape = None
-                else:
-                    val = handle[source_name][req]
-                    if source_name in self.vlen_sources:
-                        shape = handle[source_name].dims[0]['shapes'][req]
-                    else:
-                        shape = None
-            data.append(val)
-            shapes.append(shape)
+                shapes.append(None)
         return data, shapes

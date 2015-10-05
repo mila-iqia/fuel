@@ -7,7 +7,7 @@ from picklable_itertools import iter_, izip
 
 from fuel.schemes import SequentialExampleScheme
 from fuel.streams import DataStream
-from fuel.utils import iterable_fancy_indexing
+from fuel.utils import Subset
 
 
 @add_metaclass(ABCMeta)
@@ -354,6 +354,7 @@ class IndexableDataset(Dataset):
 
         self.start = start
         self.stop = stop
+        self.subset = Subset(slice(start, stop), self.num_examples)
 
     def __getattr__(self, attr):
         if (attr not in ['sources', 'indexables', '_sources'] and
@@ -375,8 +376,5 @@ class IndexableDataset(Dataset):
     def get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
-        if isinstance(request, collections.Iterable):
-            return tuple(iterable_fancy_indexing(indexable, request)
-                         for indexable in self.indexables)
-        else:
-            return tuple(indexable[request] for indexable in self.indexables)
+        return tuple(self.subset.index_within_subset(indexable, request)
+                     for indexable in self.indexables)

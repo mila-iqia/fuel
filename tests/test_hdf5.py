@@ -131,15 +131,6 @@ class TestH5PYDataset(object):
         assert (all(source in all_sources for source in sources) and
                 all(source in sources for source in all_sources))
 
-    def test_unsorted_fancy_index_1(self):
-        indexable = numpy.arange(10)
-        assert_equal(H5PYDataset.unsorted_fancy_index([0], indexable), [0])
-
-    def test_unsorted_fancy_index_gt_1(self):
-        indexable = numpy.arange(10)
-        assert_equal(H5PYDataset.unsorted_fancy_index([0, 5, 2], indexable),
-                     [0, 5, 2])
-
     def test_axis_labels(self):
         dataset = H5PYDataset(self.h5file, which_sets=('train',))
         assert dataset.axis_labels == {'features': ('batch', 'feature'),
@@ -241,15 +232,6 @@ class TestH5PYDataset(object):
         assert_raises(TypeError, dataset.get_data, handle, [7, 4, 6, 2, 5])
         dataset.close(handle)
 
-    def test_subset_step_gt_1(self):
-        dataset = H5PYDataset(
-            self.h5file, which_sets=('train',), subset=slice(0, 10, 2))
-        handle = dataset.open()
-        assert_equal(dataset.get_data(handle, [0, 1, 2, 3, 4]),
-                     (self.features[slice(0, 10, 2)],
-                      self.targets[slice(0, 10, 2)]))
-        dataset.close(handle)
-
     def test_value_error_on_unequal_sources(self):
         def get_subsets():
             return H5PYDataset(self.h5file, which_sets=('train',)).subsets
@@ -331,12 +313,13 @@ class TestH5PYDataset(object):
         dataset.close(handle)
 
     def test_index_subset_unsorted(self):
+        # A subset should have the same ordering no matter how you specify it.
         dataset = H5PYDataset(
             self.h5file, which_sets=('train',), subset=[0, 4, 2])
         handle = dataset.open()
         request = slice(0, 3)
         assert_equal(dataset.get_data(handle, request),
-                     (self.features[[0, 4, 2]], self.targets[[0, 4, 2]]))
+                     (self.features[[0, 2, 4]], self.targets[[0, 2, 4]]))
         dataset.close(handle)
 
     def test_vlen_axis_labels(self):
