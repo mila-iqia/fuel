@@ -77,26 +77,23 @@ class Subset(object):
                                   self.original_num_examples)
         # Slice-based subsets are merged into a slice-based subset if they
         # overlap, otherwise they're converted to a list-based subset.
-        else:
-            self_sss = self.slice_to_numerical_args(
-                self.list_or_slice, self.original_num_examples)
-            self_start, self_stop, self_step = self_sss
-            other_sss = self.slice_to_numerical_args(
-                other.list_or_slice, other.original_num_examples)
-            other_start, other_stop, other_step = other_sss
-            # In case of overlap, the solution is to choose the smallest start
-            # value and largest stop value.
-            if not (self_stop < other_start or self_start > other_stop):
-                return self.__class__(slice(min(self_start, other_start),
-                                            max(self_stop, other_stop),
-                                            self_step),
-                                      self.original_num_examples)
-            # Everything else is transformed into lists before merging.
-            else:
-                return self.__class__(
-                    self.get_list_representation() +
-                    other.get_list_representation(),
-                    self.original_num_examples)
+        self_sss = self.slice_to_numerical_args(
+            self.list_or_slice, self.original_num_examples)
+        self_start, self_stop, self_step = self_sss
+        other_sss = self.slice_to_numerical_args(
+            other.list_or_slice, other.original_num_examples)
+        other_start, other_stop, other_step = other_sss
+        # In case of overlap, the solution is to choose the smallest start
+        # value and largest stop value.
+        if not (self_stop < other_start or self_start > other_stop):
+            return self.__class__(slice(min(self_start, other_start),
+                                        max(self_stop, other_stop),
+                                        self_step),
+                                  self.original_num_examples)
+        # Everything else is transformed into lists before merging.
+        return self.__class__(
+            self.get_list_representation() + other.get_list_representation(),
+            self.original_num_examples)
 
     def __getitem__(self, key):
         """Translates a request from this subset to the dataset.
