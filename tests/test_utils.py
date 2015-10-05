@@ -120,13 +120,13 @@ class TestSubset(object):
                       Subset(slice(12, 16), 20)).list_or_slice,
                      [0, 1, 2, 3, 12, 13, 14, 15])
 
-    def test_safe_unsorted_fancy_index_1(self):
+    def test_safe_sorted_fancy_indexing_1(self):
         indexable = numpy.arange(10)
-        assert_equal(Subset.safe_unsorted_fancy_index(indexable, [0]), [0])
+        assert_equal(Subset.sorted_fancy_indexing(indexable, [0]), [0])
 
-    def test_safe_unsorted_fancy_index_gt_1(self):
+    def test_safe_sorted_fancy_indexing_gt_1(self):
         indexable = numpy.arange(10)
-        assert_equal(Subset.safe_unsorted_fancy_index(indexable, [0, 5, 2]),
+        assert_equal(Subset.sorted_fancy_indexing(indexable, [0, 5, 2]),
                      [0, 5, 2])
 
     def test_list_request_sanity_check_raises_error_on_empty_list(self):

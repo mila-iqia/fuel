@@ -164,8 +164,8 @@ class Subset(object):
         return cls([], original_num_examples)
 
     @staticmethod
-    def safe_unsorted_fancy_index(indexable, request):
-        """Safe unsorted fancy indexing.
+    def sorted_fancy_indexing(indexable, request):
+        """Safe fancy indexing.
 
         Some objects, such as h5py datasets, only support list indexing
         if the list is sorted.
@@ -218,7 +218,7 @@ class Subset(object):
             return self[list(range(self.num_examples))]
 
     def index_within_subset(self, indexable, subset_request,
-                            safe_hdf5_indexing=True):
+                            sort_indices=False):
         """Index an indexable object within the context of this subset.
 
         Parameters
@@ -230,12 +230,10 @@ class Subset(object):
             the request *within the context of this subset*. This
             request will be translated to a request on the indexable
             object.
-        safe_hdf5_indexing : bool, optional
-            If the indexable is an HDF5 dataset and the request is a list
-            of indices, work around the fancy indexing limitation that
-            requires lists of indices to be sorted by indexing in sorted
-            order and reshuffling the result in the original order.
-            Defaults to `True`.
+        sort_indices : bool, optional
+            If the request is a list of indices, indexes in sorted order
+            and reshuffles the result in the original order. Defaults to
+            `False`.
 
         """
         # Translate the request within the context of this subset to a
@@ -247,24 +245,17 @@ class Subset(object):
         # Integer or slice requests can be processed directly.
         if isinstance(request, int) or hasattr(request, 'step'):
             return indexable[request]
-        # If the indexable is an HDF5 dataset, it only supports fancy
-        # indexing with sorted lists. As a workaround, if
-        # `safe_hdf5_indexing` is set to `True`, Subset will do the
-        # indexing in sorted order, and reshuffle the result in the
-        # original order.
-        if isinstance(indexable, h5py.Dataset) and safe_hdf5_indexing:
-            return self.safe_unsorted_fancy_index(indexable, request)
-        # If
-        #   a) the indexable is a numpy array, or
-        #   b) it's an HDF5 dataset and the request is a sorted list of
-        #      indices,
-        # then the request can be processed directly.
-        elif isinstance(indexable, (numpy.ndarray, h5py.Dataset)):
+        # If requested, we do fancy indexing in sorted order and reshuffle the
+        # result back in the original order.
+        if sort_indices:
+            return self.sorted_fancy_indexing(indexable, request)
+        # If the indexable supports fancy indexing (numpy array, HDF5 dataset),
+        # the request can be processed directly.
+        if isinstance(indexable, (numpy.ndarray, h5py.Dataset)):
             return indexable[request]
         # Anything else (e.g. lists) isn't considered to support fancy
         # indexing, so Subset does it manually.
-        else:
-            return iterable_fancy_indexing(indexable, request)
+        return iterable_fancy_indexing(indexable, request)
 
     def _is_list(self, list_or_slice):
         """Determines if an object is a list or a slice.

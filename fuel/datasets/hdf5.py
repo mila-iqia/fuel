@@ -571,13 +571,13 @@ class H5PYDataset(Dataset):
             data.append(
                 subset.index_within_subset(
                     handle[source_name], request,
-                    safe_hdf5_indexing=self.sort_indices))
+                    sort_indices=self.sort_indices))
             # If this source has variable length, get the shapes as well
             if source_name in self.vlen_sources:
                 shapes.append(
                     subset.index_within_subset(
                         handle[source_name].dims[0]['shapes'], request,
-                        safe_hdf5_indexing=self.sort_indices))
+                        sort_indices=self.sort_indices))
             else:
                 shapes.append(None)
         return data, shapes
