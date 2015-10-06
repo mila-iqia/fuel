@@ -17,6 +17,19 @@ import sys
 
 from sphinx.ext.autodoc import cut_lines
 
+# Mock out external packages to build documentation. See
+#     https://read-the-docs.readthedocs.org/en/latest/
+#     faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+from unittest.mock import MagicMock
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return Mock()
+
+MOCK_MODULES = ['h5py', 'zmq', 'picklable_itertools', 'progressbar']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -42,7 +55,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
-    'sphinxcontrib.napoleon',
+    'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.graphviz',
