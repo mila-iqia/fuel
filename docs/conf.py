@@ -20,7 +20,7 @@ from sphinx.ext.autodoc import cut_lines
 # Mock out external packages to build documentation. See
 #     https://read-the-docs.readthedocs.org/en/latest/
 #     faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-from unittest.mock import MagicMock
+from mock import MagicMock
 
 class Mock(MagicMock):
     @classmethod
