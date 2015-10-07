@@ -28,13 +28,13 @@ install:
         curl -O https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-conda.txt
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION --file req-travis-conda.txt
         pip install -r https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req-travis-pip.txt
-        pip install -e git+git://github.com/mila-udem/blocks.git@$TRAVIS_BRANCH#egg=blocks --src=$HOME -r https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/req.txt
+        pip install -e git+git://github.com/mila-udem/blocks.git@$TRAVIS_BRANCH#egg=blocks --src=$HOME -r https://raw.githubusercontent.com/mila-udem/blocks/$TRAVIS_BRANCH/requirements.txt
       fi
   - |
       if [[ $TESTS == 'fuel' ]]; then
         conda install -q --yes python=$TRAVIS_PYTHON_VERSION --file req-travis-conda.txt
         pip install -r req-travis-pip.txt
-        pip install . -r req.txt # Installs the fuel-download command needed by .travis-data.sh
+        pip install . -r requirements.txt # Installs the fuel-download command needed by .travis-data.sh
         python setup.py build_ext --inplace
       fi
 script:
