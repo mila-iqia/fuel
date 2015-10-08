@@ -416,7 +416,7 @@ Transformers: apply some transformation on the fly
 
     * :class:`Transformer`
 
-      - :class:AbstractDataStream` subclass. Is itself an abstract class. Its
+      - :class:`AbstractDataStream` subclass. Is itself an abstract class. Its
         subclasses are responsible for taking data stream(s) as input and
         producing a data stream as output, which applies some transformation to
         the input stream(s).
