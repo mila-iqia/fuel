@@ -186,7 +186,7 @@ exist. In that case, you can set the ``available`` element for that combination
 to ``False``, and :class:`~.datasets.hdf5.H5PYDataset` will ignore it.
 
 Don't worry too much about ``indices``; we'll get back to that later. For the
-moment, all you need to know is that since our splits are congiguous, we don't
+moment, all you need to know is that since our splits are contiguous, we don't
 need that feature and therefore put empty references.
 
 The method described above does the job, but it's not very convenient. An even
