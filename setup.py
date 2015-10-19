@@ -4,6 +4,8 @@ import sys
 from setuptools import find_packages, setup
 from distutils.extension import Extension
 
+import fuel
+
 HERE = path.abspath(path.dirname(__file__))
 
 with open(path.join(HERE, 'README.rst')) as f:
@@ -18,7 +20,7 @@ else:
 
 setup(
     name='fuel',
-    version='0.0.1',  # PEP 440 compliant
+    version=fuel.__version__,  # PEP 440 compliant
     description='Data pipeline framework for machine learning',
     long_description=LONG_DESCRIPTION,
     url='https://github.com/mila-udem/fuel.git',
