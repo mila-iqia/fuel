@@ -935,8 +935,7 @@ class OneHotEncoding(SourcewiseTransformer):
 
     It assumes that the targets are integer numbers from 0,... , N-1.
     Since it works on the fly the number of classes N needs to be
-    specified. The targets are assumed to be in source_name 'targets',
-    but can be specified otherwise.
+    specified.
 
     Parameters
     ----------
@@ -968,3 +967,52 @@ class OneHotEncoding(SourcewiseTransformer):
             output[source_batch[:, 0] == i, i] = 1
         return output
 
+
+class OneHotEncodingND(OneHotEncoding):
+    """An extension of the OneHotEncoding that works for ND arrays.
+
+    It assumes that the first dimension (2nd in batch mode) are the channels.
+    All other dimension will be preserved.
+
+    Parameters
+    ----------
+    data_stream : :class:`DataStream` or :class:`Transformer`.
+        The data stream.
+    num_classes : int
+        The number of classes.
+
+    """
+    def transform_source_example(self, source_example, source_name):
+        if source_example.max() >= self.num_classes:
+            raise ValueError("source_example must be lower than num_classes")
+        if source_example.shape[0] != 1:
+            print 'Warning, source_example has no chanel dimension.'
+            source_example = numpy.expand_dims(source_example, axis=1)
+        output = numpy.zeros([self.num_classes] + list(source_example.shape[1:]))
+        if len(source_example.shape) > 1:
+            for i in range(self.num_classes):
+                output[i, source_example[0] == i] = 1
+        else:
+            output[source_example[0]] = 1
+        return output
+
+    def transform_source_batch(self, source_batch, source_name):
+        if source_batch.dtype in (numpy.float, numpy.int):
+            if numpy.max(source_batch) >= self.num_classes:
+                raise ValueError("all entries in source_batch must be lower than "
+                                 "num_classes")
+            if source_batch.shape[1] != 1:
+                print 'Warning, source_batch has no chanel dimension.'
+                source_batch = numpy.expand_dims(source_batch, axis=1)
+            output = numpy.zeros([source_batch.shape[0], self.num_classes]
+                                 + list(source_batch.shape[2:]),
+                                 dtype=source_batch.dtype)
+            for i in range(self.num_classes):
+                output[source_batch[:, 0] == i, i] = 1
+            return output
+        elif source_batch.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(example,
+                                                              source_name)
+                                for example in source_batch])
+        else:
+            raise ValueError("Unknown input datatype.")
