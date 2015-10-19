@@ -110,6 +110,17 @@ CATEGORIES = (
     'scissors',
     'ibis')
 
+NUM_TRAIN = 20
+NUM_TEST = 10
+
+
+def read_image(imfile):
+    im = scipy.misc.imresize(scipy.misc.imread(imfile), (256, 256))
+    if im.ndim == 2:
+        return im.reshape(1, 256, 256)
+    else:
+        return numpy.rollaxis(im, 2, 0)
+
 
 def convert_silhouettes(directory, output_directory,
                         output_file=None):
@@ -134,26 +145,24 @@ def convert_silhouettes(directory, output_directory,
         raise MissingInputFiles('Required files missing', [input_dir])
 
     with h5py.File(output_file, mode="w") as h5file:
-        train_features = numpy.empty((len(CATEGORIES) * 30, 3, 256, 256),
-                                     dtype='uint8')
-        test_features = numpy.empty((len(CATEGORIES) * 10, 3, 256, 256),
+        train_features = numpy.empty(
+            (len(CATEGORIES) * NUM_TRAIN, 3, 256, 256), dtype='uint8')
+        test_features = numpy.empty((len(CATEGORIES) * NUM_TEST, 3, 256, 256),
                                     dtype='uint8')
 
         for i, c in enumerate(CATEGORIES):
-            for j in xrange(30):
+            for j in xrange(NUM_TRAIN):
                 imfile = os.path.join(input_dir, c,
                                       'image_{:04d}.jpg'.format(j + 1))
-                im = scipy.misc.imresize(scipy.misc.imread(imfile), (256, 256))
-                train_features[i * 30 + j] = numpy.rollaxis(im, 2, 0)
-            for j in xrange(10):
-                imfile = os.path.join(input_dir, c,
-                                      'image_{:04d}.jpg'.format(j + 31))
-                im = scipy.misc.imresize(scipy.misc.imread(imfile), (256, 256))
-                test_features[i * 10 + j] = numpy.rollaxis(im, 2, 0)
+                train_features[i * NUM_TRAIN + j] = read_image(imfile)
+            for j in xrange(NUM_TEST):
+                imfile = os.path.join(
+                    input_dir, c, 'image_{:04d}.jpg'.format(j + NUM_TRAIN + 1))
+                test_features[i * NUM_TEST + j] = read_image(imfile)
 
-        train_targets = numpy.repeat(numpy.arange(len(CATEGORIES)), 30)
+        train_targets = numpy.repeat(numpy.arange(len(CATEGORIES)), NUM_TRAIN)
         train_targets = train_targets.reshape(-1, 1)
-        test_targets = numpy.repeat(numpy.arange(len(CATEGORIES)), 10)
+        test_targets = numpy.repeat(numpy.arange(len(CATEGORIES)), NUM_TEST)
         test_targets = test_targets.reshape(-1, 1)
 
         data = (
