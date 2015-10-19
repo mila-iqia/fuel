@@ -1,8 +1,8 @@
 import os
-import tarfile
 import h5py
 
-from scipy.misc import imread
+import numpy
+import scipy.misc
 
 from fuel.converters.base import fill_hdf5_file, MissingInputFiles
 
@@ -110,6 +110,7 @@ CATEGORIES = (
     'scissors',
     'ibis')
 
+
 def convert_silhouettes(directory, output_directory,
                         output_file=None):
     """ Convert the CalTech 101 Datasets.
@@ -126,30 +127,34 @@ def convert_silhouettes(directory, output_directory,
         output_file = 'caltech101.hdf5'
     output_file = os.path.join(output_directory, output_file)
 
-    input_file = '101_ObjectCategories.tar.gz'.format(size)
-    input_file = os.path.join(directory, input_file)
+    input_dir = '101_ObjectCategories'
+    input_dir = os.path.join(directory, input_dir)
 
-    if not os.path.isfile(input_file):
-        raise MissingInputFiles('Required files missing', [input_file])
-
-    tar_file = tarfile.open(input_file, 'r:gz')
+    if not os.path.isdir(input_dir):
+        raise MissingInputFiles('Required files missing', [input_dir])
 
     with h5py.File(output_file, mode="w") as h5file:
-        train_features = numpy.empty((len(CATEGORIES) * 30, 3, 256, 256), dtype='uint8')
-        test_features = numpy.empty((len(CATEGORIES) * 10, 3, 256, 256), dtype='uint8')
+        train_features = numpy.empty((len(CATEGORIES) * 30, 3, 256, 256),
+                                     dtype='uint8')
+        test_features = numpy.empty((len(CATEGORIES) * 10, 3, 256, 256),
+                                    dtype='uint8')
 
         for i, c in enumerate(CATEGORIES):
             for j in xrange(30):
-                imfile = 'image_{:04d}.jpg'.format(j)
-                im = scipy.imresize(scipy.misc.imread(imfile), (256, 256))
+                imfile = os.path.join(input_dir, c,
+                                      'image_{:04d}.jpg'.format(j + 1))
+                im = scipy.misc.imresize(scipy.misc.imread(imfile), (256, 256))
                 train_features[i * 30 + j] = numpy.rollaxis(im, 2, 0)
             for j in xrange(10):
-                imfile = 'image_{:04d}.jpg'.format(j + 30)
-                im = scipy.imresize(scipy.misc.imread(imfile), (256, 256))
+                imfile = os.path.join(input_dir, c,
+                                      'image_{:04d}.jpg'.format(j + 31))
+                im = scipy.misc.imresize(scipy.misc.imread(imfile), (256, 256))
                 test_features[i * 10 + j] = numpy.rollaxis(im, 2, 0)
 
-        train_targets = numpy.repeat(numpy.arange(len(CATEGORIES)), 30).reshape(-1, 1)
-        test_targets = numpy.repeat(numpy.arange(len(CATEGORIES)), 10).reshape(-1, 1)
+        train_targets = numpy.repeat(numpy.arange(len(CATEGORIES)), 30)
+        train_targets = train_targets.reshape(-1, 1)
+        test_targets = numpy.repeat(numpy.arange(len(CATEGORIES)), 10)
+        test_targets = test_targets.reshape(-1, 1)
 
         data = (
             ('train', 'features', train_features),
