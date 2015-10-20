@@ -4,6 +4,8 @@ import h5py
 import numpy
 import scipy.misc
 
+from six.moves import range
+
 from fuel.converters.base import fill_hdf5_file, MissingInputFiles
 
 CATEGORIES = (
@@ -151,11 +153,11 @@ def convert_silhouettes(directory, output_directory,
                                     dtype='uint8')
 
         for i, c in enumerate(CATEGORIES):
-            for j in xrange(NUM_TRAIN):
+            for j in range(NUM_TRAIN):
                 imfile = os.path.join(input_dir, c,
                                       'image_{:04d}.jpg'.format(j + 1))
                 train_features[i * NUM_TRAIN + j] = read_image(imfile)
-            for j in xrange(NUM_TEST):
+            for j in range(NUM_TEST):
                 imfile = os.path.join(
                     input_dir, c, 'image_{:04d}.jpg'.format(j + NUM_TRAIN + 1))
                 test_features[i * NUM_TEST + j] = read_image(imfile)
