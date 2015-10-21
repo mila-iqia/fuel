@@ -4,8 +4,6 @@ import sys
 from setuptools import find_packages, setup
 from distutils.extension import Extension
 
-import fuel
-
 HERE = path.abspath(path.dirname(__file__))
 
 with open(path.join(HERE, 'README.rst')) as f:
@@ -18,9 +16,14 @@ if sys.platform != 'win32':
 else:
     extra_compile_args = []
 
+exec_results = {}
+with open(path.join(path.dirname(__file__), 'fuel/version.py')) as file_:
+    exec(file_.read(), exec_results)
+version = exec_results['version']
+
 setup(
     name='fuel',
-    version=fuel.__version__,  # PEP 440 compliant
+    version=version,  # PEP 440 compliant
     description='Data pipeline framework for machine learning',
     long_description=LONG_DESCRIPTION,
     url='https://github.com/mila-udem/fuel.git',
