@@ -1,3 +1,4 @@
 from fuel.config_parser import config  # noqa
 
-__version__ = '0.0.1'
+import fuel.version
+__version__ = fuel.version.version
