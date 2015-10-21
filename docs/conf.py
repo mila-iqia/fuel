@@ -93,7 +93,7 @@ copyright = u'2014, Université de Montréal'
 #
 # The short X.Y version.
 import fuel
-version = fuel.__version__[:fuel.__version__.rindex('.')]
+version = '.'.join(fuel.__version__.split('.')[:2])
 # The full version, including alpha/beta/rc tags.
 release = fuel.__version__
 
