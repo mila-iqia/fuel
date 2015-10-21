@@ -17,7 +17,8 @@ else:
     extra_compile_args = []
 
 exec_results = {}
-exec(open(path.join(path.dirname(__file__), 'fuel/version.py')), exec_results)
+with open(path.join(path.dirname(__file__), 'fuel/version.py')) as file_:
+    exec(file_.read(), exec_results)
 version = exec_results['version']
 
 setup(
