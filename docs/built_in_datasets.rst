@@ -13,8 +13,25 @@ to automate these operations.
 Environment variable
 --------------------
 
-In order for Fuel to know where to look for its data, the ``FUEL_DATA_PATH``
-environment variable has to be set.
+In order for Fuel to know where to look for its data, the ``data_path``
+configuration variable has to be set inside ``~/.fuelrc``. It's expected to be
+a sequence of paths separated by an OS-specific delimiter (``:`` for Linux and
+OSX, ``;`` for Windows):
+
+.. code-block:: yaml
+
+    # ~/.fuelrc
+    data_path: "/first/path/to/my/data:/second/path/to/my/data"
+
+When looking for a specific file (e.g. ``mnist.hdf5``), Fuel will search each of
+these paths in sequence, using the first matching file that it finds.
+
+This configuration variable can be overridden by setting the ``FUEL_DATA_PATH``
+environment variable:
+
+.. code-block:: bash
+
+    $ export FUEL_DATA_PATH="/first/path/to/my/data:/second/path/to/my/data"
 
 Let's now change directory for the rest of this tutorial:
 
@@ -111,7 +128,7 @@ argument:
 
     $ fuel-info mnist.hdf5
 
-.. code-block:: plain
+.. code-block:: text
 
     Metadata for mnist.hdf5
     =======================
@@ -124,3 +141,47 @@ argument:
 
         H5PYDataset     0.1
         fuel.converters 0.1
+
+
+Working with external packages
+------------------------------
+
+By default, Fuel looks for downloaders and converters in the
+``fuel.downloaders`` and ``fuel.converters`` modules, respectively, but you're
+not limited to that.
+
+Fuel can be told to look into additional modules by setting the
+``extra_downloaders`` and ``extra_converters`` configuration variables in
+``~/.fuelrc``. These variables are expected to be lists of module names.
+
+For instance, suppose you'd like to include the following modules:
+
+* ``package1.extra_downloaders``
+* ``package2.extra_downloaders``
+* ``package1.extra_converters``
+* ``package2.extra_converters``
+
+You should include the following in your ``~/.fuelrc``:
+
+.. code-block:: yaml
+
+    # ~/.fuelrc
+    extra_downloaders:
+    - package1.extra_downloaders
+    - package2.extra_downloaders
+    extra_converters:
+    - package1.extra_converters
+    - package2.extra_converters
+
+These configuration variables can be overridden through the
+``FUEL_EXTRA_DOWNLOADERS`` and ``FUEL_EXTRA_CONVERTERS`` environment variables,
+which are expected to be strings of space-separated module names, like so:
+
+.. code-block:: bash
+
+    export FUEL_EXTRA_DOWNLOADERS="package1.extra_downloaders package2.extra_downloaders"
+    export FUEL_EXTRA_CONVERTERS="package1.extra_converters package2.extra_converters"
+
+This feature lets external developers define their own Fuel dataset
+downloader/converter packages, and also makes working with private datasets more
+straightforward.

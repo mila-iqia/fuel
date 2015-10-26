@@ -5,7 +5,8 @@ from numpy.testing import assert_raises
 from six import BytesIO
 from six.moves import cPickle
 
-from fuel.datasets import TextFile, IterableDataset
+from fuel.datasets import TextFile, IterableDataset, IndexableDataset
+from fuel.schemes import SequentialScheme
 from fuel.streams import DataStream
 from fuel.transformers.text import NGrams
 
@@ -57,7 +58,7 @@ def test_text():
 def test_ngram_stream():
     sentences = [list(numpy.random.randint(10, size=sentence_length))
                  for sentence_length in [3, 5, 7]]
-    stream = IterableDataset(sentences).get_example_stream()
+    stream = DataStream(IterableDataset(sentences))
     ngrams = NGrams(4, stream)
     assert len(list(ngrams.get_epoch_iterator())) == 4
 
@@ -66,6 +67,22 @@ def test_ngram_stream_error_on_multiple_sources():
     # Check that NGram accepts only data streams with one source
     sentences = [list(numpy.random.randint(10, size=sentence_length))
                  for sentence_length in [3, 5, 7]]
-    stream = IterableDataset(sentences).get_example_stream()
+    stream = DataStream(IterableDataset(sentences))
     stream.sources = ('1', '2')
     assert_raises(ValueError, NGrams, 4, stream)
+
+
+def test_ngram_stream_raises_error_on_batch_stream():
+    sentences = [list(numpy.random.randint(10, size=sentence_length))
+                 for sentence_length in [3, 5, 7]]
+    stream = DataStream(
+        IndexableDataset(sentences), iteration_scheme=SequentialScheme(3, 1))
+    assert_raises(ValueError, NGrams, 4, stream)
+
+
+def test_ngram_stream_raises_error_on_request():
+    sentences = [list(numpy.random.randint(10, size=sentence_length))
+                 for sentence_length in [3, 5, 7]]
+    stream = DataStream(IterableDataset(sentences))
+    ngrams = NGrams(4, stream)
+    assert_raises(ValueError, ngrams.get_data, [0, 1])

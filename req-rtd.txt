@@ -1,0 +1,5 @@
+picklable-itertools==0.1.1
+progressbar2==2.7.3
+pyyaml==3.11
+requests==2.7.0
+six==1.9.0

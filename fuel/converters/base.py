@@ -1,23 +1,13 @@
-from functools import wraps
 import os
+import sys
+from contextlib import contextmanager
+from functools import wraps
 
 import numpy
+from progressbar import (ProgressBar, Percentage, Bar, ETA)
 
 from fuel.datasets import H5PYDataset
-
-
-class MissingInputFiles(Exception):
-    """Exception raised by a converter when input files are not found.
-
-    Parameters
-    ----------
-    filenames : list
-        A list of filenames that were not found.
-
-    """
-    def __init__(self, message, filenames):
-        self.filenames = filenames
-        super(MissingInputFiles, self).__init__(message, filenames)
+from ..exceptions import MissingInputFiles
 
 
 def check_exists(required_files):
@@ -107,7 +97,29 @@ def fill_hdf5_file(h5file, data):
         dataset[...] = numpy.concatenate([s[2] for s in splits], axis=0)
         for i, j, s in zip(indices[:-1], indices[1:], splits):
             if len(s) == 4:
-                split_dict[s[0]][name] = (i, j, s[3])
+                split_dict[s[0]][name] = (i, j, None, s[3])
             else:
                 split_dict[s[0]][name] = (i, j)
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
+
+
+@contextmanager
+def progress_bar(name, maxval, prefix='Converting'):
+    """Manages a progress bar for a conversion.
+
+    Parameters
+    ----------
+    name : str
+        Name of the file being converted.
+    maxval : int
+        Total number of steps for the conversion.
+
+    """
+    widgets = ['{} {}: '.format(prefix, name), Percentage(), ' ',
+               Bar(marker='=', left='[', right=']'), ' ', ETA()]
+    bar = ProgressBar(widgets=widgets, maxval=maxval, fd=sys.stdout).start()
+    try:
+        yield bar
+    finally:
+        bar.update(maxval)
+        bar.finish()

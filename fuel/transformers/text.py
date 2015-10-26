@@ -24,16 +24,23 @@ class NGrams(Transformer):
         this source is 'targets'.
 
     """
-    def __init__(self, ngram_order, data_stream, target_source='targets'):
+    def __init__(self, ngram_order, data_stream, target_source='targets',
+                 **kwargs):
+        if not data_stream.produces_examples:
+            raise ValueError('the wrapped data stream must produce examples, '
+                             'not batches of examples.')
         if len(data_stream.sources) > 1:
             raise ValueError
-        super(NGrams, self).__init__(data_stream)
+        super(NGrams, self).__init__(
+            data_stream, produces_examples=True, **kwargs)
         self.sources = self.sources + (target_source,)
         self.ngram_order = ngram_order
         self.sentence = []
         self.index = 0
 
     def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
         while not self.index < len(self.sentence) - self.ngram_order:
             self.sentence, = next(self.child_epoch_iterator)
             self.index = 0

@@ -1,26 +1,33 @@
 import os
+import sys
 from contextlib import contextmanager
 
 import requests
 from progressbar import (ProgressBar, Percentage, Bar, ETA, FileTransferSpeed,
                          Timer, UnknownLength)
 from six.moves import zip, urllib
-
-
-class NeedURLPrefix(Exception):
-    """Raised when a URL is not provided for a file."""
-    pass
+from ..exceptions import NeedURLPrefix
 
 
 @contextmanager
 def progress_bar(name, maxval):
+    """Manages a progress bar for a download.
+
+    Parameters
+    ----------
+    name : str
+        Name of the downloaded file.
+    maxval : int
+        Total size of the download, in bytes.
+
+    """
     if maxval is not UnknownLength:
         widgets = ['{}: '.format(name), Percentage(), ' ',
                    Bar(marker='=', left='[', right=']'), ' ', ETA(), ' ',
                    FileTransferSpeed()]
     else:
         widgets = ['{}: '.format(name), ' ', Timer(), ' ', FileTransferSpeed()]
-    bar = ProgressBar(widgets=widgets, maxval=maxval).start()
+    bar = ProgressBar(widgets=widgets, maxval=maxval, fd=sys.stdout).start()
     try:
         yield bar
     finally:
@@ -70,6 +77,22 @@ def download(url, file_handle, chunk_size=1024):
             file_handle.write(chunk)
 
 
+def ensure_directory_exists(directory):
+    """Create directory (with parents) if does not exist, raise on failure.
+
+    Parameters
+    ----------
+    directory : str
+        The directory to create
+
+    """
+    try:
+        os.makedirs(directory)
+    except OSError as e:
+        if e.errno != os.errno.EEXIST:
+            raise
+
+
 def default_downloader(directory, urls, filenames, url_prefix=None,
                        clear=False):
     """Downloads or clears files from URLs and filenames.
@@ -106,6 +129,8 @@ def default_downloader(directory, urls, filenames, url_prefix=None,
                 os.remove(f)
     else:
         print('Downloading ' + ', '.join(filenames) + '\n')
+        ensure_directory_exists(directory)
+
         for url, f, n in zip(urls, files, filenames):
             if not url:
                 if url_prefix is None:

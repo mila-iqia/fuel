@@ -1,3 +1,11 @@
---allow-external picklable-itertools
---allow-unverified picklable-itertools
-git+https://github.com/dwf/picklable_itertools.git#egg=picklable-itertools
+h5py==2.5.0
+numpy==1.9.3
+tables==3.2.2
+picklable-itertools==0.1.1
+pillow==2.9.0
+progressbar2==2.7.3
+pyyaml==3.11
+pyzmq==14.7.0
+requests==2.7.0
+scipy==0.16.0
+six==1.9.0

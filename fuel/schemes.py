@@ -18,6 +18,12 @@ class IterationScheme(object):
     sequential batches, shuffled batches, etc. for datasets that choose to
     support them.
 
+    Attributes
+    ----------
+    requests_examples : bool
+        Whether requests produced by this scheme correspond to single
+        examples (as opposed to batches).
+
     Notes
     -----
     Iteration schemes implement the :meth:`get_request_iterator` method,
@@ -47,6 +53,7 @@ class BatchSizeScheme(IterationScheme):
     that only provide the number of examples that should be in a batch.
 
     """
+    requests_examples = False
 
 
 @add_metaclass(ABCMeta)
@@ -75,12 +82,46 @@ class BatchScheme(IterationScheme):
         multiple of `batch_size`.
 
     """
+    requests_examples = False
+
     def __init__(self, examples, batch_size):
         if isinstance(examples, Iterable):
             self.indices = examples
         else:
             self.indices = xrange(examples)
         self.batch_size = batch_size
+
+
+class ConcatenatedScheme(IterationScheme):
+    """Build an iterator by concatenating several schemes' iterators.
+
+    Useful for iterating through different subsets of data in a specific
+    order.
+
+    Parameters
+    ----------
+    schemes : list
+        A list of :class:`IterationSchemes`, whose request iterators
+        are to be concatenated in the order given.
+
+    Notes
+    -----
+    All schemes being concatenated must produce the same type of
+    requests (batches or examples).
+
+    """
+    def __init__(self, schemes):
+        if not len(set(scheme.requests_examples for scheme in schemes)) == 1:
+            raise ValueError('all schemes must produce the same type of '
+                             'requests (batches or examples)')
+        self.schemes = schemes
+
+    def get_request_iterator(self):
+        return chain(*[sch.get_request_iterator() for sch in self.schemes])
+
+    @property
+    def requests_examples(self):
+        return self.schemes[0].requests_examples
 
 
 @add_metaclass(ABCMeta)
@@ -91,6 +132,8 @@ class IndexScheme(IterationScheme):
     but where we want to return single examples instead of batches.
 
     """
+    requests_examples = True
+
     def __init__(self, examples):
         if isinstance(examples, Iterable):
             self.indices = examples
@@ -212,3 +255,51 @@ class ShuffledExampleScheme(IndexScheme):
         indices = list(self.indices)
         self.rng.shuffle(indices)
         return iter_(indices)
+
+
+def cross_validation(scheme_class, num_examples, num_folds, strict=True,
+                     **kwargs):
+    """Return pairs of schemes to be used for cross-validation.
+
+    Parameters
+    ----------
+    scheme_class : subclass of :class:`IndexScheme` or :class:`BatchScheme`
+        The type of the returned schemes. The constructor is called with an
+        iterator and `**kwargs` as arguments.
+    num_examples : int
+        The number of examples in the datastream.
+    num_folds : int
+        The number of folds to return.
+    strict : bool, optional
+        If `True`, enforce that `num_examples` is divisible by `num_folds`
+        and so, that all validation sets have the same size. If `False`,
+        the size of the validation set is returned along the iteration
+        schemes. Defaults to `True`.
+
+    Yields
+    ------
+    fold : tuple
+        The generator returns `num_folds` tuples. The first two elements of
+        the tuple are the training and validation iteration schemes. If
+        `strict` is set to `False`, the tuple has a third element
+        corresponding to the size of the validation set.
+
+    """
+    if strict and num_examples % num_folds != 0:
+        raise ValueError(("{} examples are not divisible in {} evenly-sized " +
+                          "folds. To allow this, have a look at the " +
+                          "`strict` argument.").format(num_examples,
+                                                       num_folds))
+
+    for i in xrange(num_folds):
+        begin = num_examples * i // num_folds
+        end = num_examples * (i+1) // num_folds
+        train = scheme_class(list(chain(xrange(0, begin),
+                                        xrange(end, num_examples))),
+                             **kwargs)
+        valid = scheme_class(xrange(begin, end), **kwargs)
+
+        if strict:
+            yield (train, valid)
+        else:
+            yield (train, valid, end - begin)

@@ -1,11 +1,13 @@
 import collections
 from abc import ABCMeta, abstractmethod
+
 from six import add_metaclass
 
 from picklable_itertools import iter_, izip
 
 from fuel.schemes import SequentialExampleScheme
 from fuel.streams import DataStream
+from fuel.utils import Subset
 
 
 @add_metaclass(ABCMeta)
@@ -21,6 +23,9 @@ class Dataset(object):
     sources : tuple of strings, optional
         The data sources to load and return by :meth:`get_data`. By default
         all data sources are returned.
+    axis_labels : dict, optional
+        Maps source names to tuples of strings describing axis semantics,
+        one per axis. Defaults to `None`, i.e. no information is available.
 
     Attributes
     ----------
@@ -113,6 +118,11 @@ class Dataset(object):
     def reset(self, state):
         """Resets the state.
 
+        Parameters
+        ----------
+        state : object
+            The current state.
+
         Returns
         -------
         state : object
@@ -134,6 +144,11 @@ class Dataset(object):
 
         The default implementation for this method is to reset the state.
 
+        Parameters
+        ----------
+        state : object
+            The current state.
+
         Returns
         -------
         state : object
@@ -143,7 +158,14 @@ class Dataset(object):
         return self.reset(state)
 
     def close(self, state):
-        """Cleanly close the dataset e.g. close file handles."""
+        """Cleanly close the dataset e.g. close file handles.
+
+        Parameters
+        ----------
+        state : object
+            The current state.
+
+        """
         pass
 
     @abstractmethod
@@ -190,8 +212,14 @@ class Dataset(object):
             The data from all the sources i.e. should be of the same length
             as :attr:`provides_sources`.
 
+        Returns
+        -------
+        tuple
+            A tuple of data matching :attr:`sources`.
+
         Examples
         --------
+        >>> import numpy
         >>> class Random(Dataset):
         ...     provides_sources = ('features', 'targets')
         ...     def get_data(self, state=None, request=None):
@@ -225,7 +253,7 @@ class IterableDataset(Dataset):
 
     Notes
     -----
-    Internally, this method uses `picklable iterools's`_ ``_iter``
+    Internally, this method uses picklable iterools's ``_iter``
     function, providing picklable alternatives to some iterators such as
     :func:`range`, :func:`tuple`, and even :class:`file`. However, if the
     iterable returns a different kind of iterator that is not picklable,
@@ -326,12 +354,20 @@ class IndexableDataset(Dataset):
 
         self.start = start
         self.stop = stop
+        self.subset = Subset(slice(start, stop), self.num_examples)
 
     def __getattr__(self, attr):
         if (attr not in ['sources', 'indexables', '_sources'] and
                 attr in self.sources):
             return self.indexables[self.sources.index(attr)]
         raise AttributeError
+
+    # Without explicitly defining a trivial __setstate__ method,
+    # the __getattribute__ method would call the __getattr__ method,
+    # which would raise an AttributeError. This causes problems
+    # when unpickling.
+    def __setstate__(self, dict):
+        self.__dict__ = dict
 
     @property
     def num_examples(self):
@@ -340,4 +376,5 @@ class IndexableDataset(Dataset):
     def get_data(self, state=None, request=None):
         if state is not None or request is None:
             raise ValueError
-        return tuple(indexable[request] for indexable in self.indexables)
+        return tuple(self.subset.index_within_subset(indexable, request)
+                     for indexable in self.indexables)

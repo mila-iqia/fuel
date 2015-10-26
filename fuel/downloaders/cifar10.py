@@ -7,8 +7,6 @@ def fill_subparser(subparser):
     The CIFAR-10 dataset file is downloaded from Alex Krizhevsky's
     website [ALEX].
 
-    .. [ALEX] http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
-
     Parameters
     ----------
     subparser : :class:`argparse.ArgumentParser`
@@ -17,5 +15,5 @@ def fill_subparser(subparser):
     """
     url = 'http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
     filename = 'cifar-10-python.tar.gz'
-    subparser.set_defaults(
-        func=default_downloader, urls=[url], filenames=[filename])
+    subparser.set_defaults(urls=[url], filenames=[filename])
+    return default_downloader

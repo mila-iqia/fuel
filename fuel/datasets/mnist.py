@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-import os
-
-from fuel import config
 from fuel.datasets import H5PYDataset
 from fuel.transformers.defaults import uint8_pixels_to_floatX
+from fuel.utils import find_in_data_path
 
 
 class MNIST(H5PYDataset):
@@ -15,26 +13,21 @@ class MNIST(H5PYDataset):
     and 10,000 testing images. The images are grayscale and 28 x 28 pixels
     large. It is accessible through Yann LeCun's website [LECUN].
 
-    .. [LBBH] Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner,
-       *Gradient-based learning applied to document recognition*,
-       Proceedings of the IEEE, November 1998, 86(11):2278-2324.
-
     .. [LECUN] http://yann.lecun.com/exdb/mnist/
 
     Parameters
     ----------
-    which_set : 'train' or 'test'
-        Whether to load the training set (60,000 samples) or the test set
-        (10,000 samples).
+    which_sets : tuple of str
+        Which split to load. Valid values are 'train' and 'test',
+        corresponding to the training set (50,000 examples) and the test
+        set (10,000 examples).
 
     """
     filename = 'mnist.hdf5'
     default_transformers = uint8_pixels_to_floatX(('features',))
 
-    def __init__(self, which_set, **kwargs):
+    def __init__(self, which_sets, **kwargs):
         kwargs.setdefault('load_in_memory', True)
-        super(MNIST, self).__init__(self.data_path, which_set, **kwargs)
-
-    @property
-    def data_path(self):
-        return os.path.join(config.data_path, self.filename)
+        super(MNIST, self).__init__(
+            file_or_path=find_in_data_path(self.filename),
+            which_sets=which_sets, **kwargs)

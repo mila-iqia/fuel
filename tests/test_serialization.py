@@ -13,7 +13,7 @@ from tests import skip_if_not_available
 def test_in_memory():
     skip_if_not_available(datasets=['mnist.hdf5'])
     # Load MNIST and get two batches
-    mnist = MNIST('train', load_in_memory=True)
+    mnist = MNIST(('train',), load_in_memory=True)
     data_stream = DataStream(mnist, iteration_scheme=SequentialScheme(
         examples=mnist.num_examples, batch_size=256))
     epoch = data_stream.get_epoch_iterator()

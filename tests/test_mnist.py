@@ -1,5 +1,3 @@
-import os
-
 import numpy
 
 from numpy.testing import assert_raises, assert_equal, assert_allclose
@@ -14,7 +12,7 @@ from tests import skip_if_not_available
 def test_mnist_train():
     skip_if_not_available(datasets=['mnist.hdf5'])
 
-    dataset = MNIST('train', load_in_memory=False)
+    dataset = MNIST(('train',), load_in_memory=False)
     handle = dataset.open()
     data, labels = dataset.get_data(handle, slice(0, 10))
     assert data.dtype == 'uint8'
@@ -38,7 +36,7 @@ def test_mnist_train():
 def test_mnist_test():
     skip_if_not_available(datasets=['mnist.hdf5'])
 
-    dataset = MNIST('test', load_in_memory=False)
+    dataset = MNIST(('test',), load_in_memory=False)
     handle = dataset.open()
     data, labels = dataset.get_data(handle, slice(0, 10))
     assert data.dtype == 'uint8'
@@ -61,7 +59,7 @@ def test_mnist_test():
 def test_mnist_axes():
     skip_if_not_available(datasets=['mnist.hdf5'])
 
-    dataset = MNIST('train', load_in_memory=False)
+    dataset = MNIST(('train',), load_in_memory=False)
     assert_equal(dataset.axis_labels['features'],
                  ('batch', 'channel', 'height', 'width'))
 
@@ -69,11 +67,4 @@ def test_mnist_axes():
 def test_mnist_invalid_split():
     skip_if_not_available(datasets=['mnist.hdf5'])
 
-    assert_raises(ValueError, MNIST, 'dummy')
-
-
-def test_mnist_data_path():
-    skip_if_not_available(datasets=['mnist.hdf5'])
-
-    assert MNIST('train').data_path == os.path.join(config.data_path,
-                                                    'mnist.hdf5')
+    assert_raises(ValueError, MNIST, ('dummy',))

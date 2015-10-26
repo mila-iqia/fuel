@@ -1,22 +1,22 @@
 import os
 
-from fuel import config
 from fuel.datasets import TextFile
+from fuel.utils import find_in_data_path
 
 
 class OneBillionWord(TextFile):
     """Google's One Billion Word benchmark.
 
-    This monolingual corpus contains 829,250,940 tokens (including sentance
+    This monolingual corpus contains 829,250,940 tokens (including sentence
     boundary markers). The data is split into 100 partitions, one of which
     is the held-out set. This held-out set is further divided into 50
     partitions. More information about the dataset can be found in
     [CMSG14].
 
     .. [CSMG14] Ciprian Chelba, Tomas Mikolov, Mike Schuster, Qi Ge, and
-    Thorsten Brants, *One Billion Word Benchmark for Measuring Progress in
-    Statistical Language Modeling*, `arXiv:1312.3005 [cs.CL]
-    <http://arxiv.org/abs/1312.3005>`.
+       Thorsten Brants, *One Billion Word Benchmark for Measuring Progress
+       in Statistical Language Modeling*, `arXiv:1312.3005 [cs.CL]
+       <http://arxiv.org/abs/1312.3005>`.
 
     Parameters
     ----------
@@ -46,18 +46,16 @@ class OneBillionWord(TextFile):
             if not all(partition in range(1, 100)
                        for partition in which_partitions):
                 raise ValueError
-            files = [os.path.join(
-                config.data_path, '1-billion-word',
-                'training-monolingual.tokenized.shuffled',
-                'news.en-{:05d}-of-00100'.format(partition))
+            files = [find_in_data_path(os.path.join(
+                '1-billion-word', 'training-monolingual.tokenized.shuffled',
+                'news.en-{:05d}-of-00100'.format(partition)))
                 for partition in which_partitions]
         else:
             if not all(partition in range(50)
                        for partition in which_partitions):
                 raise ValueError
-            files = [os.path.join(
-                config.data_path, '1-billion-word',
-                'heldout-monolingual.tokenized.shuffled',
-                'news.en.heldout-{:05d}-of-00050'.format(partition))
+            files = [find_in_data_path(os.path.join(
+                '1-billion-word', 'heldout-monolingual.tokenized.shuffled',
+                'news.en.heldout-{:05d}-of-00050'.format(partition)))
                 for partition in which_partitions]
         super(OneBillionWord, self).__init__(files, dictionary, **kwargs)
