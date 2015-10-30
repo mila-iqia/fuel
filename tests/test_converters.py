@@ -3,7 +3,6 @@ import argparse
 import gzip
 import mock
 import os
-import contextlib
 import shutil
 import struct
 import tarfile
@@ -23,20 +22,12 @@ from fuel.converters import (adult, binarized_mnist, caltech101_silhouettes,
                              iris, cifar10, cifar100, mnist, svhn)
 from fuel.downloaders.caltech101_silhouettes import silhouettes_downloader
 from fuel.downloaders.base import default_downloader
+from fuel.utils import remember_cwd
 
 if six.PY3:
     getbuffer = memoryview
 else:
     getbuffer = numpy.getbuffer
-
-
-@contextlib.contextmanager
-def remember_cwd():
-    curdir = os.getcwd()
-    try:
-        yield
-    finally:
-        os.chdir(curdir)
 
 
 class TestFillHDF5File(object):
