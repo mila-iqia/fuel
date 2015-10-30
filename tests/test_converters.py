@@ -32,9 +32,11 @@ else:
 
 @contextlib.contextmanager
 def remember_cwd():
-    curdir= os.getcwd()
-    try: yield
-    finally: os.chdir(curdir)
+    curdir = os.getcwd()
+    try:
+        yield
+    finally:
+        os.chdir(curdir)
 
 
 class TestFillHDF5File(object):
@@ -491,7 +493,7 @@ class TestIris(object):
 
     def test_download_and_convert(self):
         tempdir = self.tempdir
-        
+
         with remember_cwd():
             os.chdir(tempdir)
 
@@ -549,7 +551,8 @@ class TestSVHN(object):
                         # This ensures that label '10' is converted to '1'.
                         10 * numpy.ones((1,)).astype('uint8')]
 
-                with tarfile.open('{}.tar.gz'.format(split), 'w:gz') as tar_file:
+                with tarfile.open('{}.tar.gz'.format(split),
+                                  'w:gz') as tar_file:
                     os.mkdir(split)
                     for i, image in enumerate(self.f1_mock[split]['image']):
                         Image.fromarray(image).save(
@@ -562,10 +565,10 @@ class TestSVHN(object):
                                 suffix = 'i1{}{}'.format(source, i)
                                 suffixes.append([suffix.encode('utf8')])
                                 name = 'digitStruct/{}'.format(suffix)
-                               f[name] = [[self.f1_mock[split][source][0][i]]]
-                           name = 'digitStruct/image_1/{}'.format(source)
-                           f[name] = suffixes
-                           name = 'digitStruct/image_2/{}'.format(source)
+                                f[name] = [[self.f1_mock[split][source][0][i]]]
+                            name = 'digitStruct/image_1/{}'.format(source)
+                            f[name] = suffixes
+                            name = 'digitStruct/image_2/{}'.format(source)
                             f[name] = [[self.f1_mock[split][source][1][0]]]
                         ref_dtype = h5py.special_dtype(ref=h5py.Reference)
                         bbox = f.create_dataset(
