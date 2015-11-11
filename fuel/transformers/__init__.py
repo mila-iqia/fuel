@@ -985,7 +985,7 @@ class OneHotEncodingND(OneHotEncoding):
     def transform_source_example(self, source_example, source_name):
         if source_example.max() >= self.num_classes:
             raise ValueError("source_example must be lower than num_classes "
-                             "({})".format(self._num_classes))
+                             "({})".format(self.num_classes))
         if source_example.shape[0] != 1:
             print 'Warning, source_example has no channel dimension.'
             source_example = numpy.expand_dims(source_example, axis=1)
