@@ -989,7 +989,8 @@ class OneHotEncodingND(OneHotEncoding):
         if source_example.shape[0] != 1:
             print 'Warning, source_example has no channel dimension.'
             source_example = numpy.expand_dims(source_example, axis=1)
-        output = numpy.zeros([self.num_classes] + list(source_example.shape[1:]))
+        output = numpy.zeros([self.num_classes] + list(source_example.shape[1:]),
+                             dtype=source_example.dtype)
         if len(source_example.shape) > 1:
             for i in range(self.num_classes):
                 output[i, source_example[0] == i] = 1
@@ -998,7 +999,7 @@ class OneHotEncodingND(OneHotEncoding):
         return output
 
     def transform_source_batch(self, source_batch, source_name):
-        if source_batch.dtype in (numpy.float, numpy.int):
+        if issubclass(source_batch.dtype.type, numpy.number):
             if numpy.max(source_batch) >= self.num_classes:
                 raise ValueError("all entries in source_batch must be lower "
                                  "than num_classes ({}), found {}"
@@ -1011,7 +1012,7 @@ class OneHotEncodingND(OneHotEncoding):
                                   + list(source_batch.shape[2:]),
                                   dtype=source_batch.dtype)
             for i in range(self.num_classes):
-                output[source_batch[:, 0] == i, i] = 1
+                output[:, i][source_batch[:, 0] == i] = 1
             return output
         elif source_batch.dtype == numpy.object:
             return numpy.array([self.transform_source_example(example,
