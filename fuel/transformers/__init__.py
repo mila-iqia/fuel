@@ -1012,6 +1012,8 @@ class OneHotEncodingND(OneHotEncoding):
                                   + list(source_batch.shape[2:]),
                                   dtype=source_batch.dtype)
             for i in range(self.num_classes):
+                # Set the output of channel i to be the output of the
+                # indicator function: is source_batch of class i?
                 output[:, i][source_batch[:, 0] == i] = 1
             return output
         elif source_batch.dtype == numpy.object:
