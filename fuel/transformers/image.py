@@ -302,7 +302,7 @@ class RandomFixedSizeCrop3D(RandomFixedSizeCrop):
 
     def transform_source_batch(self, source, source_name):
         self.verify_axis_labels(('batch', 'channel', 'x', 'y', 'z'),
-                                self.data_stream.axis_labels[source_name],
+                                self.data_stream.axis_labels,
                                 source_name)
         window_x, window_y, window_z = self.window_shape
         if isinstance(source, list) and \

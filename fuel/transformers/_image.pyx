@@ -64,7 +64,7 @@ cpdef window_batch_bchw3d(image_dtype[:, :, :, :, :] batch,
                         long[:] x_offsets,
                         long[:] y_offsets,
                         long[:] z_offsets,
-                        image_dtype[:, :, :, :] out):
+                        image_dtype[:, :, :, :, :] out):
     """window_batch_bchw(batch, window_height, window_width,
                          height_offsets, width_offsets, out)
 
