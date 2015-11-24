@@ -218,6 +218,10 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
                                             b.ndim == 3 for b in source):
             return [self.transform_source_example(im, source_name)
                     for im in source]
+        elif source.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(im,
+                                                              source_name)
+                                for im in source])
         elif isinstance(source, numpy.ndarray) and source.ndim == 4:
             # Hardcoded assumption of (batch, channels, height, width).
             # This is what the fast Cython code supports.
