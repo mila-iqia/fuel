@@ -3,11 +3,12 @@ from io import BytesIO
 import math
 
 import numpy
+from picklable_itertools import izip
 from PIL import Image
 from six import PY3
 
 from ._image import window_batch_bchw, window_batch_bchw3d
-from . import ExpectsAxisLabels, SourcewiseTransformer
+from . import ExpectsAxisLabels, SourcewiseTransformer, Transformer
 from .. import config
 
 
@@ -171,9 +172,223 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
         return example
 
 
+class SamplewiseCropTransformer(Transformer):
+    """Applies same transformation to all data from get_epoch ("batchwise").
+
+    Subclasses must define `transform_source_example` (to transform
+    examples), `transform_source_batch` (to transform batches) or
+    both.
+
+    Parameters
+    ----------
+    data_stream : instance of :class:`DataStream`
+        The wrapped data stream.
+    which_sources : tuple of str, optional
+        Which sources to apply the mapping to. Defaults to `None`, in
+        which case the mapping is applied to all sources.
+
+    """
+    def __init__(self, data_stream, window_shape,
+                 which_sources=None, weight_source=None, **kwargs):
+        self.window_shape = window_shape
+        self.rng = kwargs.pop('rng', None)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
+        self.weight_source = weight_source
+        if which_sources is None:
+            which_sources = data_stream.sources
+        self.which_sources = which_sources
+        super(SamplewiseCropTransformer, self).__init__(
+            data_stream, **kwargs)
+        if self.weight_source is not None:
+            for i, source_name in enumerate(self.data_stream.sources):
+                if source_name == self.weight_source:
+                    self.weight_i = i
+        self.data = None
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        if not self.data:
+            data = next(self.child_epoch_iterator)
+            self.data = izip(*data)
+        try:
+            data = next(self.child_epoch_iterator)
+        except StopIteration:
+            self.data = None
+            return self.get_data()
+
+        if self.produces_examples != self.data_stream.produces_examples:
+            types = {True: 'examples', False: 'batches'}
+            raise NotImplementedError(
+                "the wrapped data stream produces {} while the {} transformer "
+                "produces {}, which it does not support.".format(
+                    types[self.data_stream.produces_examples],
+                    self.__class__.__name__,
+                    types[self.produces_examples]))
+        elif self.produces_examples:
+            return self.transform_example(data)
+        else:
+            return self.transform_batch(data)
+
+    def _apply_samplewise_transformation(self, data, method):
+        data = list(data)
+        if self.weight_source is not None:
+            if data[self.weight_i].dtype == numpy.object:
+                heatmap = self.calculate_heatmap(
+                    data[self.weight_i][0].reshape(
+                        [1] + list(data[self.weight_i][0].shape)))
+            else:
+                heatmap = self.calculate_heatmap(data[self.weight_i])
+            while True:
+                randint = numpy.random.randint(9999)
+                heatmap_crop = method(data[self.weight_i], self.weight_source,
+                                      randint)
+                p = numpy.minimum(numpy.sum(heatmap_crop), 1)
+                r = numpy.random.uniform()
+                if r < p:
+                    break
+            for i, source_name in enumerate(self.data_stream.sources):
+                if i == self.weight_i:
+                    data[i] = (method(data[i], source_name, randint)/p)\
+                        .astype(numpy.float32)
+                elif source_name in self.which_sources:
+                    data[i] = method(data[i], source_name, randint)
+        else:
+            randint = numpy.random.randint(9999)
+            for i, source_name in enumerate(self.data_stream.sources):
+                if source_name in self.which_sources:
+                    data[i] = method(data[i], source_name, randint).astype(
+                        numpy.float32)
+
+        return tuple(data)
+
+    def calculate_heatmap(self, volume):
+        if isinstance(volume, list):
+            raise(ValueError, "Volume type should not be a list")
+        else:
+            off = {}
+            for i in range(len(volume.shape[2:])):
+                off[i] = (volume.shape[2+i] - self.window_shape[i]) / 2
+            p = []
+            for i in [-1, 0, 1]:
+                for j in [-1, 0, 1]:
+                    for k in [-1, 0, 1]:
+                        p.append(volume[:, :,
+                            off[0] + i:off[0] + self.window_shape[0] + i,
+                            off[1] + j:off[1] + self.window_shape[1] + j,
+                            off[2] + k:off[2] + self.window_shape[2] + k]
+                                 .sum())
+
+            return volume / max(p)
+
+    def transform_source_batch(self, source, source_name, randint=None):
+        if randint is None:
+            randint = config.default_seed
+            rng = numpy.random.RandomState(randint)
+        else:
+            rng = numpy.random.RandomState(randint)
+        if len(source[2:]) == 2:
+            self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
+                                    self.data_stream.axis_labels[source_name],
+                                    source_name)
+        elif len(source[2:]) == 3:
+            self.verify_axis_labels(('batch', 'channel', 'x', 'y', 'z'),
+                                    self.data_stream.axis_labels[source_name],
+                                    source_name)
+        if source.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(im, source_name,
+                                                              randint)
+                    for im in source])
+        elif isinstance(source, numpy.ndarray) and \
+                (source.ndim == 4 or source.ndim == 5):
+            out = numpy.empty(source.shape[:2] + self.window_shape,
+                              dtype=source.dtype)
+            batch_size = source.shape[0]
+            if len(self.window_shape) != len(source.shape[2:]):
+                raise(ValueError, "Window shape dimensions ({}) is not " \
+                                   "consistent with source dimensions ({})"
+                      .format(len(self.window_shape), len(source[2:])))
+            max_indices = {}
+            offsets = {}
+            for i in range(len(self.window_shape)):
+                max_indices[i] = source.shape[2:][i] - self.window_shape[i]
+                if max_indices[i] < 0:
+                    raise ValueError("Got ndarray batch with image dimensions "
+                                     "{} but requested window shape of {}".
+                                     format(source.shape[2:],
+                                            self.window_shape))
+                offsets[i] = rng.random_integers(0, max_indices[i],
+                                                 size=batch_size)
+            if len(self.window_shape) == 2:
+                window_batch_bchw(source, offsets[0], offsets[1], out)
+            elif len(self.window_shape) == 3:
+                window_batch_bchw3d(source, offsets[0], offsets[1],
+                                    offsets[2], out)
+            else:
+                raise(NotImplementedError, "Cropping of N-D images with N>3 "
+                                           "is not implemented")
+            return out.astype(source.dtype)
+        else:
+            raise ValueError("uninterpretable batch format; expected a list "
+                             "of arrays with ndim = 3, or an array with "
+                             "ndim = 4")
+
+    def transform_source_example(self, example, source_name, randint):
+        if randint is None:
+            rng = numpy.random.RandomState(config.default_seed)
+        else:
+            rng = numpy.random.RandomState(randint)
+        if len(example) == 3:
+            self.verify_axis_labels(('channel', 'height', 'width'),
+                                    self.data_stream.axis_labels[source_name],
+                                    source_name)
+        elif len(example) == 4:
+            self.verify_axis_labels(('channel', 'x', 'y', 'z'),
+                                    self.data_stream.axis_labels[source_name],
+                                    source_name)
+
+        if not isinstance(example, numpy.ndarray) or \
+                        example.ndim not in [3, 4]:
+            raise ValueError("uninterpretable example format; expected "
+                             "ndarray with ndim = 3 or ndim = 4")
+
+        max_indices = {}
+        offsets = {}
+        for i in range(len(self.window_shape)):
+            max_indices[i] = example.shape[1:][i] - self.window_shape[i]
+            if max_indices[i] < 0:
+                raise ValueError("Got ndarray batch with image dimensions "
+                                 "{} but requested window shape of {}".
+                                 format(example.shape[1:],
+                                        self.window_shape))
+            offsets[i] = rng.random_integers(0, max_indices[i])
+
+        if len(self.window_shape) == 2:
+            out = example[:,
+                  offsets[0]:offsets[0] + self.window_shape[0],
+                  offsets[1]:offsets[1] + self.window_shape[1]]
+        elif len(self.window_shape) == 3:
+            out = example[:,
+                  offsets[0]:offsets[0] + self.window_shape[0],
+                  offsets[1]:offsets[1] + self.window_shape[1],
+                  offsets[2]:offsets[2] + self.window_shape[2]]
+        else:
+            raise(NotImplementedError, "Cropping of N-D images with N>3 is "
+                                       "not implemented")
+        return out.astype(example.dtype)
+
+    def transform_example(self, example):
+        return self._apply_samplewise_transformation(
+            data=example, method=self.transform_source_example)
+
+    def transform_batch(self, batch):
+        return self._apply_samplewise_transformation(
+            data=batch, method=self.transform_source_batch)
+
+
 class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
     """Randomly crop images to a fixed window size.
-
     Parameters
     ----------
     data_stream : :class:`AbstractDataStream`
@@ -181,11 +396,9 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
     window_shape : tuple
         The `(height, width)` tuple representing the size of the output
         window.
-
     Notes
     -----
     This transformer expects to act on stream sources which provide one of
-
      * Single images represented as 3-dimensional ndarrays, with layout
        `(channel, height, width)`.
      * Batches of images represented as lists of 3-dimensional ndarrays,
@@ -193,11 +406,9 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
        heights/widths).
      * Batches of images represented as 4-dimensional ndarrays, with
        layout `(batch, channel, height, width)`.
-
     The format of the stream will be un-altered, i.e. if lists are
     yielded by `data_stream` then lists will be yielded by this
     transformer.
-
     """
     def __init__(self, data_stream, window_shape, **kwargs):
         self.window_shape = window_shape
@@ -272,12 +483,9 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
 
 class RandomFixedSizeCrop3D(RandomFixedSizeCrop):
     """An extension of the RandomFixedSizeCrop that works for 3D arrays.
-
     It assumes that the first dimension (2nd in batch mode) are the channels.
     All other dimension will be preserved.
-
     Randomly crop images to a fixed window size.
-
     Parameters
     ----------
     data_stream : :class:`AbstractDataStream`
@@ -285,11 +493,9 @@ class RandomFixedSizeCrop3D(RandomFixedSizeCrop):
     window_shape : tuple
         The `(height, width, depth)` tuple representing the size of the output
         window.
-
     Notes
     -----
     This transformer expects to act on stream sources which provide one of
-
      * Single images represented as 4-dimensional ndarrays, with layout
        `(channel, height, width, depth)`.
      * Batches of images represented as lists of 4-dimensional ndarrays,
@@ -297,11 +503,9 @@ class RandomFixedSizeCrop3D(RandomFixedSizeCrop):
        heights/widths/depths).
      * Batches of images represented as 5-dimensional ndarrays, with
        layout `(batch, channel, height, width, depth)`.
-
     The format of the stream will be un-altered, i.e. if lists are
     yielded by `data_stream` then lists will be yielded by this
     transformer.
-
     """
 
     def transform_source_batch(self, source, source_name):
