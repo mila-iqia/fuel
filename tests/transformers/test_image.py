@@ -5,13 +5,18 @@ from numpy.testing import assert_raises
 from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
+import pyximport
+pyximport.install()
 from fuel import config
-from fuel.datasets.base import IndexableDataset
+from fuel.datasets.base import IndexableDataset, IterableDataset
 from fuel.schemes import ShuffledScheme, SequentialExampleScheme
 from fuel.streams import DataStream
 from fuel.transformers.image import (ImagesFromBytes,
                                      MinimumImageDimensions,
-                                     RandomFixedSizeCrop)
+                                     RandomFixedSizeCrop,
+                                     SamplewiseCropTransformer)
+
+
 
 
 def reorder_axes(shp):
@@ -283,3 +288,105 @@ class TestFixedSizeRandomCrop(ImageTestingMixin):
 
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
+
+class TestSamplewiseCropTransformer(object):
+    def setUp(self):
+        self.sources = ['volume1', 'volume2', 'weight']
+        self.weight_source = 'weight'
+        self.shape = (5, 5, 5)
+        self.window_shape = (2, 2, 2)
+
+        self.data_volume1 = [0 for x in range(10)]
+        self.data_volume2 = [0 for x in range(10)]
+        self.data_weight = [0 for x in range(10)]
+
+        for k in range(10):
+            self.data_volume1[k] = numpy.arange(numpy.prod(self.shape))\
+                .reshape([1, 1] + list(self.shape)).astype(numpy.float32)
+            self.data_volume2[k] = numpy.arange(numpy.prod(self.shape))\
+                .reshape([1, 1] + list(self.shape)).astype(numpy.float32)
+            self.data_weight[k] = numpy.random.uniform(size=self.shape)\
+                .reshape([1, 1] + list(self.shape)).astype(numpy.float32)
+
+        self.data = OrderedDict([('volume1', self.data_volume1),
+                                 ('volume2', self.data_volume2),
+                                 ('weight', self.data_weight)])
+
+        layout = ('batch', 'channel', 'x', 'y', 'z')
+        self.axis_labels = {self.sources[0]: layout,
+                            self.sources[1]: layout,
+                            self.sources[2]: layout}
+
+        self.stream = DataStream(IterableDataset(self.data),
+                                 axis_labels=self.axis_labels)
+        self.stream.produces_examples = False
+
+    def test_no_weight_crop(self):
+        swcTransformer = SamplewiseCropTransformer(self.stream,
+                                                   self.window_shape,
+                                                   which_sources=None,
+                                                   weight_source=None)
+        epoch_iterat = swcTransformer.get_epoch_iterator()
+
+        former_crop = []
+        different = []
+        for k in range(5):
+            n = next(epoch_iterat)
+            # Test if new array size is compliant to window_shape
+            for k in range(3):
+                assert n[k].shape[2:] == self.window_shape
+            # Test if the crop is similar on all volumes of the sample
+            assert numpy.prod(n[0] == n[1])
+            # Test if random crop different from former random crop
+            different.append(former_crop == n[0])
+            former_crop = n[0]
+
+    def test_no_weight_which_sources(self):
+        swcTransformer = SamplewiseCropTransformer(self.stream,
+                                                   self.window_shape,
+                                                   which_sources=['volume1'],
+                                                   weight_source=None)
+        epoch_iterat = swcTransformer.get_epoch_iterator()
+        for k in range(5):
+            n = next(epoch_iterat)
+            # Test if only sources directed by "which_sources" are affected
+            assert n[0].shape == (1, 1) + self.window_shape
+            assert n[1].shape == (1, 1) + self.shape
+            assert n[2].shape == (1, 1) + self.shape
+
+    def test_weight_crop(self):
+        swcTransformer = SamplewiseCropTransformer(self.stream,
+                                                   self.window_shape,
+                                                   which_sources=None,
+                                                   weight_source='weight')
+        epoch_iterat = swcTransformer.get_epoch_iterator()
+        for k in range(5):
+            n = next(epoch_iterat)
+            # Test if the output was actually upscaled from a factor p
+            # The only way to do this is to look at every possible position
+            # of the resulting cropped heatmap in the original heatmap and
+            # assert they are never equal (because of the randomness of the
+            # crop)
+            self.search_volume(self.data_weight[k], n[2])
+
+    def search_volume(self, big, small):
+        for stx in range(big.shape[2]-small.shape[2]):
+            for sty in range(big.shape[3]-small.shape[3]):
+                for stz in range(big.shape[4]-small.shape[4]):
+                    assert not numpy.allclose(small,
+                                              big[:, :,
+                                              stx:stx+small.shape[2],
+                                              sty:sty+small.shape[3],
+                                              stz:stz+small.shape[4]])
+
+    def test_calculate_heatmap(self):
+        swcTransformer = SamplewiseCropTransformer(self.stream,
+                                                   self.window_shape,
+                                                   which_sources=None,
+                                                   weight_source=None)
+        volume = numpy.arange(5 * 5 * 5).reshape((1, 1) + (5, 5, 5)).astype(
+            numpy.float32)
+        new_volume = swcTransformer.calculate_heatmap(volume)
+
+        assert numpy.allclose(new_volume,
+                              volume / volume[:, :, 2:-1, 2:-1, 2:-1].sum())

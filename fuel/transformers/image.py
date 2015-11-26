@@ -172,7 +172,7 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
         return example
 
 
-class SamplewiseCropTransformer(Transformer):
+class SamplewiseCropTransformer(Transformer, ExpectsAxisLabels):
     """Applies same transformation to all data from get_epoch ("batchwise").
 
     Subclasses must define `transform_source_example` (to transform
@@ -223,7 +223,6 @@ class SamplewiseCropTransformer(Transformer):
         except StopIteration:
             self.data = None
             return self.get_data()
-
         if self.produces_examples != self.data_stream.produces_examples:
             types = {True: 'examples', False: 'batches'}
             raise NotImplementedError(
@@ -239,7 +238,6 @@ class SamplewiseCropTransformer(Transformer):
 
     def _apply_samplewise_transformation(self, data, method):
         data = list(data)
-
         # If weight_source is given, we want to crop according to this weight
         #  matrix (or heatmap here). Depending on the dataset, the sources (
         # which are the different data[i] are either a numpy object or a
@@ -280,8 +278,7 @@ class SamplewiseCropTransformer(Transformer):
             randint = numpy.random.randint(9999)
             for i, source_name in enumerate(self.data_stream.sources):
                 if source_name in self.which_sources:
-                    data[i] = method(data[i], source_name, randint).astype(
-                        numpy.float32)
+                    data[i] = method(data[i], source_name, randint)
 
         return tuple(data)
 
@@ -325,7 +322,6 @@ class SamplewiseCropTransformer(Transformer):
                             off[0] + i:off[0] + self.window_shape[0] + i,
                             off[1] + j:off[1] + self.window_shape[1] + j]
                                  .sum())
-
             return volume / max(p)
 
     def transform_source_batch(self, source, source_name, randint=None):
@@ -514,10 +510,6 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
                                             b.ndim == 3 for b in source):
             return [self.transform_source_example(im, source_name)
                     for im in source]
-        elif source.dtype == numpy.object:
-            return numpy.array([self.transform_source_example(im,
-                                                              source_name)
-                                for im in source])
         elif isinstance(source, numpy.ndarray) and source.ndim == 4:
             # Hardcoded assumption of (batch, channels, height, width).
             # This is what the fast Cython code supports.
