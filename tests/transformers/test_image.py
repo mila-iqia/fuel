@@ -390,3 +390,20 @@ class TestSamplewiseCropTransformer(object):
 
         assert numpy.allclose(new_volume,
                               volume / volume[:, :, 2:-1, 2:-1, 2:-1].sum())
+
+    def test_get_data(self):
+        swcTransformer = SamplewiseCropTransformer(self.stream,
+                                                   self.window_shape,
+                                                   which_sources=None,
+                                                   weight_source=None)
+        n = swcTransformer.get_epoch_iterator()
+        assert_raises(ValueError, swcTransformer.get_data, 'y')
+
+        swcTransformer.produces_examples = True
+        self.stream.produces_examples = False
+        assert_raises(NotImplementedError, swcTransformer.get_data)
+
+        swcTransformer.produces_examples = False
+        assert numpy.allclose(swcTransformer.get_data(),
+                              swcTransformer.transform_batch(next(n)))
+
