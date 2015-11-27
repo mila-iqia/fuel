@@ -261,7 +261,7 @@ class SamplewiseCropTransformer(Transformer, ExpectsAxisLabels):
                 # is below the sum of its weights (so regions with few bone
                 # will get low p, so low chances of being picked)
                 randint = numpy.random.randint(9999)
-                heatmap_crop = method(data[self.weight_i], self.weight_source,
+                heatmap_crop = method(heatmap, self.weight_source,
                                       randint)
                 p = numpy.minimum(numpy.sum(heatmap_crop), 1)
                 r = numpy.random.uniform()
