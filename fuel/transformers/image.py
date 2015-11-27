@@ -638,3 +638,91 @@ class RandomFixedSizeCrop3D(RandomFixedSizeCrop):
         return example[:, off_x:off_x + window_x,
                off_y:off_y + window_y,
                off_z:off_z + window_z]
+
+
+class RandomSpatialFlip(SourcewiseTransformer, ExpectsAxisLabels):
+    """Randomly flip images horizontally and/or vertically.
+
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream`
+        The data stream to wrap.
+    flip_h : bool
+        Whether to flip images horizontally
+    flip_v : bool
+        Whether to flip images vertically
+
+    Notes
+    -----
+    This transformer expects to act on stream sources which provide one of
+
+     * Single images represented as 3-dimensional ndarrays, with layout
+       `(channel, height, width)`.
+     * Batches of images represented as lists of 3-dimensional ndarrays,
+       possibly of different shapes (i.e. images of differing
+       heights/widths).
+     * Batches of images represented as 4-dimensional ndarrays, with
+       layout `(batch, channel, height, width)`.
+
+    The format of the stream will be un-altered, i.e. if lists are
+    yielded by `data_stream` then lists will be yielded by this
+    transformer.
+
+    """
+    def __init__(self, data_stream, flip_h=False, flip_v=False, **kwargs):
+        self.flip_h = flip_h
+        self.flip_v = flip_v
+        self.rng = kwargs.pop('rng', None)
+        self.warned_axis_labels = False
+        if self.rng is None:
+            self.rng = numpy.random.RandomState(config.default_seed)
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        super(RandomSpatialFlip, self).__init__(data_stream, **kwargs)
+
+    def transform_source_batch(self, source, source_name):
+        self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
+
+        # source is list of np.array with dim 3
+        if isinstance(source, list) \
+                and all(isinstance(im, numpy.ndarray) and im.ndim == 3
+                        for im in source):
+            return [self.transform_source_example(im, source_name)
+                    for im in source]
+        # source is np.array of np.object which has 3 dims
+        elif source.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(im, source_name)
+                                for im in source])
+        # source is np.array with dim 4
+        elif isinstance(source, numpy.ndarray) and source.ndim == 4:
+            # Hardcoded assumption of (batch, channels, height, width).
+            # This is what the fast Cython code supports.
+            return self.transform_source_example(source, source_name)
+        else:
+            raise ValueError("uninterpretable batch format; expected a list "
+                             "of arrays with ndim = 3, or an array with "
+                             "ndim = 4")
+
+    def transform_source_example(self, example, source_name):
+        self.verify_axis_labels(('channel', 'height', 'width'),
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
+        if not isinstance(example, numpy.ndarray) or example.ndim != 3:
+            raise ValueError("uninterpretable example format; expected "
+                             "ndarray with ndim = 3")
+
+        if self.flip_h:
+
+            to_flip_h = self.rng.binomial(n=1, p=0.5, size=example.shape[0])\
+                .reshape([example.shape[0]] + [1] * (example.ndim-1))
+            example = example * (1-to_flip_h) + example[..., ::-1] * to_flip_h
+
+        if self.flip_v:
+
+            to_flip_v = self.rng.binomial(n=1, p=0.5, size=example.shape[0])\
+                .reshape([example.shape[0]] + [1] * (example.ndim-1))
+            example = example * (1-to_flip_v) + example[..., ::-1, :] * to_flip_v
+
+        return example

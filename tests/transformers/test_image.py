@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from io import BytesIO
 import numpy
-from numpy.testing import assert_raises
+from numpy.testing import assert_raises, assert_allclose
 from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
@@ -14,6 +14,7 @@ from fuel.streams import DataStream
 from fuel.transformers.image import (ImagesFromBytes,
                                      MinimumImageDimensions,
                                      RandomFixedSizeCrop,
+                                     RandomSpatialFlip,
                                      SamplewiseCropTransformer)
 
 
@@ -288,6 +289,123 @@ class TestFixedSizeRandomCrop(ImageTestingMixin):
 
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
+
+
+class TestRandomSpatialFlip(ImageTestingMixin):
+
+    def setUp(self):
+
+        # source is list of np.array with dim 3
+        self.source_list = []
+        shapes = [tuple(numpy.random.randint(1, 10, 3)) for _ in numpy.arange(5)]
+        for shape in shapes:
+            self.source_list.append(numpy.random.randint(0, 256, shape))
+
+        # source is np.array with dim 4
+        self.source_4d = numpy.random.randint(0, 256, (5, 3, 10, 10))
+
+        axis_labels = {'source_list': ('channel', 'height', 'width'),
+                       'source_4d': ('batch', 'channel', 'height', 'width')}
+        self.dataset = IndexableDataset(OrderedDict([('source_list', self.source_list),
+                                                     ('source_4d', self.source_4d)]),
+                                        axis_labels=axis_labels)
+        self.common_setup()
+
+    def utils_test_setup(self, source, source_name, flip_h=False, flip_v=False):
+
+        rng = numpy.random.RandomState(seed=111)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_h=flip_h, flip_v=flip_v,
+                                   which_sources=(source_name,),
+                                   rng=rng)
+
+        rng = numpy.random.RandomState(seed=111)
+        if flip_h:
+            to_flip_h = rng.binomial(n=1, p=0.5, size=source.shape[0])\
+                .reshape([source.shape[0]] + [1] * (source.ndim-1))
+        else:
+            to_flip_h = None
+
+        if flip_v:
+            to_flip_v = rng.binomial(n=1, p=0.5, size=source.shape[0])\
+                .reshape([source.shape[0]] + [1] * (source.ndim-1))
+        else:
+            to_flip_v = None
+
+        return stream, to_flip_h, to_flip_v
+
+    def test_ndarray_batch_source(self):
+
+        source = self.source_4d
+        source_name = 'source_4d'
+
+        # test no flip
+        stream, to_flip_h, to_flip_v = \
+            self.utils_test_setup(source, source_name)
+        result = stream.transform_source_batch(source, source_name)
+        expected = source
+        assert_allclose(result, expected, "no flip")
+
+        # test flip horizontally
+        stream, to_flip_h, to_flip_v = \
+            self.utils_test_setup(source, source_name, flip_h=True)
+        result = stream.transform_source_batch(source, source_name)
+        expected = source * (1-to_flip_h) + source[..., ::-1] * to_flip_h
+        assert_allclose(result, expected, "flip horizontally")
+
+        # test flip vertically
+        stream, to_flip_h, to_flip_v = \
+            self.utils_test_setup(source, source_name, flip_v=True)
+        result = stream.transform_source_batch(source, source_name)
+        expected = source * (1-to_flip_v) + source[..., ::-1] * to_flip_v
+        assert_allclose(result, expected, "flip horizontally")
+
+        # test flip both
+        stream, to_flip_h, to_flip_v = \
+            self.utils_test_setup(source, source_name, flip_h=True, flip_v=True)
+        result = stream.transform_source_batch(source, source_name)
+        sourcebis = source * (1-to_flip_h) + source[..., ::-1] * to_flip_h
+        expected = sourcebis * (1-to_flip_v) + sourcebis[..., ::-1] * to_flip_v
+        assert_allclose(result, expected, "flip both")
+
+    def test_list_batch_source(self):
+
+        source = self.source_list
+        source_name = 'source_list'
+
+        # test no flip
+        stream, to_flip_h, to_flip_v = \
+            self.utils_test_setup(source, source_name)
+        result = stream.transform_source_batch(source, source_name)
+        expected = source
+        assert_allclose(result, expected, "no flip")
+
+        # test flip horizontally
+        stream, to_flip_h, to_flip_v = \
+            self.utils_test_setup(source, source_name, flip_h=True)
+        result = stream.transform_source_batch(source, source_name)
+        expected = [example * (1-to_flip_h) + example[..., ::-1] * to_flip_h
+                    for example in source]
+        assert_allclose(result, expected, "flip horizontally")
+
+        # test flip vertically
+        stream, to_flip_h, to_flip_v = \
+            self.utils_test_setup(source, source_name, flip_v=True)
+        result = stream.transform_source_batch(source, source_name)
+        expected = [example * (1-to_flip_v) + example[..., ::-1] * to_flip_v
+                    for example in source]
+        assert_allclose(result, expected, "flip horizontally")
+
+        # test flip both
+        stream, to_flip_h, to_flip_v = \
+            self.utils_test_setup(source, source_name, flip_h=True, flip_v=True)
+        result = stream.transform_source_batch(source, source_name)
+        sourcebis = [example * (1-to_flip_h) + example[..., ::-1] * to_flip_h
+                     for example in source]
+        expected = [example * (1-to_flip_v) + example[..., ::-1] * to_flip_v
+                    for example in sourcebis]
+        assert_allclose(result, expected, "flip both")
+
 
 class TestSamplewiseCropTransformer(object):
     def setUp(self):
