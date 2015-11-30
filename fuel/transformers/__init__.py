@@ -1025,3 +1025,166 @@ class OneHotEncodingND(OneHotEncoding):
         else:
             raise ValueError("source_batch is of unusable input datatype {}"
                              .format(source_batch.dtype))
+
+
+class Drop(Transformer):
+    """
+    Implement border drop (of size `border) and dropout`(with probability of
+    dropping of `dropout`) on the volume directed by the variable
+    `which_weight`.
+
+    Parameters:
+    -----------
+    stream: instance of :class:`DataStream`
+        The wrapped data stream.
+    which_weight: str
+        Name of the source that will be affected by the transformer.
+    border: int
+        Size of the border of the volume.
+    dropout: float
+        Probability of dropping out an element of the volume.
+    """
+    def __init__(self, stream,
+                 which_weight=None, border=None, dropout=None,
+                 **kwargs):
+        self.rng = kwargs.pop('rng', None)
+        if self.rng is None:
+            self.rng = numpy.random.RandomState(config.default_seed)
+        super(Transformer, self).__init__(stream, **kwargs)
+        self.stream = stream
+        self.which_weight = which_weight
+        if self.which_weight is None:
+            import warnings
+            warnings.warn("The transformer will not affect the data stream as "
+                          "which_weight is None.", Warning)
+        elif self.which_weight not in self.stream.sources:
+            import warnings
+            warnings.warn("The transformer will not affect the data stram as "
+                          "which_weight does not correspond to any sources.",
+                          Warning)
+
+        if border is None or isinstance(border, int):
+            self.border = border
+        else:
+            raise ValueError("Parameter border should be an int "
+                             "(type passed {}).".format(type(border)))
+        if dropout is not None:
+            if dropout >= 0 and dropout <=1:
+                self.dropout = dropout
+            else:
+                ValueError("Parameter dropout should be a float between "
+                           "0 and 1 (value passed: {}).".format(dropout))
+        else:
+            self.dropout = dropout
+
+    def get_data(self, request=None):
+        # Ensure that we catch StopIteration error, which is not provided with
+        # get_data method of Transformer class.
+        if request is not None:
+            raise ValueError("Parameter request is not None (get_data)")
+        if not self.data:
+            data = next(self.child_epoch_iterator)
+            self.data = izip(*data)
+        try:
+            data = next(self.child_epoch_iterator)
+        except StopIteration:
+            self.data = None
+            return self.get_data()
+        if self.produces_examples != self.data_stream.produces_examples:
+            types = {True: 'examples', False: 'batches'}
+            raise NotImplementedError(
+                "the wrapped data stream produces {} while the {} transformer "
+                "produces {}, which it does not support.".format(
+                    types[self.data_stream.produces_examples],
+                    self.__class__.__name__,
+                    types[self.produces_examples]))
+        elif self.produces_examples:
+            return self.transform_example(data)
+        else:
+            return self.transform_batch(data)
+
+    def _apply_transformation(self, data, method):
+        data = list(data)
+        for i, source_name in enumerate(self.stream.sources):
+            if source_name == self.which_weight:
+                data[i] = method(data[i], source_name)
+        return tuple(data)
+
+    def transform_source_batch(self, source, source_name):
+        if isinstance(source, numpy.ndarray) and source.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(im, source_name)
+                                for im in source])
+        elif isinstance(source, numpy.ndarray) and \
+                (source.ndim == 4 or source.ndim == 5):
+            if self.border is not None:
+                source = self.border_func(source, self.border, 'source')
+            if self.dropout is not None:
+                source = self.dropout_func(source, self.dropout)
+            return source
+        else:
+            raise ValueError("uninterpretable source format; expected ndarray "
+                             "with ndim = 4 or ndim = 5, got {} instead."
+                             .format(type(source)))
+
+    def transform_source_example(self, example, source_name):
+        if isinstance(example, numpy.ndarray) and \
+                        example.ndim in [3, 4]:
+            if self.border is not None:
+                example = self._border_func(example, self.border, 'example')
+            if self.dropout is not None:
+                example = self._dropout_func(example, self.dropout)
+            return example
+        else:
+            raise ValueError("uninterpretable example format; expected "
+                             "ndarray with ndim = 3 or ndim = 4, "
+                             "got {} instead".format(type(example)))
+
+    def transform_example(self, example):
+        return self._apply_transformation(
+            data=example, method=self.transform_source_example)
+
+    def transform_batch(self, batch):
+        return self._apply_transformation(
+            data=batch, method=self.transform_source_batch)
+
+    def _border_func(self, volume, border, flag=None):
+        if flag == 'source':
+            for i in range(len(volume.shape[2:])):
+                if volume.shape[2+i] < 2 * border:
+                    raise ValueError("border does not fit in image (dimension"
+                                     "{} size {}, borders {}"
+                                     .format(i, volume.shape[2+i],
+                                             2 * border))
+            if volume.ndim == 5:
+                volume[:, :, :border, :border, :border] = 0
+                volume[:, :, -border:, -border:, -border:] = 0
+            elif volume.ndim == 4:
+                volume[:, :, :border, :border] = 0
+                volume[:, :, -border:, -border:] = 0
+            else:
+                ValueError("uninterpretable number of dimensions for source "
+                           "volume, expected 4 or 5, got {} instead"
+                           .format(volume.ndim))
+        elif flag == 'example':
+            for i in range(len(volume.shape[1:])):
+                if volume.shape[1+i] < 2 * border:
+                    raise ValueError("border does not fit in image (dimension "
+                                     "{} size {}, borders {}"
+                                     .format(i, volume.shape[1+i],
+                                             2 * border))
+            if volume.ndim == 4:
+                volume[:, :border, :border, :border] = 0
+                volume[:, -border:, -border:, -border:] = 0
+            if volume.ndim == 3:
+                volume[:, :border, :border] = 0
+                volume[:, -border:, -border:] = 0
+        else:
+            raise ValueError("Expected flag as 'source' or 'example' "
+                             "got {} instead".format(flag))
+        return volume
+
+    def _dropout_func(self, volume, dropout):
+        dropout_cast = numpy.random.binomial(1,
+                                             1 - dropout,
+                                             size=volume.shape)
+        return volume * dropout_cast
