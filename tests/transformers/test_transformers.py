@@ -1,5 +1,6 @@
 import logging
 import operator
+import warnings
 from collections import OrderedDict
 
 import numpy
@@ -15,7 +16,7 @@ from fuel.transformers import (
     ExpectsAxisLabels, Transformer, Mapping, SortMapping, ForceFloatX, Filter,
     Cache, Batch, Padding, MultiProcessing, Unpack, Merge,
     SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename,
-    FilterSources, OneHotEncoding)
+    FilterSources, OneHotEncoding, Drop)
 
 
 class FlagDataStream(DataStream):
@@ -773,3 +774,91 @@ class TestExpectsAxisLabels(object):
     def test_exception(self):
         assert_raises(ValueError, self.obj.verify_axis_labels, ('a', 'b', 'c'),
                       ('b', 'c', 'd'), 'foo')
+
+
+class TestDrop(object):
+    def setUp(self):
+        self.sources = ['volume1', 'volume2', 'weight']
+        self.which_weight = 'weight'
+        self.im_shape = (10, 10)
+        self.vo_shape = (10, 10, 10)
+
+        self.data_im = {}
+        self.data_vo = {}
+        for k in range(len(self.sources)):
+            self.data_im[self.sources[k]] = [0 for x in range(10)]
+            self.data_vo[self.sources[k]] = [0 for x in range(10)]
+
+        for k in range(10):
+            self.data_im[self.sources[0]][k] = numpy.arange(
+                numpy.prod(self.im_shape)).reshape(
+                [1, 1] + list(self.im_shape)).astype(numpy.float32)
+            self.data_vo[self.sources[0]][k] = numpy.arange(
+                numpy.prod(self.vo_shape)).reshape(
+                [1, 1] + list(self.vo_shape)).astype(numpy.float32)
+            self.data_im[self.sources[0]][k] = numpy.arange(
+                numpy.prod(self.im_shape)).reshape(
+                [1, 1] + list(self.im_shape)).astype(numpy.float32)
+            self.data_vo[self.sources[0]][k] = numpy.arange(
+                numpy.prod(self.vo_shape)).reshape(
+                [1, 1] + list(self.vo_shape)).astype(numpy.float32)
+            self.data_im[self.sources[0]][k] = numpy.random.uniform(
+                size=self.im_shape).reshape(
+                [1, 1] + list(self.im_shape)).astype(numpy.float32)
+            self.data_vo[self.sources[0]][k] = numpy.random.uniform(
+                size=self.vo_shape).reshape(
+                [1, 1] + list(self.vo_shape)).astype(numpy.float32)
+
+        self.data = {}
+        for type, data in zip(['image', 'volume'], [self.data_im, self.data_vo]):
+            self.data[type] = OrderedDict([('volume1', data[self.sources[0]]),
+                                           ('volume2', data[self.sources[1]]),
+                                           ('weight', data[self.sources[2]])])
+
+        layout_im = ('batch', 'channel', 'width', 'height')
+        layout_vol = ('batch', 'channel', 'x', 'y', 'z')
+        self.axis_labels_im = {self.sources[0]: layout_im,
+                               self.sources[1]: layout_im,
+                               self.sources[2]: layout_im}
+        self.axis_labels_vol = {self.sources[0]: layout_vol,
+                                self.sources[1]: layout_vol,
+                                self.sources[2]: layout_vol}
+
+        self.stream = {}
+        self.stream['image'] = DataStream(IterableDataset(
+            self.data['image']), axis_labels=self.axis_labels_im)
+
+        self.stream['volume'] = DataStream(IterableDataset(
+            self.data['volume']), axis_labels=self.axis_labels_vol)
+
+    def test_init(self):
+        # Warning weight
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+            # Trigger warnings
+            # Not in sources
+            kwargs = {'stream': self.stream['image'],
+                      'which_weight': 'uwotm9'}
+            Drop(**kwargs)
+            # None
+            kwargs = {'stream': self.stream['image'],
+                      'which_weight': None}
+            Drop(**kwargs)
+            # Assert warnings were triggered
+            assert len(w) == 2
+            for i in range(len(w)):
+                assert issubclass(w[i].category, Warning)
+
+        assert_raises(ValueError, Drop, **kwargs)
+        # Illegal
+        kwargs = {'stream': self.stream['image'],
+                  'which_weight': 'weight',
+                  'border': 'kek'}
+        assert_raises(ValueError, Drop, **kwargs)
+        kwargs = {'stream': self.stream['image'],
+                  'which_weight': 'weight',
+                  'border': 'kek'}
+        assert_raises(ValueError, Drop, **kwargs)
+
+
