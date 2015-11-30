@@ -1081,30 +1081,21 @@ class Drop(Transformer):
         self.data = False
         self.produces_examples = produces_examples
 
-    def get_data(self, request=None):
-        # Ensure that we catch StopIteration error, which is not provided with
-        # get_data method of Transformer class.
-        if request is not None:
-            raise ValueError("Parameter request is not None (get_data)")
-        if not self.data:
-            self.get_epoch_iterator()
-            self.data = True
-        try:
-            data = next(self.child_epoch_iterator)
-        except StopIteration:
-            self.data = False
-            return self.get_data()
-        if self.produces_examples:
-            return self.transform_example(data)
-        else:
-            return self.transform_batch(data)
-
     def _apply_transformation(self, data, method):
         data = list(data)
         for i, source_name in enumerate(self.data_stream.sources):
             if source_name == self.which_weight:
                 data[i] = method(data[i], source_name)
         return tuple(data)
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
+        if self.produces_examples:
+            return self.transform_example(data)
+        else:
+            return self.transform_batch(data)
 
     def transform_source_batch(self, source, source_name):
         if isinstance(source, numpy.ndarray) and source.dtype == numpy.object:

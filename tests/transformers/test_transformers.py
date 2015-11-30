@@ -860,17 +860,6 @@ class TestDrop(object):
                   'dropout': 'lel'}
         assert_raises(ValueError, Drop, **kwargs)
 
-    def test_get_data(self):
-        # Test request is None
-        kwargs = {'request': 'n'}
-        assert_raises(ValueError, self.dropstream.get_data, **kwargs)
-        # Test if next epoch iterator is called if self.data is None
-        # Initializing first dropstream
-        dropstream = Drop(stream=self.stream['image'], which_weight='weight')
-        assert not dropstream.data
-        dropstream.get_data()
-        assert dropstream.data
-
     def test_border_func(self):
         # Test illegal flag
         kwargs = {'volume': 0, 'border': 0, 'flag': 'iswearonmemum'}
@@ -988,6 +977,7 @@ class TestDrop(object):
         original = self.data_im['weight'][0].copy()
         dropstream = Drop(stream=self.stream['image'], which_weight='weight',
                           border=2)
+        dropstream.get_epoch_iterator()
         transformed_data = dropstream.get_data()
         assert numpy.allclose(transformed_data[0], self.data_im['volume1'][0])
         assert numpy.allclose(transformed_data[1], self.data_im['volume2'][0])
