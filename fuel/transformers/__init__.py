@@ -1048,7 +1048,7 @@ class Drop(Transformer):
     """
     def __init__(self, stream,
                  which_weight=None, border=None, dropout=None,
-                 produces_examples = False,
+                 produces_examples=False,
                  **kwargs):
         self.rng = kwargs.pop('rng', None)
         if self.rng is None:
