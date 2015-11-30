@@ -7,6 +7,7 @@ from picklable_itertools.extras import partition_all
 from six.moves import zip
 import pyximport
 pyximport.install()
+
 from fuel import config
 from fuel.datasets.base import IndexableDataset, IterableDataset
 from fuel.schemes import ShuffledScheme, SequentialExampleScheme
@@ -16,8 +17,6 @@ from fuel.transformers.image import (ImagesFromBytes,
                                      RandomFixedSizeCrop,
                                      RandomSpatialFlip,
                                      SamplewiseCropTransformer)
-
-
 
 
 def reorder_axes(shp):
@@ -296,115 +295,309 @@ class TestRandomSpatialFlip(ImageTestingMixin):
     def setUp(self):
 
         # source is list of np.array with dim 3
-        self.source_list = []
-        shapes = [tuple(numpy.random.randint(1, 10, 3)) for _ in numpy.arange(5)]
-        for shape in shapes:
-            self.source_list.append(numpy.random.randint(0, 256, shape))
+        self.source_list = [
+            numpy.array([[[1, 0],
+                          [0, 2]],
+
+                         [[3, 0],
+                          [0, 4]]]),
+
+            numpy.array([[[1, 2, 3],
+                          [0, 0, 0]],
+
+                         [[4, 5, 6],
+                          [0, 0, 0]]])
+        ]
+        # source is np.object of np.array with dim 3
+        self.source_ndobject = numpy.empty((2,), dtype=object)
+        self.source_ndobject[0] = numpy.array([[[1, 0],
+                                                [0, 2]],
+
+                                               [[3, 0],
+                                                [0, 4]]])
+
+        self.source_ndobject[1] = numpy.array([[[1, 2, 3],
+                                                [0, 0, 0]],
+
+                                               [[4, 5, 6],
+                                                [0, 0, 0]]])
 
         # source is np.array with dim 4
-        self.source_4d = numpy.random.randint(0, 256, (5, 3, 10, 10))
+        self.source_ndarray = numpy.array([
+            [[[1, 2, 3],
+              [0, 0, 0]],
 
-        axis_labels = {'source_list': ('channel', 'height', 'width'),
-                       'source_4d': ('batch', 'channel', 'height', 'width')}
+             [[4, 5, 6],
+              [0, 0, 0]]],
+
+            [[[1, 2, 3],
+              [0, 0, 0]],
+
+             [[4, 5, 6],
+              [0, 0, 0]]]
+        ])
+
         self.dataset = IndexableDataset(OrderedDict([('source_list', self.source_list),
-                                                     ('source_4d', self.source_4d)]),
-                                        axis_labels=axis_labels)
+                                                     ('source_ndobject', self.source_ndobject),
+                                                     ('source_ndarray', self.source_ndarray)]), )
         self.common_setup()
-
-    def utils_test_setup(self, source, source_name, flip_h=False, flip_v=False):
-
-        rng = numpy.random.RandomState(seed=111)
-        stream = RandomSpatialFlip(self.example_stream,
-                                   flip_h=flip_h, flip_v=flip_v,
-                                   which_sources=(source_name,),
-                                   rng=rng)
-
-        rng = numpy.random.RandomState(seed=111)
-        if flip_h:
-            to_flip_h = rng.binomial(n=1, p=0.5, size=source.shape[0])\
-                .reshape([source.shape[0]] + [1] * (source.ndim-1))
-        else:
-            to_flip_h = None
-
-        if flip_v:
-            to_flip_v = rng.binomial(n=1, p=0.5, size=source.shape[0])\
-                .reshape([source.shape[0]] + [1] * (source.ndim-1))
-        else:
-            to_flip_v = None
-
-        return stream, to_flip_h, to_flip_v
-
-    def test_ndarray_batch_source(self):
-
-        source = self.source_4d
-        source_name = 'source_4d'
-
-        # test no flip
-        stream, to_flip_h, to_flip_v = \
-            self.utils_test_setup(source, source_name)
-        result = stream.transform_source_batch(source, source_name)
-        expected = source
-        assert_allclose(result, expected, "no flip")
-
-        # test flip horizontally
-        stream, to_flip_h, to_flip_v = \
-            self.utils_test_setup(source, source_name, flip_h=True)
-        result = stream.transform_source_batch(source, source_name)
-        expected = source * (1-to_flip_h) + source[..., ::-1] * to_flip_h
-        assert_allclose(result, expected, "flip horizontally")
-
-        # test flip vertically
-        stream, to_flip_h, to_flip_v = \
-            self.utils_test_setup(source, source_name, flip_v=True)
-        result = stream.transform_source_batch(source, source_name)
-        expected = source * (1-to_flip_v) + source[..., ::-1] * to_flip_v
-        assert_allclose(result, expected, "flip horizontally")
-
-        # test flip both
-        stream, to_flip_h, to_flip_v = \
-            self.utils_test_setup(source, source_name, flip_h=True, flip_v=True)
-        result = stream.transform_source_batch(source, source_name)
-        sourcebis = source * (1-to_flip_h) + source[..., ::-1] * to_flip_h
-        expected = sourcebis * (1-to_flip_v) + sourcebis[..., ::-1] * to_flip_v
-        assert_allclose(result, expected, "flip both")
 
     def test_list_batch_source(self):
 
         source = self.source_list
         source_name = 'source_list'
 
+        seed = 10
+        # to_flip_h = [1, 0]
+        # to_flip_h = [1, 1]
+
         # test no flip
-        stream, to_flip_h, to_flip_v = \
-            self.utils_test_setup(source, source_name)
+        rng = numpy.random.RandomState(seed=seed)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   which_sources=(source_name,),
+                                   rng=rng)
         result = stream.transform_source_batch(source, source_name)
         expected = source
-        assert_allclose(result, expected, "no flip")
+        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch no flip")
+            for ex_result, ex_expected in zip(result, expected))
 
         # test flip horizontally
-        stream, to_flip_h, to_flip_v = \
-            self.utils_test_setup(source, source_name, flip_h=True)
+        rng = numpy.random.RandomState(seed=seed)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_h=True,
+                                   which_sources=(source_name,),
+                                   rng=rng)
         result = stream.transform_source_batch(source, source_name)
-        expected = [example * (1-to_flip_h) + example[..., ::-1] * to_flip_h
-                    for example in source]
-        assert_allclose(result, expected, "flip horizontally")
+        expected = [
+            numpy.array([[[0, 1],
+                          [2, 0]],
+
+                         [[0, 3],
+                          [4, 0]]]),
+
+            numpy.array([[[1, 2, 3],
+                          [0, 0, 0]],
+
+                         [[4, 5, 6],
+                          [0, 0, 0]]])
+        ]
+        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip horizontally")
+            for ex_result, ex_expected in zip(result, expected))
 
         # test flip vertically
-        stream, to_flip_h, to_flip_v = \
-            self.utils_test_setup(source, source_name, flip_v=True)
+        rng = numpy.random.RandomState(seed=seed)
+        rng.binomial(n=1, p=0.5, size=len(source))  # simulate first rng call
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_v=True,
+                                   which_sources=(source_name,),
+                                   rng=rng)
         result = stream.transform_source_batch(source, source_name)
-        expected = [example * (1-to_flip_v) + example[..., ::-1] * to_flip_v
-                    for example in source]
-        assert_allclose(result, expected, "flip horizontally")
+        expected = [
+            numpy.array([[[0, 2],
+                          [1, 0]],
+
+                         [[0, 4],
+                          [3, 0]]]),
+
+            numpy.array([[[0, 0, 0],
+                          [1, 2, 3]],
+
+                         [[0, 0, 0],
+                          [4, 5, 6]]])
+        ]
+        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip vertically")
+            for ex_result, ex_expected in zip(result, expected))
 
         # test flip both
-        stream, to_flip_h, to_flip_v = \
-            self.utils_test_setup(source, source_name, flip_h=True, flip_v=True)
+        rng = numpy.random.RandomState(seed=seed)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_h=True, flip_v=True,
+                                   which_sources=(source_name,),
+                                   rng=rng)
         result = stream.transform_source_batch(source, source_name)
-        sourcebis = [example * (1-to_flip_h) + example[..., ::-1] * to_flip_h
-                     for example in source]
-        expected = [example * (1-to_flip_v) + example[..., ::-1] * to_flip_v
-                    for example in sourcebis]
-        assert_allclose(result, expected, "flip both")
+        expected = [
+            numpy.array([[[2, 0],
+                          [0, 1]],
+
+                         [[4, 0],
+                          [0, 3]]]),
+
+            numpy.array([[[0, 0, 0],
+                          [1, 2, 3]],
+
+                         [[0, 0, 0],
+                          [4, 5, 6]]])
+        ]
+        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip both")
+            for ex_result, ex_expected in zip(result, expected))
+
+    def test_ndobject_batch_source(self):
+
+        source = self.source_ndobject
+        source_name = 'source_ndobject'
+        expected = numpy.empty((2,), dtype=object)
+
+        seed = 10
+        # to_flip_h = [1, 0]
+        # to_flip_v = [1, 1]
+
+        # test no flip
+        rng = numpy.random.RandomState(seed=seed)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   which_sources=(source_name,),
+                                   rng=rng)
+        result = stream.transform_source_batch(source, source_name)
+        expected = numpy.copy(source)
+        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch no flip")
+            for ex_result, ex_expected in zip(result, expected))
+
+        # test flip horizontally
+        rng = numpy.random.RandomState(seed=seed)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_h=True,
+                                   which_sources=(source_name,),
+                                   rng=rng)
+        result = stream.transform_source_batch(source, source_name)
+        expected[0] = numpy.array([[[0, 1],
+                                    [2, 0]],
+
+                                   [[0, 3],
+                                    [4, 0]]])
+        expected[1] = numpy.array([[[1, 2, 3],
+                                    [0, 0, 0]],
+
+                                   [[4, 5, 6],
+                                    [0, 0, 0]]])
+
+        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip horizontally")
+            for ex_result, ex_expected in zip(result, expected))
+
+        # test flip vertically
+        rng = numpy.random.RandomState(seed=seed)
+        rng.binomial(n=1, p=0.5, size=source.shape[0])  # simulate first rng call
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_v=True,
+                                   which_sources=(source_name,),
+                                   rng=rng)
+        result = stream.transform_source_batch(source, source_name)
+        expected[0] = numpy.array([[[0, 2],
+                                    [1, 0]],
+
+                                   [[0, 4],
+                                    [3, 0]]])
+        expected[1] = numpy.array([[[0, 0, 0],
+                                    [1, 2, 3]],
+
+                                   [[0, 0, 0],
+                                    [4, 5, 6]]])
+        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip vertically")
+            for ex_result, ex_expected in zip(result, expected))
+
+        # test flip both
+        rng = numpy.random.RandomState(seed=seed)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_h=True, flip_v=True,
+                                   which_sources=(source_name,),
+                                   rng=rng)
+        result = stream.transform_source_batch(source, source_name)
+        expected[0] = numpy.array([[[2, 0],
+                                    [0, 1]],
+
+                                   [[4, 0],
+                                    [0, 3]]])
+        expected[1] = numpy.array([[[0, 0, 0],
+                                    [1, 2, 3]],
+
+                                   [[0, 0, 0],
+                                    [4, 5, 6]]])
+
+        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip both")
+            for ex_result, ex_expected in zip(result, expected))
+
+    def test_ndarray_batch_source(self):
+
+        source = self.source_ndarray
+        source_name = 'source_ndarray'
+
+        seed = 10
+        # to_flip_h = [1, 0]
+        # to_flip_h = [1, 1]
+
+        # test no flip
+        rng = numpy.random.RandomState(seed=seed)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   which_sources=(source_name,),
+                                   rng=rng)
+        result = stream.transform_source_batch(source, source_name)
+        expected = source
+        assert_allclose(result, expected, err_msg="Mismatch no flip")
+
+        # test flip horizontally
+        rng = numpy.random.RandomState(seed=seed)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_h=True,
+                                   which_sources=(source_name,),
+                                   rng=rng)
+        result = stream.transform_source_batch(source, source_name)
+        expected = numpy.array([
+            [[[3, 2, 1],
+              [0, 0, 0]],
+
+             [[6, 5, 4],
+              [0, 0, 0]]],
+
+            [[[1, 2, 3],
+              [0, 0, 0]],
+
+             [[4, 5, 6],
+              [0, 0, 0]]]
+        ])
+        assert_allclose(result, expected, err_msg="Mismatch flip horizontally")
+
+        # test flip vertically
+        rng = numpy.random.RandomState(seed=seed)
+        rng.binomial(n=1, p=0.5, size=source.shape[0])  # simulate first rng call
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_v=True,
+                                   which_sources=(source_name,),
+                                   rng=rng)
+        result = stream.transform_source_batch(source, source_name)
+        expected = numpy.array([
+            [[[0, 0, 0],
+              [1, 2, 3]],
+
+             [[0, 0, 0],
+              [4, 5, 6]]],
+
+            [[[0, 0, 0],
+              [1, 2, 3]],
+
+             [[0, 0, 0],
+              [4, 5, 6]]]
+        ])
+        assert_allclose(result, expected, err_msg="Mismatch flip vertically")
+
+        # test flip both
+        rng = numpy.random.RandomState(seed=seed)
+        stream = RandomSpatialFlip(self.example_stream,
+                                   flip_h=True, flip_v=True,
+                                   which_sources=(source_name,),
+                                   rng=rng)
+        result = stream.transform_source_batch(source, source_name)
+        expected = numpy.array([
+            [[[0, 0, 0],
+              [3, 2, 1]],
+
+             [[0, 0, 0],
+              [6, 5, 4]]],
+
+            [[[0, 0, 0],
+              [1, 2, 3]],
+
+             [[0, 0, 0],
+              [4, 5, 6]]]
+        ])
+        assert_allclose(result, expected, err_msg="Mismatch flip both")
 
 
 class TestSamplewiseCropTransformer(object):

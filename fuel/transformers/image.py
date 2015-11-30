@@ -640,7 +640,7 @@ class RandomFixedSizeCrop3D(RandomFixedSizeCrop):
                off_z:off_z + window_z]
 
 
-class RandomSpatialFlip(SourcewiseTransformer, ExpectsAxisLabels):
+class RandomSpatialFlip(SourcewiseTransformer):
     """Randomly flip images horizontally and/or vertically.
 
     Parameters
@@ -677,52 +677,80 @@ class RandomSpatialFlip(SourcewiseTransformer, ExpectsAxisLabels):
         if self.rng is None:
             self.rng = numpy.random.RandomState(config.default_seed)
         kwargs.setdefault('produces_examples', data_stream.produces_examples)
-        kwargs.setdefault('axis_labels', data_stream.axis_labels)
         super(RandomSpatialFlip, self).__init__(data_stream, **kwargs)
 
     def transform_source_batch(self, source, source_name):
-        self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
-                                self.data_stream.axis_labels[source_name],
-                                source_name)
 
         # source is list of np.array with dim 3
         if isinstance(source, list) \
-                and all(isinstance(im, numpy.ndarray) and im.ndim == 3
-                        for im in source):
-            return [self.transform_source_example(im, source_name)
-                    for im in source]
-        # source is np.array of np.object which has 3 dims
+                and all(isinstance(example, numpy.ndarray) and example.ndim == 3
+                        for example in source):
+            to_flip_h, to_flip_v = self.flip_vectors(batch_size=len(source))
+            to_flip_h = to_flip_h.reshape(len(source)) == 1  # convert to bool list
+            to_flip_v = to_flip_v.reshape(len(source)) == 1
+
+            return [self.flip_example(example, ex_flip_h, ex_flip_v)
+                    for example, ex_flip_h, ex_flip_v
+                    in zip(source, to_flip_h, to_flip_v)]
+
+        # source is np.object of np.array with dim 3
         elif source.dtype == numpy.object:
-            return numpy.array([self.transform_source_example(im, source_name)
-                                for im in source])
-        # source is np.array with dim 4
+            to_flip_h, to_flip_v = self.flip_vectors(batch_size=source.shape[0])
+            to_flip_h = to_flip_h.reshape(source.shape[0]) == 1  # convert to bool list
+            to_flip_v = to_flip_v.reshape(source.shape[0]) == 1
+
+            output = numpy.empty(source.shape[0], dtype=object)
+
+            for i in xrange(source.shape[0]):
+                output[i] = self.flip_example(source[i], to_flip_h[i], to_flip_v[i])
+
+            return output
+
+        # source is np.array with dim 4 (batch, channels, height, width)
         elif isinstance(source, numpy.ndarray) and source.ndim == 4:
-            # Hardcoded assumption of (batch, channels, height, width).
-            # This is what the fast Cython code supports.
-            return self.transform_source_example(source, source_name)
+            to_flip_h, to_flip_v = self.flip_vectors(batch_size=source.shape[0])
+            to_flip_h = to_flip_h.reshape([source.shape[0]] + [1] * 3)
+            to_flip_v = to_flip_v.reshape([source.shape[0]] + [1] * 3)
+
+            output = self.flip_batch(source, to_flip_h, to_flip_v)
+
+            return output
+
         else:
             raise ValueError("uninterpretable batch format; expected a list "
                              "of arrays with ndim = 3, or an array with "
                              "ndim = 4")
 
-    def transform_source_example(self, example, source_name):
-        self.verify_axis_labels(('channel', 'height', 'width'),
-                                self.data_stream.axis_labels[source_name],
-                                source_name)
-        if not isinstance(example, numpy.ndarray) or example.ndim != 3:
-            raise ValueError("uninterpretable example format; expected "
-                             "ndarray with ndim = 3")
+    def flip_vectors(self, batch_size):
 
         if self.flip_h:
-
-            to_flip_h = self.rng.binomial(n=1, p=0.5, size=example.shape[0])\
-                .reshape([example.shape[0]] + [1] * (example.ndim-1))
-            example = example * (1-to_flip_h) + example[..., ::-1] * to_flip_h
+            to_flip_h = self.rng.binomial(n=1, p=0.5, size=batch_size)
+        else:
+            to_flip_h = numpy.zeros(batch_size)
 
         if self.flip_v:
+            to_flip_v = self.rng.binomial(n=1, p=0.5, size=batch_size)
+        else:
+            to_flip_v = numpy.zeros(batch_size)
 
-            to_flip_v = self.rng.binomial(n=1, p=0.5, size=example.shape[0])\
-                .reshape([example.shape[0]] + [1] * (example.ndim-1))
-            example = example * (1-to_flip_v) + example[..., ::-1, :] * to_flip_v
+        return to_flip_h, to_flip_v
+
+    @staticmethod
+    def flip_example(example, ex_flip_h=False, ex_flip_v=False):
+
+        if ex_flip_h:
+            example = example[..., ::-1]
+
+        if ex_flip_v:
+            example = example[..., ::-1, :]
 
         return example
+
+    @staticmethod
+    def flip_batch(batch, to_flip_h, to_flip_v):
+
+        batch = batch * (1-to_flip_h) + batch[..., ::-1] * to_flip_h
+        batch = batch * (1-to_flip_v) + batch[..., ::-1, :] * to_flip_v
+
+        return batch
+
