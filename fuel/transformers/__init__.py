@@ -1198,5 +1198,5 @@ class Drop(Transformer):
     def _dropout_func(self, volume, dropout, rng):
         dropout_cast = rng.binomial(1,
                                     1 - dropout,
-                                    size=volume.shape)
+                                    size=volume.shape).astype(volume.dtype)
         return volume * dropout_cast
