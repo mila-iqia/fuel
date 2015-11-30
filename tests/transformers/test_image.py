@@ -56,6 +56,7 @@ class TestImagesFromBytes(ImageTestingMixin):
                                                    size=self.shapes[1])
                                .astype('uint8'), mode='CMYK')
         pil3 = Image.fromarray(rng.random_integers(0, 255,
+
                                                    size=self.shapes[2])
                                .astype('uint8'), mode='RGB')
         pil4 = Image.fromarray(rng.random_integers(0, 255,

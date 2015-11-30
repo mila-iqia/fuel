@@ -679,49 +679,65 @@ class RandomSpatialFlip(SourcewiseTransformer):
         kwargs.setdefault('produces_examples', data_stream.produces_examples)
         super(RandomSpatialFlip, self).__init__(data_stream, **kwargs)
 
+    def transform_source_example(self, source_example, source_name,
+                                 example_flip_h=False, example_flip_v=False):
+        output = source_example
+
+        if example_flip_h:
+            output = output[..., ::-1]
+
+        if example_flip_v:
+            output = output[..., ::-1, :]
+
+        return output.astype(source_example.dtype)
+
     def transform_source_batch(self, source, source_name):
 
         # source is list of np.array with dim 3
         if isinstance(source, list) \
                 and all(isinstance(example, numpy.ndarray) and example.ndim == 3
                         for example in source):
-            to_flip_h, to_flip_v = self.flip_vectors(batch_size=len(source))
-            to_flip_h = to_flip_h.reshape(len(source)) == 1  # convert to bool list
-            to_flip_v = to_flip_v.reshape(len(source)) == 1
+            to_flip_h, to_flip_v = self.get_flip_vectors(batch_size=len(source))
+            to_flip_h = to_flip_h == 1  # convert to bool list
+            to_flip_v = to_flip_v == 1
 
-            return [self.flip_example(example, ex_flip_h, ex_flip_v)
-                    for example, ex_flip_h, ex_flip_v
-                    in zip(source, to_flip_h, to_flip_v)]
+            output = [self.transform_source_example(example, source_name,
+                                                    ex_flip_h, ex_flip_v)
+                      for example, ex_flip_h, ex_flip_v
+                      in zip(source, to_flip_h, to_flip_v)]
+
+            return output
 
         # source is np.object of np.array with dim 3
         elif source.dtype == numpy.object:
-            to_flip_h, to_flip_v = self.flip_vectors(batch_size=source.shape[0])
-            to_flip_h = to_flip_h.reshape(source.shape[0]) == 1  # convert to bool list
-            to_flip_v = to_flip_v.reshape(source.shape[0]) == 1
+            to_flip_h, to_flip_v = self.get_flip_vectors(batch_size=source.shape[0])
+            to_flip_h = to_flip_h == 1  # convert to bool list
+            to_flip_v = to_flip_v == 1
 
             output = numpy.empty(source.shape[0], dtype=object)
 
             for i in xrange(source.shape[0]):
-                output[i] = self.flip_example(source[i], to_flip_h[i], to_flip_v[i])
+                output[i] = self.transform_source_example(source[i], source_name,
+                                                          to_flip_h[i], to_flip_v[i])
 
             return output
 
         # source is np.array with dim 4 (batch, channels, height, width)
         elif isinstance(source, numpy.ndarray) and source.ndim == 4:
-            to_flip_h, to_flip_v = self.flip_vectors(batch_size=source.shape[0])
+            to_flip_h, to_flip_v = self.get_flip_vectors(batch_size=source.shape[0])
             to_flip_h = to_flip_h.reshape([source.shape[0]] + [1] * 3)
             to_flip_v = to_flip_v.reshape([source.shape[0]] + [1] * 3)
 
             output = self.flip_batch(source, to_flip_h, to_flip_v)
 
-            return output
+            return output.astype(source.dtype)
 
         else:
             raise ValueError("uninterpretable batch format; expected a list "
                              "of arrays with ndim = 3, or an array with "
                              "ndim = 4")
 
-    def flip_vectors(self, batch_size):
+    def get_flip_vectors(self, batch_size):
 
         if self.flip_h:
             to_flip_h = self.rng.binomial(n=1, p=0.5, size=batch_size)
@@ -734,17 +750,6 @@ class RandomSpatialFlip(SourcewiseTransformer):
             to_flip_v = numpy.zeros(batch_size)
 
         return to_flip_h, to_flip_v
-
-    @staticmethod
-    def flip_example(example, ex_flip_h=False, ex_flip_v=False):
-
-        if ex_flip_h:
-            example = example[..., ::-1]
-
-        if ex_flip_v:
-            example = example[..., ::-1, :]
-
-        return example
 
     @staticmethod
     def flip_batch(batch, to_flip_h, to_flip_v):
