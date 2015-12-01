@@ -1027,7 +1027,7 @@ class OneHotEncodingND(OneHotEncoding):
                              .format(source_batch.dtype))
 
 
-class Drop(Transformer):
+class Drop(SourcewiseTransformer):
     """
     Implement border drop (of size `border) and dropout`(with probability of
     dropping of `dropout`) on the volume directed by the variable
@@ -1037,8 +1037,8 @@ class Drop(Transformer):
     -----------
     stream: instance of :class:`DataStream`
         The wrapped data stream.
-    which_weight: str
-        Name of the source that will be affected by the transformer.
+    which_sources: str or list of str
+        Name of the sources that will be affected by the transformer.
     border: int
         Size of the border of the volume.
     dropout: float
@@ -1046,25 +1046,15 @@ class Drop(Transformer):
     produces_examples: bool
         True for example streams, False for batch streams
     """
-    def __init__(self, stream,
-                 which_weight=None, border=None, dropout=None,
+    def __init__(self, stream, which_sources,
+                 border=None, dropout=None,
                  produces_examples=False,
                  **kwargs):
         self.rng = kwargs.pop('rng', None)
         if self.rng is None:
             self.rng = numpy.random.RandomState(config.default_seed)
-        super(Drop, self).__init__(stream, **kwargs)
-        self.which_weight = which_weight
-        if self.which_weight is None:
-            import warnings
-            warnings.warn("The transformer will not affect the data stream as "
-                          "which_weight is None.", Warning)
-        elif self.which_weight not in self.data_stream.sources:
-            import warnings
-            warnings.warn("The transformer will not affect the data stram as "
-                          "which_weight does not correspond to any sources.",
-                          Warning)
-
+        super(Drop, self).__init__(stream, produces_examples, which_sources,
+                                   **kwargs)
         if border is None or isinstance(border, int):
             self.border = border
         else:
@@ -1078,15 +1068,6 @@ class Drop(Transformer):
                                  "0 and 1 (value passed: {}).".format(dropout))
         else:
             self.dropout = dropout
-        self.data = False
-        self.produces_examples = produces_examples
-
-    def _apply_transformation(self, data, method):
-        data = list(data)
-        for i, source_name in enumerate(self.data_stream.sources):
-            if source_name == self.which_weight:
-                data[i] = method(data[i], source_name)
-        return tuple(data)
 
     def get_data(self, request=None):
         if request is not None:
@@ -1125,14 +1106,6 @@ class Drop(Transformer):
             raise ValueError("uninterpretable example format; expected "
                              "ndarray with ndim = 3 or ndim = 4, "
                              "got {} instead".format(type(example)))
-
-    def transform_example(self, example):
-        return self._apply_transformation(
-            data=example, method=self.transform_source_example)
-
-    def transform_batch(self, batch):
-        return self._apply_transformation(
-            data=batch, method=self.transform_source_batch)
 
     def _border_func(self, volume, border, flag=None):
         if flag == 'source':
@@ -1184,10 +1157,10 @@ class Drop(Transformer):
         else:
             raise ValueError("Expected flag as 'source' or 'example' "
                              "got {} instead".format(flag))
-        return volume
+        return volume.astype(volume.dtype)
 
     def _dropout_func(self, volume, dropout, rng):
         dropout_cast = rng.binomial(1,
                                     1 - dropout,
-                                    size=volume.shape).astype(volume.dtype)
-        return volume * dropout_cast
+                                    size=volume.shape)
+        return (volume * dropout_cast).astype(volume.dtype)

@@ -833,30 +833,17 @@ class TestDrop(object):
         self.stream['volume'] = DataStream(IterableDataset(
             self.data['volume']), axis_labels=self.axis_labels_vol)
         self.dropstream = Drop(stream=self.stream['image'],
-                               which_weight='weight')
+                               which_sources='weight')
 
     def test_init(self):
-        # Warning weight
-        with warnings.catch_warnings(record=True) as w:
-            # Cause all warnings to always be triggered.
-            warnings.simplefilter("always")
-            # Trigger warnings
-            # Not in sources
-            Drop(stream=self.stream['image'], which_weight='uwotm9')
-            # None
-            Drop(stream=self.stream['image'])
-            # Assert warnings were triggered
-            assert len(w) == 2
-            for i in range(len(w)):
-                assert issubclass(w[i].category, Warning)
         # Illegal border
         kwargs = {'stream': self.stream['image'],
-                  'which_weight': 'weight',
+                  'which_sources': 'weight',
                   'border': 'kek'}
         assert_raises(ValueError, Drop, **kwargs)
         # Illegal dropout
         kwargs = {'stream': self.stream['image'],
-                  'which_weight': 'weight',
+                  'which_sources': 'weight',
                   'dropout': 'lel'}
         assert_raises(ValueError, Drop, **kwargs)
 
@@ -923,7 +910,7 @@ class TestDrop(object):
         assert numpy.allclose(self.dropstream.transform_source_example(
             array, '420'), array)
         # Border drop
-        dropstream = Drop(stream=self.stream['image'], which_weight='weight',
+        dropstream = Drop(stream=self.stream['image'], which_sources='weight',
                           border=2)
         result = numpy.zeros([5, 5, 5]).reshape([1, 5, 5, 5])
         result[:, 2, 2, 2] = 62
@@ -936,7 +923,7 @@ class TestDrop(object):
         result[:, 1, 1] = 0
         result[:, 4, 1] = 0
         kwargs = {'rng': rng}
-        dropstream = Drop(stream=self.stream['image'], which_weight='weight',
+        dropstream = Drop(stream=self.stream['image'], which_sources='weight',
                           dropout=0.2, **kwargs)
         assert numpy.allclose(result,
                               dropstream.transform_source_example(
@@ -954,7 +941,7 @@ class TestDrop(object):
         assert numpy.allclose(self.dropstream.transform_source_batch(
             array, '420'), array)
         # Border drop
-        dropstream = Drop(stream=self.stream['image'], which_weight='weight',
+        dropstream = Drop(stream=self.stream['image'], which_sources='weight',
                           border=2)
         result = numpy.zeros([5, 5, 5]).reshape([1, 1, 5, 5, 5])
         result[:, :, 2, 2, 2] = 62
@@ -967,18 +954,7 @@ class TestDrop(object):
         result[:, :, 1, 1] = 0
         result[:, :, 4, 1] = 0
         kwargs = {'rng': rng}
-        dropstream = Drop(stream=self.stream['image'], which_weight='weight',
+        dropstream = Drop(stream=self.stream['image'], which_sources='weight',
                           dropout=0.2, **kwargs)
         assert numpy.allclose(result,
                               dropstream.transform_source_batch(array, '420'))
-
-    def test_apply_transformation(self):
-        # Test that only the source which_weight is affected
-        original = self.data_im['weight'][0].copy()
-        dropstream = Drop(stream=self.stream['image'], which_weight='weight',
-                          border=2)
-        dropstream.get_epoch_iterator()
-        transformed_data = dropstream.get_data()
-        assert numpy.allclose(transformed_data[0], self.data_im['volume1'][0])
-        assert numpy.allclose(transformed_data[1], self.data_im['volume2'][0])
-        assert not numpy.all(transformed_data[2] == original)
