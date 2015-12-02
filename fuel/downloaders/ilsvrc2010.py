@@ -25,13 +25,13 @@ def fill_subparser(subparser):
     urls = [
         ('http://www.image-net.org/challenges/LSVRC/2010/'
          'ILSVRC2010_test_ground_truth.txt'),
-        ('http://www.image-net.org/challenges/LSVRC/2010/',
+        ('http://www.image-net.org/challenges/LSVRC/2010/'
          'download/ILSVRC2010_devkit-1.0.tar.gz'),
     ] + ([None] * len(IMAGE_TARS))
     filenames = [None, None] + list(IMAGE_TARS)
-    subparser.set_defaults(
-        func=default_downloader, urls=urls, filenames=filenames)
-    subparser.add_argument('--url-prefix', type=str, default=None,
+    subparser.set_defaults(urls=urls, filenames=filenames)
+    subparser.add_argument('-P', '--url-prefix', type=str, default=None,
                            help="URL prefix to prepend to the filenames of "
                                 "non-public files, in order to download them. "
                                 "Be sure to include the trailing slash.")
+    return default_downloader

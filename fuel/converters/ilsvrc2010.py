@@ -16,6 +16,7 @@ from scipy.io.matlab import loadmat
 from six.moves import zip, xrange
 import zmq
 
+from fuel.converters.base import check_exists
 from fuel.datasets import H5PYDataset
 from fuel.utils.formats import tar_open
 from fuel.utils.parallel import producer_consumer
@@ -38,6 +39,7 @@ PUBLIC_FILES = TEST_GROUNDTRUTH, DEVKIT_ARCHIVE
 ALL_FILES = PUBLIC_FILES + IMAGE_TARS
 
 
+@check_exists(required_files=ALL_FILES)
 def convert_ilsvrc2010(directory, output_directory,
                        output_filename='ilsvrc2010.hdf5',
                        shuffle_seed=config.default_seed):
@@ -99,7 +101,7 @@ def fill_subparser(subparser):
         "--shuffle-seed", help="Seed to use for randomizing order of the "
                                "training set on disk.",
         default=config.default_seed, type=int, required=False)
-    subparser.set_defaults(func=convert_ilsvrc2010)
+    return convert_ilsvrc2010
 
 
 def prepare_metadata(devkit_archive, test_groundtruth_path):
