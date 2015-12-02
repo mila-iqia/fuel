@@ -15,6 +15,7 @@ from fuel.transformers import (
     ExpectsAxisLabels, Transformer, Mapping, SortMapping, ForceFloatX, Filter,
     Cache, Batch, Padding, MultiProcessing, Unpack, Merge,
     SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename, FilterSources)
+from fuel.transformers.defaults import ToBytes
 
 
 class FlagDataStream(DataStream):
@@ -723,3 +724,26 @@ class TestExpectsAxisLabels(object):
     def test_exception(self):
         assert_raises(ValueError, self.obj.verify_axis_labels, ('a', 'b', 'c'),
                       ('b', 'c', 'd'), 'foo')
+
+
+class TestToBytes(object):
+    def setUp(self):
+        self.string_data = [b'Hello', b'World!']
+        self.dataset = IndexableDataset(
+            indexables={'words': [numpy.fromstring(s, dtype='uint8')
+                                  for s in self.string_data]},
+            axis_labels={'words': ('batch', 'bytes')})
+
+    def test_examplewise(self):
+        stream = DataStream(
+            dataset=self.dataset, iteration_scheme=SequentialExampleScheme(2))
+        decoded_stream = ToBytes(stream)
+        assert_equal(self.string_data,
+                     [s for s, in decoded_stream.get_epoch_iterator()])
+
+    def test_batchwise(self):
+        stream = DataStream(
+            dataset=self.dataset, iteration_scheme=SequentialScheme(2, 2))
+        decoded_stream = ToBytes(stream)
+        assert_equal([self.string_data],
+                     [s for s, in decoded_stream.get_epoch_iterator()])
