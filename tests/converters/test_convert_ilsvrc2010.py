@@ -263,7 +263,12 @@ def create_fake_jpeg_tar(seed, min_num_images=5, max_num_images=50,
                 tar.add(f.name, arcname=fn)
             finally:
                 os.remove(f.name)
-    return temp_tar.getvalue(), files[:len(images)]
+    ordered_files = []
+    with tarfile.open(fileobj=io.BytesIO(temp_tar.getvalue()),
+                      mode='r') as tar:
+        for info in tar.getmembers():
+            ordered_files.append(info.name)
+    return temp_tar.getvalue(), ordered_files
 
 
 def create_fake_tar_of_tars(seed, num_inner_tars, *args, **kwargs):
