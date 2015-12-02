@@ -270,3 +270,99 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
             off_w = 0
         return example[:, off_h:off_h + windowed_height,
                        off_w:off_w + windowed_width]
+
+
+class FixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
+    """Crop images to a fixed window size.
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream`
+        The data stream to wrap.
+    window_shape : tuple
+        The `(height, width)` tuple representing the size of the output
+        window.
+    location : tuple
+        Location of the crop (height, width) given relatively to the volume
+        (each between 0 and 1, where (0, 0) is the top left corner and (1,
+        1) the lower right corner and (.5, .5) the center).
+    Notes
+    -----
+    This transformer expects to act on stream sources which provide one of
+     * Single images represented as 3-dimensional ndarrays, with layout
+       `(channel, height, width)`.
+     * Batches of images represented as lists of 3-dimensional ndarrays,
+       possibly of different shapes (i.e. images of differing
+       heights/widths).
+     * Batches of images represented as 4-dimensional ndarrays, with
+       layout `(batch, channel, height, width)`.
+    The format of the stream will be un-altered, i.e. if lists are
+    yielded by `data_stream` then lists will be yielded by this
+    transformer.
+    """
+    def __init__(self, data_stream, window_shape, location, **kwargs):
+        self.window_shape = window_shape
+        self.warned_axis_labels = False
+        if not isinstance(location, (list, tuple)) or len(location) != 2:
+            raise ValueError('Location must be a tuple or list of length 2 '
+                             '(given {}).'.format(location))
+        if location[0] < 0 or location[0] > 1 or location[1] < 0 or \
+                        location[1] > 1:
+            raise ValueError('Location height and width must be between 0 '
+                             'and 1 (given {}).'.format(location))
+        self.location = location
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        super(FixedSizeCrop, self).__init__(data_stream, **kwargs)
+
+    def transform_source_batch(self, source, source_name):
+        self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
+        if isinstance(source, list) and all(isinstance(b, numpy.ndarray) and
+                                            b.ndim == 3 for b in source):
+            return [self.transform_source_example(im, source_name)
+                    for im in source]
+        elif isinstance(source, numpy.ndarray) and \
+                        source.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(im,
+                                                              source_name)
+                                for im in source])
+        elif isinstance(source, numpy.ndarray) and source.ndim == 4:
+            # Hardcoded assumption of (batch, channels, height, width).
+            # This is what the fast Cython code supports.
+            windowed_height, windowed_width = self.window_shape
+            image_height, image_width = source.shape[2:]
+            loc_height, loc_width = self.location
+            if image_height < windowed_height or image_width < windowed_width:
+                raise ValueError("can't obtain ({}, {}) window from image "
+                                 "dimensions ({}, {})".format(
+                                     windowed_height, windowed_width,
+                                     image_height, image_width))
+            off_h = int(round((image_height - windowed_height) * loc_height))
+            off_w = int(round((image_width - windowed_width) * loc_width))
+            return source[:, :, off_h:off_h + windowed_height,
+                          off_w:off_w + windowed_width]
+        else:
+            raise ValueError("uninterpretable batch format; expected a list "
+                             "of arrays with ndim = 3, or an array with "
+                             "ndim = 4")
+
+    def transform_source_example(self, example, source_name):
+        self.verify_axis_labels(('channel', 'height', 'width'),
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
+        windowed_height, windowed_width = self.window_shape
+        loc_height, loc_width = self.location
+        if not isinstance(example, numpy.ndarray) or example.ndim != 3:
+            raise ValueError("uninterpretable example format; expected "
+                             "ndarray with ndim = 3")
+        image_height, image_width = example.shape[1:]
+        if image_height < windowed_height or image_width < windowed_width:
+            raise ValueError("can't obtain ({}, {}) window from image "
+                             "dimensions ({}, {})".format(
+                                 windowed_height, windowed_width,
+                                 image_height, image_width))
+        off_h = int(round((image_height - windowed_height) * loc_height))
+        off_w = int(round((image_width - windowed_width) * loc_width))
+        return example[:, off_h:off_h + windowed_height,
+                       off_w:off_w + windowed_width]
