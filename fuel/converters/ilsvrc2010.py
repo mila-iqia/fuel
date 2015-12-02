@@ -386,7 +386,7 @@ def other_set_producer(socket, which_set, image_archive, patch_archive,
 
 
 def load_from_tar_or_patch(tar, image_filename, patch_images):
-    """Do everything necessary to process a image inside a TAR.
+    """Do everything necessary to process an image inside a TAR.
 
     Parameters
     ----------
