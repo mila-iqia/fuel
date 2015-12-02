@@ -6,7 +6,6 @@ from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
 import pyximport
-pyximport.install()
 
 from fuel import config
 from fuel.datasets.base import IndexableDataset, IterableDataset
@@ -17,6 +16,8 @@ from fuel.transformers.image import (ImagesFromBytes,
                                      RandomFixedSizeCrop,
                                      RandomSpatialFlip,
                                      SamplewiseCropTransformer)
+
+pyximport.install()
 
 
 def reorder_axes(shp):
@@ -56,7 +57,6 @@ class TestImagesFromBytes(ImageTestingMixin):
                                                    size=self.shapes[1])
                                .astype('uint8'), mode='CMYK')
         pil3 = Image.fromarray(rng.random_integers(0, 255,
-
                                                    size=self.shapes[2])
                                .astype('uint8'), mode='RGB')
         pil4 = Image.fromarray(rng.random_integers(0, 255,
@@ -338,9 +338,12 @@ class TestRandomSpatialFlip(ImageTestingMixin):
               [0, 0, 0]]]
         ])
 
-        self.dataset = IndexableDataset(OrderedDict([('source_list', self.source_list),
-                                                     ('source_ndobject', self.source_ndobject),
-                                                     ('source_ndarray', self.source_ndarray)]), )
+        self.dataset = IndexableDataset(OrderedDict([
+                ('source_list', self.source_list),
+                ('source_ndobject', self.source_ndobject),
+                ('source_ndarray', self.source_ndarray)
+            ]))
+
         self.common_setup()
 
     def test_list_batch_source(self):
@@ -382,7 +385,8 @@ class TestRandomSpatialFlip(ImageTestingMixin):
                          [[4, 5, 6],
                           [0, 0, 0]]])
         ]
-        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip horizontally")
+        all(assert_allclose(ex_result, ex_expected,
+                            err_msg="Mismatch flip horizontally")
             for ex_result, ex_expected in zip(result, expected))
 
         # test flip vertically
@@ -406,7 +410,8 @@ class TestRandomSpatialFlip(ImageTestingMixin):
                          [[0, 0, 0],
                           [4, 5, 6]]])
         ]
-        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip vertically")
+        all(assert_allclose(ex_result, ex_expected,
+                            err_msg="Mismatch flip vertically")
             for ex_result, ex_expected in zip(result, expected))
 
         # test flip both
@@ -429,7 +434,8 @@ class TestRandomSpatialFlip(ImageTestingMixin):
                          [[0, 0, 0],
                           [4, 5, 6]]])
         ]
-        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip both")
+        all(assert_allclose(ex_result, ex_expected,
+                            err_msg="Mismatch flip both")
             for ex_result, ex_expected in zip(result, expected))
 
     def test_ndobject_batch_source(self):
@@ -470,12 +476,13 @@ class TestRandomSpatialFlip(ImageTestingMixin):
                                    [[4, 5, 6],
                                     [0, 0, 0]]])
 
-        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip horizontally")
+        all(assert_allclose(ex_result, ex_expected,
+                            err_msg="Mismatch flip horizontally")
             for ex_result, ex_expected in zip(result, expected))
 
         # test flip vertically
         rng = numpy.random.RandomState(seed=seed)
-        rng.binomial(n=1, p=0.5, size=source.shape[0])  # simulate first rng call
+        rng.binomial(n=1, p=0.5, size=source.shape[0])  # force first rng call
         stream = RandomSpatialFlip(self.example_stream,
                                    flip_v=True,
                                    which_sources=(source_name,),
@@ -491,7 +498,8 @@ class TestRandomSpatialFlip(ImageTestingMixin):
 
                                    [[0, 0, 0],
                                     [4, 5, 6]]])
-        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip vertically")
+        all(assert_allclose(ex_result, ex_expected,
+                            err_msg="Mismatch flip vertically")
             for ex_result, ex_expected in zip(result, expected))
 
         # test flip both
@@ -512,7 +520,8 @@ class TestRandomSpatialFlip(ImageTestingMixin):
                                    [[0, 0, 0],
                                     [4, 5, 6]]])
 
-        all(assert_allclose(ex_result, ex_expected, err_msg="Mismatch flip both")
+        all(assert_allclose(ex_result, ex_expected,
+                            err_msg="Mismatch flip both")
             for ex_result, ex_expected in zip(result, expected))
 
     def test_ndarray_batch_source(self):
@@ -557,7 +566,7 @@ class TestRandomSpatialFlip(ImageTestingMixin):
 
         # test flip vertically
         rng = numpy.random.RandomState(seed=seed)
-        rng.binomial(n=1, p=0.5, size=source.shape[0])  # simulate first rng call
+        rng.binomial(n=1, p=0.5, size=source.shape[0])  # force first rng call
         stream = RandomSpatialFlip(self.example_stream,
                                    flip_v=True,
                                    which_sources=(source_name,),
