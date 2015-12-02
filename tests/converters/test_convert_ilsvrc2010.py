@@ -4,7 +4,6 @@ import io
 import os
 import tarfile
 from tempfile import NamedTemporaryFile
-import unittest
 import gzip
 
 import numpy
@@ -24,6 +23,7 @@ from fuel.converters.ilsvrc2010 import (extract_patch_images,
                                         prepare_hdf5_file,
                                         prepare_metadata,
                                         process_train_set,
+                                        process_other_set,
                                         read_devkit,
                                         read_metadata_mat_file,
                                         train_set_producer,
@@ -423,14 +423,39 @@ def test_process_train_set():
                       io.BytesIO(patches_data), len(all_jpegs),
                       wnid_map)
 
-    # XXX TODO
+    # Other tests cover that the actual images are what they should be.
+    # Just do a basic verification of the filenames and targets.
 
     assert set(all_jpegs) == set(s.decode('ascii')
                                  for s in hdf5_file['filenames'][:, 0])
+    assert len(hdf5_file['encoded_images'][:]) == len(all_jpegs)
+    assert len(hdf5_file['targets'][:]) == len(all_jpegs)
 
 
 def test_process_other_set():
-    raise unittest.SkipTest("TODO")
+    images, all_filenames = create_fake_jpeg_tar(3, min_num_images=30,
+                                                 max_num_images=40,
+                                                 gzip_probability=0.0)
+    all_filenames_shuffle = numpy.array(all_filenames)
+    numpy.random.RandomState(20151202).shuffle(all_filenames_shuffle)
+    patched_files = all_filenames_shuffle[:15]
+    patches_data = create_fake_patch_images(filenames=patched_files,
+                                            num_train=0, num_valid=15,
+                                            num_test=0)
+    hdf5_file = MockH5PYFile()
+    OFFSET = 50
+    prepare_hdf5_file(hdf5_file, OFFSET, len(all_filenames), 0)
+    groundtruth = [i % 10 for i in range(len(all_filenames))]
+    process_other_set(hdf5_file, 'valid', io.BytesIO(images),
+                      io.BytesIO(patches_data), groundtruth, OFFSET)
+
+    # Other tests cover that the actual images are what they should be.
+    # Just do a basic verification of the filenames.
+
+    assert all(hdf5_file['targets'][OFFSET:, 0] == groundtruth)
+    assert all(a.decode('ascii') == b
+               for a, b in zip(hdf5_file['filenames'][OFFSET:, 0],
+                               all_filenames))
 
 
 def test_train_set_producer():
