@@ -27,9 +27,8 @@ class ILSVRC2010(H5PYDataset):
     Parameters
     ----------
     which_sets : tuple of str
-        Which split to load. Valid values are 'train' and 'test',
-        corresponding to the training set (50,000 examples) and the test
-        set (10,000 examples).
+        Which split to load. Valid values are 'train' (1.2M examples)
+        'valid' (150,000 examples), and 'test' (50,000 examples).
 
     """
     filename = 'ilsvrc2010.hdf5'
