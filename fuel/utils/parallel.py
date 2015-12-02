@@ -23,7 +23,7 @@ def _producer_wrapper(f, port, addr='tcp://127.0.0.1'):
         The port on which the socket should connect.
     addr : str, optional
         Address to which the socket should connect. Defaults
-        to localhost.
+        to localhost ('tcp://127.0.0.1').
 
     """
     try:
@@ -68,6 +68,9 @@ def producer_consumer(producer, consumer, addr='tcp://127.0.0.1',
     consumer : callable
         Callable that takes a single argument, a handle
         for a ZeroMQ PULL socket.
+    addr : str, optional
+        Address to which the socket should connect. Defaults
+        to localhost ('tcp://127.0.0.1').
     port : int, optional
         The port on which the consumer should listen.
     context : zmq.Context, optional
