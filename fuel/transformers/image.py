@@ -172,7 +172,7 @@ class MinimumImageDimensions(SourcewiseTransformer, ExpectsAxisLabels):
         return example
 
 
-class SamplewiseCropTransformer(Transformer, ExpectsAxisLabels):
+class SamplewiseCropTransformer(Transformer):
     """Applies same transformation to all data from get_epoch ("batchwise").
 
     Subclasses must define `transform_source_example` (to transform
@@ -350,14 +350,7 @@ class SamplewiseCropTransformer(Transformer, ExpectsAxisLabels):
             rng = numpy.random.RandomState(randint)
         else:
             rng = numpy.random.RandomState(randint)
-        if len(source[2:]) == 2:
-            self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
-                                    self.data_stream.axis_labels[source_name],
-                                    source_name)
-        elif len(source[2:]) == 3:
-            self.verify_axis_labels(('batch', 'channel', 'x', 'y', 'z'),
-                                    self.data_stream.axis_labels[source_name],
-                                    source_name)
+
         if source.dtype == numpy.object:
             return numpy.array([self.transform_source_example(im, source_name,
                                                               randint)
@@ -420,14 +413,6 @@ class SamplewiseCropTransformer(Transformer, ExpectsAxisLabels):
             rng = numpy.random.RandomState(config.default_seed)
         else:
             rng = numpy.random.RandomState(randint)
-        if len(example) == 3:
-            self.verify_axis_labels(('channel', 'height', 'width'),
-                                    self.data_stream.axis_labels[source_name],
-                                    source_name)
-        elif len(example) == 4:
-            self.verify_axis_labels(('channel', 'x', 'y', 'z'),
-                                    self.data_stream.axis_labels[source_name],
-                                    source_name)
 
         if not isinstance(example, numpy.ndarray) or \
                         example.ndim not in [3, 4]:
