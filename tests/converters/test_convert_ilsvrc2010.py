@@ -357,20 +357,26 @@ def test_prepare_hdf5_file():
     hdf5_file = MockH5PYFile()
     prepare_hdf5_file(hdf5_file, 10, 5, 2)
 
+    def get_start_stop(hdf5_file, split):
+        rows = [r for r in hdf5_file.attrs['split'] if
+                (r['split'].decode('utf8') == split)]
+        return dict([(r['source'].decode('utf8'), (r['start'], r['stop']))
+                     for r in rows])
+
     # Verify properties of the train split.
-    train_splits = H5PYDataset.get_start_stop(hdf5_file, 'train')
+    train_splits = get_start_stop(hdf5_file, 'train')
     assert all(v == (0, 10) for v in train_splits.values())
     assert set(train_splits.keys()) == set(['encoded_images', 'targets',
                                             'filenames'])
 
     # Verify properties of the valid split.
-    valid_splits = H5PYDataset.get_start_stop(hdf5_file, 'valid')
+    valid_splits = get_start_stop(hdf5_file, 'valid')
     assert all(v == (10, 15) for v in valid_splits.values())
     assert valid_splits.keys() == set(['encoded_images', 'targets',
                                        'filenames'])
 
     # Verify properties of the test split.
-    test_splits = H5PYDataset.get_start_stop(hdf5_file, 'test')
+    test_splits = get_start_stop(hdf5_file, 'test')
     assert all(v == (15, 17) for v in test_splits.values())
     assert test_splits.keys() == set(['encoded_images', 'targets',
                                       'filenames'])
