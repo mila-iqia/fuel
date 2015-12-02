@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from io import BytesIO
 import numpy
-from numpy.testing import assert_raises
+from numpy.testing import assert_raises, assert_allclose
 from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
@@ -17,8 +17,6 @@ from fuel.transformers.image import (ImagesFromBytes,
                                      RandomSpatialFlip,
                                      SamplewiseCropTransformer,
                                      FixedSizeCrop)
-
-pyximport.install()
 
 
 def reorder_axes(shp):
