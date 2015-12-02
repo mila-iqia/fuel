@@ -20,7 +20,9 @@ class ToBytes(SourcewiseTransformer):
     """
     def __init__(self, stream, **kwargs):
         kwargs.setdefault('produces_examples', stream.produces_examples)
-        axis_labels = stream.axis_labels
+        axis_labels = (stream.axis_labels
+                       if stream.axis_labels is not None
+                       else {})
         for source in kwargs.get('which_sources', stream.sources):
             axis_labels[source] = (('batch', 'bytes')
                                    if 'batch' in axis_labels.get(source, ())
