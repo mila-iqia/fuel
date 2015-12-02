@@ -1,12 +1,12 @@
 from collections import OrderedDict
 from io import BytesIO
 import numpy
-from numpy.testing import assert_raises, assert_allclose
+from numpy.testing import assert_raises
 from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
 import pyximport
-
+pyximport.install()
 from fuel import config
 from fuel.datasets.base import IndexableDataset, IterableDataset
 from fuel.schemes import ShuffledScheme, SequentialExampleScheme
@@ -15,7 +15,8 @@ from fuel.transformers.image import (ImagesFromBytes,
                                      MinimumImageDimensions,
                                      RandomFixedSizeCrop,
                                      RandomSpatialFlip,
-                                     SamplewiseCropTransformer)
+                                     SamplewiseCropTransformer,
+                                     FixedSizeCrop)
 
 pyximport.install()
 
@@ -711,3 +712,114 @@ class TestSamplewiseCropTransformer(object):
 
         assert numpy.allclose(new_volume,
                               volume / volume[:, :, 2:-1, 2:-1, 2:-1].sum())
+
+
+class TestFixedSizeCrop(ImageTestingMixin):
+    def setUp(self):
+        source1 = numpy.zeros((9, 3, 7, 5), dtype='uint8')
+        source1[:] = numpy.arange(3 * 7 * 5, dtype='uint8').reshape(3, 7, 5)
+        shapes = [(5, 8), (6, 8), (5, 6), (5, 5), (6, 4), (7, 4),
+                  (9, 4), (5, 6), (6, 5)]
+        source2 = []
+        biggest = 0
+        num_channels = 2
+        for shp in shapes:
+            biggest = max(biggest, shp[0] * shp[1] * 2)
+            ex = numpy.arange(shp[0] * shp[1] * num_channels).reshape(
+                (num_channels,) + shp).astype('uint8')
+            source2.append(ex)
+        self.source2_biggest = biggest
+        source3 = numpy.empty((len(shapes),), dtype=object)
+        for i in range(len(source2)):
+            source3[i] = source2[i]
+        axis_labels = {'source1': ('batch', 'channel', 'height', 'width'),
+                       'source2': ('batch', 'channel', 'height', 'width'),
+                       'source3': ('batch', 'channel', 'height', 'width')}
+        self.dataset = IndexableDataset(OrderedDict([('source1', source1),
+                                                     ('source2', source2),
+                                                     ('source3', source3)]),
+                                        axis_labels=axis_labels)
+        self.common_setup()
+
+    def test_ndarray_batch_source(self):
+        # Make sure that with 4 corner crops we sample everything.
+        seen_indices = numpy.array([], dtype='uint8')
+        for loc in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+            stream = FixedSizeCrop(self.batch_stream, (5, 4),
+                                   which_sources=('source1',), location=loc)
+            batch = stream.get_epoch_iterator().next()
+            assert batch[0].shape[1:] == (3, 5, 4)
+            assert batch[0].shape[0] in (1, 2)
+            # seen indices should only be of that length in after last location
+            if 3 * 7 * 5 == len(seen_indices):
+                assert False
+            seen_indices = numpy.union1d(seen_indices, batch[0].flatten())
+        assert 3 * 7 * 5 == len(seen_indices)
+
+    def test_list_batch_source(self):
+        # Make sure that with 4 corner crops we sample everything.
+        seen_indices = numpy.array([], dtype='uint8')
+
+        for loc in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+            stream = FixedSizeCrop(self.batch_stream, (5, 4),
+                                   which_sources=('source2',), location=loc)
+            # seen indices should only be of that length in after last location
+            if self.source2_biggest == len(seen_indices):
+                assert False
+            for batch in stream.get_epoch_iterator():
+                for example in batch[1]:
+                    assert example.shape == (2, 5, 4)
+                    seen_indices = numpy.union1d(seen_indices,
+                                                 example.flatten())
+        assert self.source2_biggest == len(seen_indices)
+
+    def test_objectarray_batch_source(self):
+        # Make sure that with 4 corner crops we sample everything.
+        seen_indices = numpy.array([], dtype='uint8')
+
+        for loc in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+            stream = FixedSizeCrop(self.batch_stream, (5, 4),
+                                   which_sources=('source3',), location=loc)
+            # seen indices should only be of that length in after last location
+            if self.source2_biggest == len(seen_indices):
+                assert False
+            for batch in stream.get_epoch_iterator():
+                for example in batch[2]:
+                    print example.shape
+                    assert example.shape == (2, 5, 4)
+                    seen_indices = numpy.union1d(seen_indices,
+                                                 example.flatten())
+        assert self.source2_biggest == len(seen_indices)
+
+    def test_wrong_location_exceptions(self):
+        assert_raises(ValueError, FixedSizeCrop, self.example_stream, (5, 4),
+                      which_sources=('source2',), location=1)
+        assert_raises(ValueError, FixedSizeCrop, self.example_stream, (5, 4),
+                      which_sources=('source2',), location=[0, 1, 0])
+        assert_raises(ValueError, FixedSizeCrop, self.example_stream, (5, 4),
+                      which_sources=('source2',), location=[2, 0])
+
+    def test_format_exceptions(self):
+        estream = FixedSizeCrop(self.example_stream, (5, 4),
+                                which_sources=('source2',), location=[0, 0])
+        bstream = FixedSizeCrop(self.batch_stream, (5, 4),
+                                which_sources=('source2',), location=[0, 0])
+        assert_raises(ValueError, estream.transform_source_example,
+                      numpy.empty((5, 6)), 'source2')
+        assert_raises(ValueError, bstream.transform_source_batch,
+                      [numpy.empty((7, 6))], 'source2')
+        assert_raises(ValueError, bstream.transform_source_batch,
+                      [numpy.empty((8, 6))], 'source2')
+
+    def test_window_too_big_exceptions(self):
+        stream = FixedSizeCrop(self.example_stream, (5, 4),
+                               which_sources=('source2',), location=[0, 0])
+
+        assert_raises(ValueError, stream.transform_source_example,
+                      numpy.empty((3, 4, 2)), 'source2')
+
+        bstream = FixedSizeCrop(self.batch_stream, (5, 4),
+                                which_sources=('source1',), location=[0, 0])
+
+        assert_raises(ValueError, bstream.transform_source_batch,
+                      numpy.empty((5, 3, 4, 2)), 'source1')
