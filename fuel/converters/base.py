@@ -7,6 +7,7 @@ import numpy
 from progressbar import (ProgressBar, Percentage, Bar, ETA)
 
 from fuel.datasets import H5PYDataset
+
 from ..exceptions import MissingInputFiles
 
 
