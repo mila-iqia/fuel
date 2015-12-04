@@ -32,3 +32,8 @@ def test_cifar10():
     assert data.dtype == config.floatX
 
     assert_raises(ValueError, CIFAR10, ('valid',))
+
+    dummy = CIFAR10(('train',), subset=slice(50000, 60000))
+    handle = dummy.open()
+    assert_raises(ValueError, dummy.get_data, handle, slice(0, 10000))
+    dummy.close(handle)

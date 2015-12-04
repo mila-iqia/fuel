@@ -18,6 +18,7 @@ from fuel.transformers import (
     Cache, Batch, Padding, MultiProcessing, Unpack, Merge,
     SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename,
     FilterSources, OneHotEncoding, Drop)
+from fuel.transformers.defaults import ToBytes
 
 
 class FlagDataStream(DataStream):
@@ -958,3 +959,26 @@ class TestDrop(object):
                           dropout=0.2, **kwargs)
         assert numpy.allclose(result,
                               dropstream.transform_source_batch(array, '420'))
+
+
+class TestToBytes(object):
+    def setUp(self):
+        self.string_data = [b'Hello', b'World!']
+        self.dataset = IndexableDataset(
+            indexables={'words': [numpy.fromstring(s, dtype='uint8')
+                                  for s in self.string_data]},
+            axis_labels={'words': ('batch', 'bytes')})
+
+    def test_examplewise(self):
+        stream = DataStream(
+            dataset=self.dataset, iteration_scheme=SequentialExampleScheme(2))
+        decoded_stream = ToBytes(stream)
+        assert_equal(self.string_data,
+                     [s for s, in decoded_stream.get_epoch_iterator()])
+
+    def test_batchwise(self):
+        stream = DataStream(
+            dataset=self.dataset, iteration_scheme=SequentialScheme(2, 2))
+        decoded_stream = ToBytes(stream)
+        assert_equal([self.string_data],
+                     [s for s, in decoded_stream.get_epoch_iterator()])

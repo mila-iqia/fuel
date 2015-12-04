@@ -7,7 +7,11 @@ from picklable_itertools import izip
 from PIL import Image
 from six import PY3
 
-from ._image import window_batch_bchw, window_batch_bchw3d
+try:
+    from ._image import window_batch_bchw, window_batch_bchw3d
+    window_batch_bchw_available = True
+except ImportError:
+    window_batch_bchw_available = False
 from . import ExpectsAxisLabels, SourcewiseTransformer, Transformer
 from .. import config
 
@@ -477,6 +481,8 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
     transformer.
     """
     def __init__(self, data_stream, window_shape, **kwargs):
+        if not window_batch_bchw_available:
+            raise ImportError('window_batch_bchw not compiled')
         self.window_shape = window_shape
         self.rng = kwargs.pop('rng', None)
         self.warned_axis_labels = False
