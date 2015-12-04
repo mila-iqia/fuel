@@ -5,8 +5,6 @@ from numpy.testing import assert_raises, assert_allclose, assert_equal
 from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
-import pyximport
-pyximport.install()
 from fuel import config
 from fuel.datasets.base import IndexableDataset, IterableDataset
 from fuel.schemes import ShuffledScheme, SequentialExampleScheme
@@ -745,7 +743,7 @@ class TestSamplewiseCropTransformer(object):
         # Testing consitency of window shape and volume shape
         kwargs = {'source': self.image,
                   'source_name': 'kappa',
-                  'randint': self.seed}
+                  'seed': self.seed}
         assert_raises(ValueError,
                       self.swctransformer.transform_source_batch,
                       **kwargs)
@@ -754,7 +752,7 @@ class TestSamplewiseCropTransformer(object):
         # Testing consitency of window shape and volume shape
         kwargs = {'example': numpy.arange(1).reshape((1, 1, 1, 1)),
                   'source_name': 'kappa',
-                  'randint': self.seed}
+                  'seed': self.seed}
         assert_raises(ValueError,
                       self.swctransformer.transform_source_example,
                       **kwargs)
@@ -889,6 +887,7 @@ class TestFixedSizeCrop(ImageTestingMixin):
 
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
+
 
 class TestRandom2DRotation(ImageTestingMixin):
     def setUp(self):
