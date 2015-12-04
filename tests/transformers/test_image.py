@@ -5,9 +5,6 @@ from numpy.testing import assert_raises
 from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
-
-import pyximport
-pyximport.install()
 from fuel import config
 from fuel.datasets.base import IndexableDataset
 from fuel.schemes import ShuffledScheme, SequentialExampleScheme
@@ -322,13 +319,13 @@ class TestFixedSizeCrop(ImageTestingMixin):
         for loc in [(0, 0), (0, 1), (1, 0), (1, 1)]:
             stream = FixedSizeCrop(self.batch_stream, (5, 4),
                                    which_sources=('source1',), location=loc)
-            batch = stream.get_epoch_iterator().next()
-            assert batch[0].shape[1:] == (3, 5, 4)
-            assert batch[0].shape[0] in (1, 2)
             # seen indices should only be of that length in after last location
             if 3 * 7 * 5 == len(seen_indices):
                 assert False
-            seen_indices = numpy.union1d(seen_indices, batch[0].flatten())
+            for batch in stream.get_epoch_iterator():
+                assert batch[0].shape[1:] == (3, 5, 4)
+                assert batch[0].shape[0] in (1, 2)
+                seen_indices = numpy.union1d(seen_indices, batch[0].flatten())
         assert 3 * 7 * 5 == len(seen_indices)
 
     def test_list_batch_source(self):
@@ -360,7 +357,6 @@ class TestFixedSizeCrop(ImageTestingMixin):
                 assert False
             for batch in stream.get_epoch_iterator():
                 for example in batch[2]:
-                    print example.shape
                     assert example.shape == (2, 5, 4)
                     seen_indices = numpy.union1d(seen_indices,
                                                  example.flatten())
