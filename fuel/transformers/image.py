@@ -215,32 +215,6 @@ class SamplewiseCropTransformer(Transformer):
                     self.weight_i = i
         self.data = None
 
-    def get_data(self, request=None):
-        # Ensure that we catch StopIteration error, which is not provided with
-        # get_data method of Transformer class.
-        if request is not None:
-            raise ValueError
-        if not self.data:
-            data = next(self.child_epoch_iterator)
-            self.data = izip(*data)
-        try:
-            data = next(self.child_epoch_iterator)
-        except StopIteration:
-            self.data = None
-            return self.get_data()
-        if self.produces_examples != self.data_stream.produces_examples:
-            types = {True: 'examples', False: 'batches'}
-            raise NotImplementedError(
-                "the wrapped data stream produces {} while the {} transformer "
-                "produces {}, which it does not support.".format(
-                    types[self.data_stream.produces_examples],
-                    self.__class__.__name__,
-                    types[self.produces_examples]))
-        elif self.produces_examples:
-            return self.transform_example(data)
-        else:
-            return self.transform_batch(data)
-
     def _apply_samplewise_transformation(self, data, method):
         data = list(data)
         # If weight_source is given, we want to crop according to this weight
@@ -265,9 +239,9 @@ class SamplewiseCropTransformer(Transformer):
                 # We crop the heatmap indefinetely until the random float r
                 # is below the sum of its weights (so regions with few bone
                 # will get low p, so low chances of being picked)
-                randint = numpy.random.randint(9999)
+                seed = numpy.random.randint(9999)
                 heatmap_crop = method(heatmap, self.weight_source,
-                                      randint)
+                                      seed)
                 p = numpy.minimum(numpy.sum(heatmap_crop), 1)
                 r = numpy.random.uniform()
                 if r < p:
@@ -275,15 +249,15 @@ class SamplewiseCropTransformer(Transformer):
             for i, source_name in enumerate(self.data_stream.sources):
                 if i == self.weight_i:
                     # We scale up the heatmap accordingly
-                    data[i] = (method(data[i], source_name, randint)/p)\
+                    data[i] = (method(data[i], source_name, seed) / p)\
                         .astype(numpy.float32)
                 elif source_name in self.which_sources:
-                    data[i] = method(data[i], source_name, randint)
+                    data[i] = method(data[i], source_name, seed)
         else:
-            randint = numpy.random.randint(9999)
+            seed = numpy.random.randint(9999)
             for i, source_name in enumerate(self.data_stream.sources):
                 if source_name in self.which_sources:
-                    data[i] = method(data[i], source_name, randint)
+                    data[i] = method(data[i], source_name, seed)
 
         return tuple(data)
 
@@ -329,10 +303,10 @@ class SamplewiseCropTransformer(Transformer):
                                  .sum())
             return volume / max(p)
 
-    def transform_source_batch(self, source, source_name, randint=None):
+    def transform_source_batch(self, source, source_name, seed=None):
         """
         Crops randomly the source at self.window_shape size, according to
-        the random seed randint.
+        the random seed.
 
         Parameters:
         -----------
@@ -342,23 +316,23 @@ class SamplewiseCropTransformer(Transformer):
             numpy.object, which should be numpy.ndarray
         source_name: str
             Name of the volume to crop
-        randint: int
+        seed: int
             Random seed to be used for the random cropping
 
         Returns:
         --------
         out: numpy.object or numpy.array
-            Cropped source according to window_shape size and randint seed
+            Cropped source according to window_shape size and seed
         """
-        if randint is None:
-            randint = config.default_seed
-            rng = numpy.random.RandomState(randint)
+        if seed is None:
+            seed = config.default_seed
+            rng = numpy.random.RandomState(seed)
         else:
-            rng = numpy.random.RandomState(randint)
+            rng = numpy.random.RandomState(seed)
 
         if source.dtype == numpy.object:
             return numpy.array([self.transform_source_example(im, source_name,
-                                                              randint)
+                                                              seed)
                                 for im in source])
         elif isinstance(source, numpy.ndarray) and \
                 (source.ndim == 4 or source.ndim == 5):
@@ -394,10 +368,10 @@ class SamplewiseCropTransformer(Transformer):
                              "of arrays with ndim = 3, or an array with "
                              "ndim = 4")
 
-    def transform_source_example(self, example, source_name, randint):
+    def transform_source_example(self, example, source_name, seed=None):
         """
         Crops randomly the source at self.window_shape size, according to
-        the random seed randint.
+        the random seed.
 
         Parameters:
         -----------
@@ -406,24 +380,27 @@ class SamplewiseCropTransformer(Transformer):
             transform_source_example is called.
         source_name: str
             Name of the volume to crop
-        randint: int
+        seed: int
             Random seed to be used for the random cropping
 
         Returns:
         --------
         out: numpy.object
-            Cropped source according to window_shape size and randint seed
+            Cropped source according to window_shape size and seed
         """
-        if randint is None:
+        if seed is None:
             rng = numpy.random.RandomState(config.default_seed)
         else:
-            rng = numpy.random.RandomState(randint)
+            rng = numpy.random.RandomState(seed)
 
         if not isinstance(example, numpy.ndarray) or \
                         example.ndim not in [3, 4]:
             raise ValueError("uninterpretable example format; expected "
                              "ndarray with ndim = 3 or ndim = 4")
-
+        if example.ndim != len(self.window_shape) + 1:
+            raise ValueError("Window shape dimensions ({}) is not "
+                             "consistent with source dimensions ({})"
+                             .format(len(self.window_shape), len(example[1:])))
         max_indices = {}
         offsets = {}
         for i in range(len(self.window_shape)):
@@ -439,14 +416,11 @@ class SamplewiseCropTransformer(Transformer):
             out = example[:,
                   offsets[0]:offsets[0] + self.window_shape[0],
                   offsets[1]:offsets[1] + self.window_shape[1]]
-        elif len(self.window_shape) == 3:
+        else:
             out = example[:,
                   offsets[0]:offsets[0] + self.window_shape[0],
                   offsets[1]:offsets[1] + self.window_shape[1],
                   offsets[2]:offsets[2] + self.window_shape[2]]
-        else:
-            raise(NotImplementedError, "Cropping of N-D images with N>3 is "
-                                       "not implemented")
         return out.astype(example.dtype)
 
     def transform_example(self, example):

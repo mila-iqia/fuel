@@ -18,6 +18,7 @@ from fuel.transformers.image import (ImagesFromBytes,
                                      SamplewiseCropTransformer,
                                      FixedSizeCrop,
                                      Random2DRotation)
+from fuel.transformers._image import window_batch_bchw3d
 
 
 def reorder_axes(shp):
@@ -633,21 +634,22 @@ class TestSamplewiseCropTransformer(object):
                                  ('volume2', self.data_volume2),
                                  ('weight', self.data_weight)])
 
-        layout = ('batch', 'channel', 'x', 'y', 'z')
-        self.axis_labels = {self.sources[0]: layout,
-                            self.sources[1]: layout,
-                            self.sources[2]: layout}
-
-        self.stream = DataStream(IterableDataset(self.data),
-                                 axis_labels=self.axis_labels)
+        self.stream = DataStream(IterableDataset(self.data))
         self.stream.produces_examples = False
+        self.swctransformer = SamplewiseCropTransformer(self.stream,
+                                                        self.window_shape)
+        self.volume = numpy.arange(5 * 5 * 5).reshape((1, 1) + (5, 5, 5))\
+            .astype(numpy.float32)
+        self.image = numpy.arange(5 * 5).reshape((1, 1) + (5, 5))\
+            .astype(numpy.float32)
+        self.source_ndobject = numpy.empty((2,), dtype=object)
+        self.source_ndobject[0] = self.volume[0]
+        self.source_ndobject[1] = self.volume[0]
+        self.seed = 123
+        self.rng = numpy.random.RandomState(self.seed)
 
     def test_no_weight_crop(self):
-        swcTransformer = SamplewiseCropTransformer(self.stream,
-                                                   self.window_shape,
-                                                   which_sources=None,
-                                                   weight_source=None)
-        epoch_iterat = swcTransformer.get_epoch_iterator()
+        epoch_iterat = self.swctransformer.get_epoch_iterator()
 
         former_crop = []
         different = []
@@ -657,17 +659,17 @@ class TestSamplewiseCropTransformer(object):
             for k in range(3):
                 assert n[k].shape[2:] == self.window_shape
             # Test if the crop is similar on all volumes of the sample
-            assert numpy.prod(n[0] == n[1])
+            assert_allclose(n[0], n[1])
             # Test if random crop different from former random crop
             different.append(former_crop == n[0])
             former_crop = n[0]
 
     def test_no_weight_which_sources(self):
-        swcTransformer = SamplewiseCropTransformer(self.stream,
+        swctransformer = SamplewiseCropTransformer(self.stream,
                                                    self.window_shape,
                                                    which_sources=['volume1'],
                                                    weight_source=None)
-        epoch_iterat = swcTransformer.get_epoch_iterator()
+        epoch_iterat = swctransformer.get_epoch_iterator()
         for k in range(5):
             n = next(epoch_iterat)
             # Test if only sources directed by "which_sources" are affected
@@ -675,42 +677,107 @@ class TestSamplewiseCropTransformer(object):
             assert n[1].shape == (1, 1) + self.shape
             assert n[2].shape == (1, 1) + self.shape
 
-    def test_weight_crop(self):
-        swcTransformer = SamplewiseCropTransformer(self.stream,
-                                                   self.window_shape,
-                                                   which_sources=None,
-                                                   weight_source='weight')
-        epoch_iterat = swcTransformer.get_epoch_iterator()
-        for k in range(5):
-            n = next(epoch_iterat)
-            # Test if the output was actually upscaled from a factor p
-            # The only way to do this is to look at every possible position
-            # of the resulting cropped heatmap in the original heatmap and
-            # assert they are never equal (because of the randomness of the
-            # crop)
-            self.search_volume(self.data_weight[k], n[2])
-
-    def search_volume(self, big, small):
-        for stx in range(big.shape[2]-small.shape[2]):
-            for sty in range(big.shape[3]-small.shape[3]):
-                for stz in range(big.shape[4]-small.shape[4]):
-                    assert not numpy.allclose(small,
-                                              big[:, :,
-                                              stx:stx+small.shape[2],
-                                              sty:sty+small.shape[3],
-                                              stz:stz+small.shape[4]])
-
     def test_calculate_heatmap(self):
-        swcTransformer = SamplewiseCropTransformer(self.stream,
-                                                   self.window_shape,
-                                                   which_sources=None,
-                                                   weight_source=None)
-        volume = numpy.arange(5 * 5 * 5).reshape((1, 1) + (5, 5, 5)).astype(
-            numpy.float32)
-        new_volume = swcTransformer.calculate_heatmap(volume)
+        # Test calculate heatmap on 3D images
+        new_volume = self.swctransformer.calculate_heatmap(self.volume)
+        assert_allclose(new_volume,
+                        self.volume / self.volume[:, :, 2:-1, 2:-1, 2:-1]
+                        .sum())
+        new_image = self.swctransformer.calculate_heatmap(self.image)
+        assert_allclose(new_image,
+                        self.image / self.image[:, :, 2:-1, 2:-1].sum())
 
-        assert numpy.allclose(new_volume,
-                              volume / volume[:, :, 2:-1, 2:-1, 2:-1].sum())
+    def test_transform_source_batch(self):
+        # Test randint initialization
+
+        # Unspecified randint
+        # Cropping through transformer
+        new_volume = self.swctransformer.transform_source_batch(self.volume,
+                                                                'lel', None)
+        # Cropping manually
+        rng = numpy.random.RandomState(config.default_seed)
+        out = numpy.empty(self.volume.shape[:2] + self.window_shape,
+                          dtype=self.volume.dtype)
+        max_indices = {}
+        offsets = {}
+        for i in range(len(self.window_shape)):
+            max_indices[i] = self.volume.shape[2:][i] - self.window_shape[i]
+            offsets[i] = rng.random_integers(0, max_indices[i],
+                                             size=1)
+        window_batch_bchw3d(self.volume, offsets[0], offsets[1], offsets[2],
+                            out)
+        assert_allclose(out, new_volume)
+
+        # Specified randint
+        # Cropping through transformer
+        new_volume = self.swctransformer.transform_source_batch(self.volume,
+                                                                'lel',
+                                                                self.seed)
+        # Cropping manually
+        out = numpy.empty(self.volume.shape[:2] + self.window_shape,
+                          dtype=self.volume.dtype)
+        max_indices = {}
+        offsets = {}
+        for i in range(len(self.window_shape)):
+            max_indices[i] = self.volume.shape[2:][i] - self.window_shape[i]
+            offsets[i] = self.rng.random_integers(0, max_indices[i],
+                                                  size=1)
+        window_batch_bchw3d(self.volume, offsets[0], offsets[1], offsets[2],
+                            out)
+        assert_allclose(out, new_volume)
+
+        # Test sourcedtype
+        npy_obj = numpy.empty(2, dtype=object)
+        npy_obj[0] = self.volume[0]
+        npy_obj[1] = self.volume[0]
+        # Through transformer
+        result = self.swctransformer.transform_source_batch(npy_obj, 'kappa',
+                                                            self.seed)
+        # Manually
+        expected = numpy.array(
+            [self.swctransformer.transform_source_example(npy_obj[0],
+                                                          'kappa', self.seed),
+             self.swctransformer.transform_source_example(npy_obj[1],
+                                                          'kappa', self.seed)])
+
+        assert_allclose(result, expected)
+
+        # Testing consitency of window shape and volume shape
+        kwargs = {'source': self.image,
+                  'source_name': 'kappa',
+                  'randint': self.seed}
+        assert_raises(ValueError,
+                      self.swctransformer.transform_source_batch,
+                      **kwargs)
+
+    def test_transform_source_example(self):
+        # Testing consitency of window shape and volume shape
+        kwargs = {'example': numpy.arange(1).reshape((1, 1, 1, 1)),
+                  'source_name': 'kappa',
+                  'randint': self.seed}
+        assert_raises(ValueError,
+                      self.swctransformer.transform_source_example,
+                      **kwargs)
+
+        # Test cropping of 2D images
+        # Transformer cropping
+        swctransformer = SamplewiseCropTransformer(self.stream,
+                                                   (2, 2))
+        result = swctransformer.transform_source_example(self.image[0],
+                                                         'kappa',
+                                                         self.seed)
+        # Manual cropping
+        max_indices = {}
+        offsets = {}
+        for i in range(len(swctransformer.window_shape)):
+            max_indices[i] = \
+                self.image[0].shape[1:][i] - \
+                swctransformer.window_shape[i]
+            offsets[i] = self.rng.random_integers(0, max_indices[i])
+        expected = self.image[0][:,
+                   offsets[0]:offsets[0] + swctransformer.window_shape[0],
+                   offsets[1]:offsets[1] + swctransformer.window_shape[1]]
+        assert_allclose(result, expected)
 
 
 class TestFixedSizeCrop(ImageTestingMixin):
