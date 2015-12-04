@@ -3,6 +3,7 @@ from io import BytesIO
 import math
 
 import numpy
+import scipy.ndimage
 from picklable_itertools import izip
 from PIL import Image
 from six import PY3
@@ -855,9 +856,86 @@ class RandomSpatialFlip(SourcewiseTransformer):
 
     @staticmethod
     def flip_batch(batch, to_flip_h, to_flip_v):
-
         batch = batch * (1-to_flip_h) + batch[..., ::-1] * to_flip_h
         batch = batch * (1-to_flip_v) + batch[..., ::-1, :] * to_flip_v
-
         return batch
 
+
+class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
+    """Randomly rotate 2D images in the spatial plane.
+
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream`
+        The data stream to wrap.
+    maximum_rotation : float, default 3.14159
+        Maximum amount of rotation in radians. The image will be rotated by
+        an angle in the range [-maximum_rotation, maximum_rotation].
+
+    Notes
+    -----
+    This transformer expects to act on stream sources which provide one of
+
+     * Single images represented as 3-dimensional ndarrays, with layout
+       `(channel, height, width)`.
+     * Batches of images represented as lists of 3-dimensional ndarrays,
+       possibly of different shapes (i.e. images of differing
+       heights/widths).
+     * Batches of images represented as 4-dimensional ndarrays, with
+       layout `(batch, channel, height, width)`.
+
+    The format of the stream will be un-altered, i.e. if lists are
+    yielded by `data_stream` then lists will be yielded by this
+    transformer.
+
+    """
+    def __init__(self, data_stream, maximum_rotation=math.pi, **kwargs):
+        if maximum_rotation <= 0 or maximum_rotation > math.pi:
+            raise ValueError('maximum_rotation ({:.5f}) must be in the range '
+                             '(0, math.pi]'.format(maximum_rotation))
+        self.maximum_rotation = numpy.rad2deg(maximum_rotation)
+        self.rng = kwargs.pop('rng', None)
+        self.warned_axis_labels = False
+        if self.rng is None:
+            self.rng = numpy.random.RandomState(config.default_seed)
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        super(Random2DRotation, self).__init__(data_stream, **kwargs)
+
+    def transform_source_batch(self, source, source_name):
+        self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
+        if isinstance(source, list) and all(isinstance(b, numpy.ndarray) and
+                                            b.ndim == 3 for b in source):
+            return [self.transform_source_example(im, source_name)
+                    for im in source]
+        elif isinstance(source, numpy.ndarray) and source.dtype == object and \
+                all(isinstance(b, numpy.ndarray) and b.ndim == 3 for b in
+                    source):
+            out = numpy.empty(len(source), dtype=object)
+            for im_idx, im in enumerate(source):
+                out[im_idx] = self.transform_source_example(im, source_name)
+            return out
+        elif isinstance(source, numpy.ndarray) and source.ndim == 4:
+            return numpy.array([self.transform_source_example(im, source_name)
+                                for im in source], dtype=source.dtype)
+        else:
+            raise ValueError("uninterpretable batch format; expected a list "
+                             "of arrays with ndim = 3, or an array with "
+                             "ndim = 4")
+
+    def transform_source_example(self, example, source_name):
+        self.verify_axis_labels(('channel', 'height', 'width'),
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
+        if not isinstance(example, numpy.ndarray) or example.ndim != 3:
+            raise ValueError("uninterpretable example format; expected "
+                             "ndarray with ndim = 3")
+        # we aim to perform the same rotation for all channels
+        rotation_angle = self.rng.uniform(-self.maximum_rotation,
+                                          self.maximum_rotation)
+        return numpy.array([scipy.ndimage.interpolation.rotate(img,
+                                                               rotation_angle,
+                                                               reshape=False)
+                            for img in example])
