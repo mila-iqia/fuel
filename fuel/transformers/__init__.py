@@ -928,3 +928,50 @@ class FilterSources(AgnosticTransformer):
     def transform_any(self, data):
         return [d for d, s in izip(data, self.data_stream.sources)
                 if s in self.sources]
+
+
+class Duplicate(Transformer):
+    """
+    Duplicate the sources directed by which_sources, insert them after their
+    original.
+
+    Parameters:
+    -----------
+    data_stream : :class:`AbstractDataStream`
+        The data stream to wrap.
+    which_sources: list of string
+        List of the sources to duplicate
+    prefix: string, default 'duplicate'
+        Prefix used to rename the source
+    """
+    def __init__(self, data_stream, which_sources, prefix='duplicate',
+                 **kwargs):
+        if which_sources is None:
+            self.which_sources = data_stream.sources
+        else:
+            self.which_sources = which_sources
+        self.original_sources = data_stream.sources
+        self.new_sources = list(data_stream.sources)
+        self.prefix = prefix
+        super(Duplicate, self).__init__(data_stream, **kwargs)
+
+
+    def sources(self):
+        for i, source_name in enumerate(self.new_sources):
+            if source_name in self.which_sources:
+                self.new_sources.insert(i+1, source_name + '_' + self.prefix)
+
+        return self.new_sources
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        temp_sources = list(self.original_sources)
+        data = next(self.child_epoch_iterator)
+        data = list(data)
+        for i, source in enumerate(zip(data, temp_sources)):
+            if source[1] in self.which_sources:
+                temp_sources.insert(i+1, source[1] + 'duplicate')
+                data.insert(i+1, source[0])
+
+        return data
