@@ -306,7 +306,7 @@ class FixedSizeCropND(SourcewiseTransformer):
             raise ValueError('Location (ndims={}) and window shape (ndims={} '
                              'must have the same number of dimensions'
                              .format(len(location), len(window_shape)))
-        if not all(0 < i < 1 for i in location):
+        if not all(0 <= i <= 1 for i in location):
             raise ValueError('Location values must be between 0 '
                              'and 1 (given {}).'.format(location))
         self.location = location
@@ -345,15 +345,16 @@ class FixedSizeCropND(SourcewiseTransformer):
         if not isinstance(example, numpy.ndarray):
             raise ValueError("uninterpretable example format; expected "
                              "ndarray")
-        if any(vol_sh < win_sh for vol_sh, win_sh
-               in zip(example.shape[1:], self.window_shape)):
+        if len(example.shape[1:]) != len(self.window_shape) or \
+            any(vol_sh < win_sh for vol_sh, win_sh in zip(example.shape[1:],
+                                                          self.window_shape)):
                 raise ValueError("can't obtain {} window from image "
                                  "dimensions {}".format(
                                      self.window_shape, example.shape[1:]))
         for i in range(len(self.window_shape)):
-            off = int(round((example.shape[2 + i] - self.window_shape[i])
+            off = int(round((example.shape[1 + i] - self.window_shape[i])
                             * self.location[i]))
             example = numpy.take(example,
-                                range(off, off + self.window_shape[i]),
-                                axis=1+i)
+                                 range(off, off + self.window_shape[i]),
+                                 axis=1+i)
         return example

@@ -286,20 +286,20 @@ class TestFixedSizeRandomCrop(ImageTestingMixin):
                       numpy.empty((5, 3, 4, 2)), 'source1')
 
 
-class TestFixedSizeCropND(ImageTestingMixin):
+class TestFixedSizeCropND_3D(ImageTestingMixin):
     def setUp(self):
-        source1 = numpy.zeros((9, 3, 7, 5, 4), dtype='uint8')
-        source1[:] = numpy.arange(3 * 7 * 5 * 4, dtype='uint8')\
+        source1 = numpy.zeros((9, 3, 7, 5, 4), dtype='uint16')
+        source1[:] = numpy.arange(3 * 7 * 5 * 4, dtype='uint16')\
             .reshape((3, 7, 5, 4))
-        shapes = [(5, 8, 4), (6, 8, 3), (5, 6, 7), (5, 5, 4), (6, 4, 2),
-                  (7, 4, 7), (9, 4, 4), (5, 6, 9), (6, 5, 3)]
+        shapes = [(5, 8, 4), (6, 8, 3), (5, 6, 3), (5, 5, 4), (6, 4, 3),
+                  (7, 4, 6), (9, 4, 4), (8, 6, 4), (6, 5, 3)]
         source2 = []
         biggest = 0
         num_channels = 2
         for shp in shapes:
             biggest = max(biggest, shp[0] * shp[1] * shp[2] * 2)
-            ex = numpy.arange(shp[0] * shp[1] * num_channels).reshape(
-                (num_channels,) + shp).astype('uint8')
+            ex = numpy.arange(shp[0] * shp[1] *shp[2] * num_channels).reshape(
+                (num_channels,) + shp).astype('uint16')
             source2.append(ex)
         self.source2_biggest = biggest
         source3 = numpy.empty((len(shapes),), dtype=object)
@@ -309,6 +309,106 @@ class TestFixedSizeCropND(ImageTestingMixin):
         self.dataset = IndexableDataset(OrderedDict([('source1', source1),
                                                      ('source2', source2),
                                                      ('source3', source3)]))
+        self.common_setup()
+
+    def test_ndarray_batch_source(self):
+        # Make sure that with 4 corner crops we sample everything.
+        seen_indices = numpy.array([], dtype='uint16')
+        for x in (0, 1):
+            for y in (0, 1):
+                for z in (0, 1):
+                    stream = FixedSizeCropND(self.batch_stream, (5, 4, 3),
+                                             which_sources=('source1',),
+                                             location=(x, y, z))
+                    # seen indices should only be of that length in
+                    #  after last location
+                    if 3 * 7 * 5 * 4 == len(seen_indices):
+                        assert False
+                    for batch in stream.get_epoch_iterator():
+                        assert batch[0].shape[1:] == (3, 5, 4, 3)
+                        assert batch[0].shape[0] in (1, 2)
+                        seen_indices = numpy.union1d(seen_indices,
+                                                     batch[0].flatten())
+        assert 3 * 7 * 5 * 4 == len(seen_indices)
+
+    def test_list_batch_source(self):
+        # Make sure that with 4 corner crops we sample everything.
+        seen_indices = numpy.array([], dtype='uint16')
+        for x in (0, 1):
+            for y in (0, 1):
+                for z in (0, 1):
+                    stream = FixedSizeCropND(self.batch_stream, (5, 4, 3),
+                                             which_sources=('source2',),
+                                             location=(x, y, z))
+                    # seen indices should only be of that length
+                    # in after last location
+                    if self.source2_biggest == len(seen_indices):
+                        assert False
+                    for batch in stream.get_epoch_iterator():
+                        for example in batch[1]:
+                            assert example.shape == (2, 5, 4, 3)
+                            seen_indices = numpy.union1d(seen_indices,
+                                                         example.flatten())
+        assert self.source2_biggest == len(seen_indices)
+
+    def test_objectarray_batch_source(self):
+        # Make sure that with 4 corner crops we sample everything.
+        seen_indices = numpy.array([], dtype='uint16')
+        for x in (0, 1):
+            for y in (0,1):
+                for z in (0, 1):
+                    stream = FixedSizeCropND(self.batch_stream, (5, 4, 3),
+                                           which_sources=('source3',),
+                                             location=(x, y, z))
+                    # seen indices should only be of that length
+                    # in after last location
+                    if self.source2_biggest == len(seen_indices):
+                        assert False
+                    for batch in stream.get_epoch_iterator():
+                        for example in batch[2]:
+                            assert example.shape == (2, 5, 4, 3)
+                            seen_indices = numpy.union1d(seen_indices,
+                                                         example.flatten())
+        assert self.source2_biggest == len(seen_indices)
+
+    def test_wrong_format_exception(self):
+        # Make sure transform_source_example returns ValueError if not example
+        # is not a ndarray
+        stream = FixedSizeCropND(self.batch_stream, (5, 4, 3),
+                                 which_sources=('source3',),
+                                 location=(0, 0, 0))
+        assert_raises(ValueError, stream.transform_source_example, [5, 7],
+                      'kek')
+
+
+class TestFixedSizeCropND_2D(ImageTestingMixin):
+    """
+    Test FixedSizeCropND with 2D images, same test as FixedSizeCrop
+    """
+    def setUp(self):
+        source1 = numpy.zeros((9, 3, 7, 5), dtype='uint8')
+        source1[:] = numpy.arange(3 * 7 * 5, dtype='uint8').reshape(3, 7, 5)
+        shapes = [(5, 8), (6, 8), (5, 6), (5, 5), (6, 4), (7, 4),
+                  (9, 4), (5, 6), (6, 5)]
+        source2 = []
+        biggest = 0
+        num_channels = 2
+        for shp in shapes:
+            biggest = max(biggest, shp[0] * shp[1] * 2)
+            ex = numpy.arange(shp[0] * shp[1] * num_channels).reshape(
+                (num_channels,) + shp).astype('uint8')
+            source2.append(ex)
+        self.source2_biggest = biggest
+        source3 = numpy.empty((len(shapes),), dtype=object)
+        for i in range(len(source2)):
+            source3[i] = source2[i]
+        axis_labels = {'source1': ('batch', 'channel', 'height', 'width'),
+                       'source2': ('batch', 'channel', 'height', 'width'),
+                       'source3': ('batch', 'channel', 'height', 'width')}
+        self.dataset = IndexableDataset(OrderedDict([('source1', source1),
+                                                     ('source2', source2),
+                                                     ('source3', source3)]),
+                                        axis_labels=axis_labels)
         self.common_setup()
 
     def test_ndarray_batch_source(self):
@@ -331,7 +431,7 @@ class TestFixedSizeCropND(ImageTestingMixin):
         seen_indices = numpy.array([], dtype='uint8')
 
         for loc in [(0, 0), (0, 1), (1, 0), (1, 1)]:
-            stream = FixedSizeCrop(self.batch_stream, (5, 4),
+            stream = FixedSizeCropND(self.batch_stream, (5, 4),
                                    which_sources=('source2',), location=loc)
             # seen indices should only be of that length in after last location
             if self.source2_biggest == len(seen_indices):
@@ -348,7 +448,7 @@ class TestFixedSizeCropND(ImageTestingMixin):
         seen_indices = numpy.array([], dtype='uint8')
 
         for loc in [(0, 0), (0, 1), (1, 0), (1, 1)]:
-            stream = FixedSizeCrop(self.batch_stream, (5, 4),
+            stream = FixedSizeCropND(self.batch_stream, (5, 4),
                                    which_sources=('source3',), location=loc)
             # seen indices should only be of that length in after last location
             if self.source2_biggest == len(seen_indices):
@@ -361,17 +461,17 @@ class TestFixedSizeCropND(ImageTestingMixin):
         assert self.source2_biggest == len(seen_indices)
 
     def test_wrong_location_exceptions(self):
-        assert_raises(ValueError, FixedSizeCrop, self.example_stream, (5, 4),
+        assert_raises(ValueError, FixedSizeCropND, self.example_stream, (5, 4),
                       which_sources=('source2',), location=1)
-        assert_raises(ValueError, FixedSizeCrop, self.example_stream, (5, 4),
+        assert_raises(ValueError, FixedSizeCropND, self.example_stream, (5, 4),
                       which_sources=('source2',), location=[0, 1, 0])
-        assert_raises(ValueError, FixedSizeCrop, self.example_stream, (5, 4),
+        assert_raises(ValueError, FixedSizeCropND, self.example_stream, (5, 4),
                       which_sources=('source2',), location=[2, 0])
 
     def test_format_exceptions(self):
-        estream = FixedSizeCrop(self.example_stream, (5, 4),
+        estream = FixedSizeCropND(self.example_stream, (5, 4),
                                 which_sources=('source2',), location=[0, 0])
-        bstream = FixedSizeCrop(self.batch_stream, (5, 4),
+        bstream = FixedSizeCropND(self.batch_stream, (5, 4),
                                 which_sources=('source2',), location=[0, 0])
         assert_raises(ValueError, estream.transform_source_example,
                       numpy.empty((5, 6)), 'source2')
@@ -381,15 +481,14 @@ class TestFixedSizeCropND(ImageTestingMixin):
                       [numpy.empty((8, 6))], 'source2')
 
     def test_window_too_big_exceptions(self):
-        stream = FixedSizeCrop(self.example_stream, (5, 4),
+        stream = FixedSizeCropND(self.example_stream, (5, 4),
                                which_sources=('source2',), location=[0, 0])
 
         assert_raises(ValueError, stream.transform_source_example,
                       numpy.empty((3, 4, 2)), 'source2')
 
-        bstream = FixedSizeCrop(self.batch_stream, (5, 4),
+        bstream = FixedSizeCropND(self.batch_stream, (5, 4),
                                 which_sources=('source1',), location=[0, 0])
 
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
-
