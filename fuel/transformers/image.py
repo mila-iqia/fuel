@@ -655,7 +655,7 @@ class FixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
             raise ValueError('Location must be a tuple or list of length 2 '
                              '(given {}).'.format(location))
         if location[0] < 0 or location[0] > 1 or location[1] < 0 or \
-           location[1] > 1:
+                location[1] > 1:
             raise ValueError('Location height and width must be between 0 '
                              'and 1 (given {}).'.format(location))
         self.location = location
