@@ -17,7 +17,7 @@ from fuel.transformers import (
     ExpectsAxisLabels, Transformer, Mapping, SortMapping, ForceFloatX, Filter,
     Cache, Batch, Padding, MultiProcessing, Unpack, Merge,
     SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename,
-    FilterSources, OneHotEncoding, Drop)
+    FilterSources, OneHotEncoding, Drop, Duplicate)
 from fuel.transformers.defaults import ToBytes
 
 
@@ -982,3 +982,33 @@ class TestToBytes(object):
         decoded_stream = ToBytes(stream)
         assert_equal([self.string_data],
                      [s for s, in decoded_stream.get_epoch_iterator()])
+
+
+class TestDuplicate(object):
+    def setUp(self):
+        rng = numpy.random.RandomState(123)
+        self.stream = DataStream(
+            IndexableDataset(
+                OrderedDict([('features', rng.rand(4, 2, 2)),
+                             ('targets', numpy.array([0, 1, 0, 1]))]),
+                axis_labels={'features': ('batch', 'width', 'height'),
+                             'targets': ('batch',)}),
+            iteration_scheme=SequentialScheme(4, 2))
+
+        self.duplicate = Duplicate(self.stream, 'features')
+
+    def test_init(self):
+        duplicate = Duplicate(self.stream)
+        assert_equal(duplicate.which_sources, self.stream.sources)
+        assert_equal(self.duplicate.which_sources, ['features'])
+
+    def test_sources(self):
+        assert_equal(self.duplicate.sources(), ['features',
+                                                'features_duplicate',
+                                                'targets'])
+
+    def test_get_data(self):
+        self.duplicate.get_epoch_iterator()
+        assert_raises(ValueError, self.duplicate.get_data, **{'request': 'k'})
+        data = self.duplicate.get_data()
+        assert_equal(data[0], data[1])
