@@ -13,7 +13,10 @@ try:
     window_batch_bchw_available = True
 except ImportError:
     window_batch_bchw_available = False
-from . import ExpectsAxisLabels, SourcewiseTransformer, Transformer
+
+from . import ExpectsAxisLabels, SourcewiseTransformer, Transformer, \
+    AgnosticSourcewiseTransformer
+
 from .. import config
 
 
@@ -920,6 +923,7 @@ class RandomSpatialFlip(SourcewiseTransformer):
         batch = batch * (1-to_flip_v) + batch[..., ::-1, :] * to_flip_v
         return batch
 
+<<<<<<< HEAD
 
 class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
     """Randomly rotate 2D images in the spatial plane.
@@ -995,3 +999,79 @@ class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
                                                                rotation_angle,
                                                                reshape=False)
                             for img in example])
+=======
+class Image2DSlicer(SourcewiseTransformer):
+    def __init__(self, data_stream,
+                 slice_location='center',
+                 dimension_to_slice=None,
+                 batch_or_channel=None, **kwargs):
+        super(Image2DSlicer, self).__init__(
+            data_stream=data_stream,
+            produces_examples=data_stream.produces_examples,
+            **kwargs)
+        self.dim_to_slice = dimension_to_slice
+        self.slice_loc = slice_location
+        self.batch_or_channel = batch_or_channel
+
+    def transform_source_batch(self, source, name):
+        """Applies a transformation to a source.
+
+        The data can either be an example or a batch of examples.
+
+        Parameters
+        ----------
+        source_data : :class:`numpy.ndarray`
+            Data from a source.
+            Assuming images of dimensionality (num_samples, channel, x, y, z)
+        source_name : str
+            The name of the source being operated upon.
+        dimension_to_slice: str or int
+            Dimension "x", "y", "z" or 0, 1, 2.
+        slice_location: str
+            Randomly or centerwise.exit
+        batch_or_channel: int
+            If slicing along each dimension: 0 for batchwise or 1 for
+            channelwise concatenation of the output.
+        """
+        # Assuming all dimensions are of the same size
+        src_shape = source.shape
+        if self.slice_loc == 'random':
+            pick = numpy.random.binomial(src_shape[2], p=0.5, size=3)
+        elif self.slice_loc == 'center':
+            pick = numpy.asarray(src_shape) / 2
+        else:
+            raise ValueError('Slice location must be either "random" or '
+                             '"center".')
+
+        # Slice along a specified dimension
+        if self.dim_to_slice is not None:
+            check = str(self.dim_to_slice).lower()
+            if (check not in 'xyz012') or (len(check) > 1):
+                raise ValueError('Unknown dimension {}. Use either one of '
+                                  '"x", "y", "z" or 0 ,1 ,2.'
+                                 .format(self.dim_to_slice))
+            else:
+                # return a 2D slice along the specified dimension
+                if check in 'x0':
+                    return source[:, :, pick[0]]        # dimension x
+                elif check in 'y1':
+                    return source[:, :, :, pick[1]]     # dimension y
+                elif check in 'z2':
+                    return source[:, :, : , :, pick[2]] # dimension z
+
+        # Slice along each dimension
+        else:
+            if self.batch_or_channel is None:
+                raise ValueError('If slicing along each dimension, need to  '
+                                 'specify axis along which to concatenate '
+                                 'the output.')
+            elif str(self.batch_or_channel).lower() not in '01':
+                raise ValueError('Invalid concatenation axis, use either 0 '
+                                 'for  channelwise or 1 for batchwise '
+                                 'concatenation of the slices.')
+            else:
+                x = source[:, :, pick[0]]        # x-th slice
+                y = source[:, :, :, pick[1]]     # y-th slice
+                z = source[:, :, :, :, pick[2]]  # z-th slice
+
+                return numpy.concatenate((x, y, z), axis=self.batch_or_channel)

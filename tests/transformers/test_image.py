@@ -15,9 +15,13 @@ from fuel.transformers.image import (ImagesFromBytes,
                                      RandomSpatialFlip,
                                      SamplewiseCropTransformer,
                                      FixedSizeCrop,
+<<<<<<< HEAD
                                      FixedSizeCropND,
                                      Random2DRotation)
 from fuel.transformers._image import window_batch_bchw3d
+=======
+                                     Image2DSlicer)
+>>>>>>> 2d_slicing
 
 
 def reorder_axes(shp):
@@ -888,6 +892,7 @@ class TestFixedSizeCrop(ImageTestingMixin):
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
 
+<<<<<<< HEAD
 
 class TestRandom2DRotation(ImageTestingMixin):
     def setUp(self):
@@ -1241,3 +1246,106 @@ class TestFixedSizeCropND_2D(ImageTestingMixin):
 
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
+=======
+class TestImage2DSlicer(ImageTestingMixin):
+    def setup(self):
+        self.dataset = IndexableDataset(
+            indexables=OrderedDict(
+                [('images',numpy.random.randn(100, 1, 19, 19, 19)),
+                 ('targets', numpy.random.randint(1, size=100))]))
+        self.common_setup()
+
+    def test_single_dimensions(self):
+        # Illegal input
+        batch_stream = Image2DSlicer(self.batch_stream,
+                                     which_sources=('images',),
+                                     slice_location='xyz')
+        assert_raises(ValueError, batch_stream.transform_source_batch,
+                      numpy.random.randn(100, 1, 19, 19), 'images')
+
+        batch_stream = Image2DSlicer(self.batch_stream,
+                                     which_sources=('images',),
+                                     slice_location='center',
+                                     dimension_to_slice='xyz')
+        assert_raises(ValueError, batch_stream.transform_source_batch,
+                      numpy.random.randn(100, 1, 19, 19), 'images')
+
+        batch_stream = Image2DSlicer(self.batch_stream,
+                               which_sources=('images',),
+                               slice_location='center',
+                               dimension_to_slice='z')
+
+        batch_shapes = [batch[0].shape for batch
+                        in batch_stream.get_epoch_iterator()]
+
+        assert len(batch_shapes[0])==4
+
+        batch_stream = Image2DSlicer(self.batch_stream,
+                                     which_sources=('images',),
+                                     slice_location='random',
+                                     dimension_to_slice=0)
+
+        batch_shapes = [batch[0].shape for batch
+                        in batch_stream.get_epoch_iterator()]
+
+        assert len(batch_shapes[0]) == 4
+
+        batch_stream = Image2DSlicer(self.batch_stream,
+                                     which_sources=('images',),
+                                     slice_location='random',
+                                     dimension_to_slice=1)
+
+        batch_shapes = [batch[0].shape for batch
+                        in batch_stream.get_epoch_iterator()]
+
+        assert len(batch_shapes[0]) == 4
+
+        batch_stream = Image2DSlicer(self.batch_stream,
+                                     which_sources=('images',),
+                                     slice_location='random',
+                                     dimension_to_slice=2)
+
+        batch_shapes = [batch[0].shape for batch
+                        in batch_stream.get_epoch_iterator()]
+
+        assert len(batch_shapes[0]) == 4
+
+    def test_all_dimensions(self):
+        batch_stream = Image2DSlicer(self.batch_stream,
+                             which_sources=('images',),
+                             slice_location='center',
+                             dimension_to_slice=None,
+                             batch_or_channel=None)
+        assert_raises(ValueError, batch_stream.transform_source_batch,
+                      numpy.random.randn(100, 1, 19, 19), 'images')
+
+        batch_stream = Image2DSlicer(self.batch_stream,
+                             which_sources=('images',),
+                             slice_location='center',
+                             dimension_to_slice=None,
+                             batch_or_channel='xyz')
+        assert_raises(ValueError, batch_stream.transform_source_batch,
+                      numpy.random.randn(100, 1, 19, 19), 'images')
+
+        batch_stream = Image2DSlicer(self.batch_stream,
+                                     which_sources=('images',),
+                                     slice_location='center',
+                                     dimension_to_slice=None,
+                                     batch_or_channel=0)
+
+        batch_shapes = [batch[0].shape for batch
+                        in batch_stream.get_epoch_iterator()]
+
+        assert batch_shapes[0][0] == 3 * self.batch_size
+
+        batch_stream = Image2DSlicer(self.batch_stream,
+                                     which_sources=('images',),
+                                     slice_location='random',
+                                     dimension_to_slice=None,
+                                     batch_or_channel=1)
+
+        batch_shapes = [batch[0].shape for batch
+                        in batch_stream.get_epoch_iterator()]
+
+        assert batch_shapes[0][1] == 3
+>>>>>>> 2d_slicing
