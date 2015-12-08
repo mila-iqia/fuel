@@ -7,7 +7,11 @@ from picklable_itertools import izip
 from PIL import Image
 from six import PY3
 
-from ._image import window_batch_bchw, window_batch_bchw3d
+try:
+    from ._image import window_batch_bchw, window_batch_bchw3d
+    window_batch_bchw_available = True
+except ImportError:
+    window_batch_bchw_available = False
 from . import ExpectsAxisLabels, SourcewiseTransformer, Transformer, \
     AgnosticSourcewiseTransformer
 from .. import config
@@ -856,19 +860,20 @@ class RandomSpatialFlip(SourcewiseTransformer):
 
         return batch
 
-class Image2DSlicer(AgnosticSourcewiseTransformer):
-    def __init__(self, data_stream, slice_location,
+class Image2DSlicer(SourcewiseTransformer):
+    def __init__(self, data_stream,
+                 slice_location='center',
                  dimension_to_slice=None,
-                 channel_or_batch=None, **kwargs):
+                 batch_or_channel=None, **kwargs):
         super(Image2DSlicer, self).__init__(
             data_stream=data_stream,
             produces_examples=data_stream.produces_examples,
             **kwargs)
         self.dim_to_slice = dimension_to_slice
         self.slice_loc = slice_location
-        self.channel_or_batch = channel_or_batch
+        self.batch_or_channel = batch_or_channel
 
-    def transform_any_source(self, source, name):
+    def transform_source_batch(self, source, name):
         """Applies a transformation to a source.
 
         The data can either be an example or a batch of examples.
@@ -883,8 +888,8 @@ class Image2DSlicer(AgnosticSourcewiseTransformer):
         dimension_to_slice: str or int
             Dimension "x", "y", "z" or 0, 1, 2.
         slice_location: str
-            Randomly or centerwise.
-        channel_or_batch: int
+            Randomly or centerwise.exit
+        batch_or_channel: int
             If slicing along each dimension: 0 for batchwise or 1 for
             channelwise concatenation of the output.
         """
@@ -902,7 +907,7 @@ class Image2DSlicer(AgnosticSourcewiseTransformer):
         if self.dim_to_slice is not None:
             check = str(self.dim_to_slice).lower()
             if (check not in 'xyz012') or (len(check) > 1):
-                raise ValueError('Unknown dimension {}. Use either one of ' \
+                raise ValueError('Unknown dimension {}. Use either one of '
                                   '"x", "y", "z" or 0 ,1 ,2.'
                                  .format(self.dim_to_slice))
             else:
@@ -916,13 +921,17 @@ class Image2DSlicer(AgnosticSourcewiseTransformer):
 
         # Slice along each dimension
         else:
-            if self.channel_or_batch is None:
+            if self.batch_or_channel is None:
                 raise ValueError('If slicing along each dimension, need to  '
                                  'specify axis along which to concatenate '
                                  'the output.')
+            elif str(self.batch_or_channel).lower() not in '01':
+                raise ValueError('Invalid concatenation axis, use either 0 '
+                                 'for  channelwise or 1 for batchwise '
+                                 'concatenation of the slices.')
             else:
                 x = source[:, :, pick[0]]        # x-th slice
                 y = source[:, :, :, pick[1]]     # y-th slice
                 z = source[:, :, :, :, pick[2]]  # z-th slice
 
-                return numpy.concatenate((x, y, z), axis=self.channel_or_batch)
+                return numpy.concatenate((x, y, z), axis=self.batch_or_channel)
