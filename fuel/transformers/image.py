@@ -717,9 +717,97 @@ class FixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
                        off_w:off_w + windowed_width]
 
 
+class FixedSizeCropND(SourcewiseTransformer):
+    """Crop N-D volumes to a fixed window size.
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream`
+        The data stream to wrap.
+    window_shape : tuple
+        The tuple representing the size of the output window.
+    location : tuple
+        Location of the crop given relatively to the volume
+        (each between 0 and 1, where (0, 0) is the top left corner and (1,
+        1) the lower right corner and (.5, .5) the center).
+    Notes
+    -----
+    This transformer expects to act on stream sources which provide one of
+     * Single volumes represented as n-dimensional ndarrays, with first
+       dimension being the channel dimension
+     * Batches of volumes represented as lists of n-dimensional ndarrays,
+       possibly of different shapes
+     * Batches of images represented as n-dimensional ndarrays, with
+       layout `(batch, channel) + volume_shape`
+
+    The format of the stream will be un-altered, i.e. if lists are
+    yielded by `data_stream` then lists will be yielded by this
+    transformer.
+    """
+    def __init__(self, data_stream, window_shape, location, **kwargs):
+        self.window_shape = window_shape
+        if not isinstance(location, (list, tuple)):
+            raise ValueError('Location must be a tuple or list'
+                             '(given {}).'.format(type(location)))
+        if len(location) != len(window_shape):
+            raise ValueError('Location (ndims={}) and window shape (ndims={} '
+                             'must have the same number of dimensions'
+                             .format(len(location), len(window_shape)))
+        if not all(0 <= i <= 1 for i in location):
+            raise ValueError('Location values must be between 0 '
+                             'and 1 (given {}).'.format(location))
+        self.location = location
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        super(FixedSizeCropND, self).__init__(data_stream, **kwargs)
+
+    def transform_source_batch(self, source, source_name):
+        if isinstance(source, list) and all(isinstance(b, numpy.ndarray)
+                                            for b in source):
+            return [self.transform_source_example(im, source_name)
+                    for im in source]
+        elif isinstance(source, numpy.ndarray) and \
+                        source.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(im,
+                                                              source_name)
+                                for im in source])
+        elif isinstance(source, numpy.ndarray):
+            if any(vol_sh < win_sh for vol_sh, win_sh
+                   in zip(source.shape[2:], self.window_shape)):
+                raise ValueError("can't obtain {} window from image "
+                                 "dimensions {}".format(
+                                     self.window_shape, source.shape[2:]))
+            for i in range(len(self.window_shape)):
+                off = int(round((source.shape[2 + i] - self.window_shape[i])
+                                * self.location[i]))
+                source = numpy.take(source,
+                                    range(off, off + self.window_shape[i]),
+                                    axis=2+i)
+            return source
+        else:
+            raise ValueError("uninterpretable batch format; expected a list "
+                             "of arrays, or an array")
+
+    def transform_source_example(self, example, source_name):
+        if not isinstance(example, numpy.ndarray):
+            raise ValueError("uninterpretable example format; expected "
+                             "ndarray")
+        if len(example.shape[1:]) != len(self.window_shape) or \
+            any(vol_sh < win_sh for vol_sh, win_sh in zip(example.shape[1:],
+                                                          self.window_shape)):
+                raise ValueError("can't obtain {} window from image "
+                                 "dimensions {}".format(
+                                     self.window_shape, example.shape[1:]))
+        for i in range(len(self.window_shape)):
+            off = int(round((example.shape[1 + i] - self.window_shape[i])
+                            * self.location[i]))
+            example = numpy.take(example,
+                                 range(off, off + self.window_shape[i]),
+                                 axis=1+i)
+        return example
+
+
 class RandomSpatialFlip(SourcewiseTransformer):
     """Randomly flip images horizontally and/or vertically.
-
     Parameters
     ----------
     data_stream : :class:`AbstractDataStream`
@@ -728,7 +816,6 @@ class RandomSpatialFlip(SourcewiseTransformer):
         Whether to flip images horizontally
     flip_v : bool
         Whether to flip images vertically
-
     Notes
     -----
     This transformer expects to act on stream sources which provide one of
@@ -744,7 +831,6 @@ class RandomSpatialFlip(SourcewiseTransformer):
     The format of the stream will be un-altered, i.e. if lists are
     yielded by `data_stream` then lists will be yielded by this
     transformer.
-
     """
     def __init__(self, data_stream, flip_h=False, flip_v=False, **kwargs):
         self.flip_h = flip_h
@@ -837,7 +923,6 @@ class RandomSpatialFlip(SourcewiseTransformer):
 
 class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
     """Randomly rotate 2D images in the spatial plane.
-
     Parameters
     ----------
     data_stream : :class:`AbstractDataStream`
@@ -845,7 +930,6 @@ class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
     maximum_rotation : float, default 3.14159
         Maximum amount of rotation in radians. The image will be rotated by
         an angle in the range [-maximum_rotation, maximum_rotation].
-
     Notes
     -----
     This transformer expects to act on stream sources which provide one of
@@ -857,11 +941,9 @@ class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
        heights/widths).
      * Batches of images represented as 4-dimensional ndarrays, with
        layout `(batch, channel, height, width)`.
-
     The format of the stream will be un-altered, i.e. if lists are
     yielded by `data_stream` then lists will be yielded by this
     transformer.
-
     """
     def __init__(self, data_stream, maximum_rotation=math.pi, **kwargs):
         if maximum_rotation <= 0 or maximum_rotation > math.pi:
