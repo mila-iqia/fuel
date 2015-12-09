@@ -1003,9 +1003,9 @@ class TestDuplicate(object):
         assert_equal(self.duplicate.which_sources, ['features'])
 
     def test_sources(self):
-        assert_equal(self.duplicate.sources(), ['features',
-                                                'features_duplicate',
-                                                'targets'])
+        assert_equal(self.duplicate.sources, ['features',
+                                              'features_duplicate',
+                                              'targets'])
 
     def test_get_data(self):
         self.duplicate.get_epoch_iterator()

@@ -762,6 +762,9 @@ class FixedSizeCropND(SourcewiseTransformer):
         kwargs.setdefault('produces_examples', data_stream.produces_examples)
         kwargs.setdefault('axis_labels', data_stream.axis_labels)
         super(FixedSizeCropND, self).__init__(data_stream, **kwargs)
+        if not isinstance(self.which_sources, list) and \
+                not isinstance(self.which_sources, tuple):
+            self.which_sources = [self.which_sources]
 
     def transform_source_batch(self, source, source_name):
         if isinstance(source, list) and all(isinstance(b, numpy.ndarray)

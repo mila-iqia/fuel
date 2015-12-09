@@ -1112,7 +1112,7 @@ class TestFixedSizeCropND_3D(ImageTestingMixin):
             for y in (0,1):
                 for z in (0, 1):
                     stream = FixedSizeCropND(self.batch_stream, (5, 4, 3),
-                                           which_sources=('source3',),
+                                             which_sources=('source3',),
                                              location=(x, y, z))
                     # seen indices should only be of that length
                     # in after last location
@@ -1170,7 +1170,7 @@ class TestFixedSizeCropND_2D(ImageTestingMixin):
         seen_indices = numpy.array([], dtype='uint8')
         for loc in [(0, 0), (0, 1), (1, 0), (1, 1)]:
             stream = FixedSizeCropND(self.batch_stream, (5, 4),
-                                   which_sources=('source1',), location=loc)
+                                     which_sources=('source1',), location=loc)
             # seen indices should only be of that length in after last location
             if 3 * 7 * 5 == len(seen_indices):
                 assert False
@@ -1186,7 +1186,7 @@ class TestFixedSizeCropND_2D(ImageTestingMixin):
 
         for loc in [(0, 0), (0, 1), (1, 0), (1, 1)]:
             stream = FixedSizeCropND(self.batch_stream, (5, 4),
-                                   which_sources=('source2',), location=loc)
+                                     which_sources=('source2',), location=loc)
             # seen indices should only be of that length in after last location
             if self.source2_biggest == len(seen_indices):
                 assert False
@@ -1203,7 +1203,7 @@ class TestFixedSizeCropND_2D(ImageTestingMixin):
 
         for loc in [(0, 0), (0, 1), (1, 0), (1, 1)]:
             stream = FixedSizeCropND(self.batch_stream, (5, 4),
-                                   which_sources=('source3',), location=loc)
+                                     which_sources=('source3',), location=loc)
             # seen indices should only be of that length in after last location
             if self.source2_biggest == len(seen_indices):
                 assert False
