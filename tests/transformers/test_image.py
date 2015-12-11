@@ -5,24 +5,18 @@ from numpy.testing import assert_raises, assert_allclose, assert_equal
 from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
+from fuel.transformers._image import window_batch_bchw3d
 from fuel import config
 from fuel.datasets.base import IndexableDataset, IterableDataset
 from fuel.schemes import ShuffledScheme, SequentialExampleScheme
 from fuel.streams import DataStream
-from fuel.transformers.image import (ImagesFromBytes,
+from fuel.transformers.image import (ImagesFromBytes, Image2DSlicer,
                                      MinimumImageDimensions,
                                      RandomFixedSizeCrop,
                                      RandomSpatialFlip,
                                      SamplewiseCropTransformer,
-                                     FixedSizeCrop,
-<<<<<<< HEAD
-                                     FixedSizeCropND,
+                                     FixedSizeCrop, FixedSizeCropND,
                                      Random2DRotation)
-from fuel.transformers._image import window_batch_bchw3d
-=======
-                                     Image2DSlicer)
->>>>>>> 2d_slicing
-
 
 def reorder_axes(shp):
     if len(shp) == 3:
@@ -892,7 +886,6 @@ class TestFixedSizeCrop(ImageTestingMixin):
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
 
-<<<<<<< HEAD
 
 class TestRandom2DRotation(ImageTestingMixin):
     def setUp(self):
@@ -1246,7 +1239,7 @@ class TestFixedSizeCropND_2D(ImageTestingMixin):
 
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
-=======
+
 class TestImage2DSlicer(ImageTestingMixin):
     def setup(self):
         self.dataset = IndexableDataset(
@@ -1348,4 +1341,3 @@ class TestImage2DSlicer(ImageTestingMixin):
                         in batch_stream.get_epoch_iterator()]
 
         assert batch_shapes[0][1] == 3
->>>>>>> 2d_slicing
