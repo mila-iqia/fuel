@@ -1004,6 +1004,25 @@ class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
 
 
 class Image2DSlicer(SourcewiseTransformer):
+    """Applies a transformation to a source.
+
+    The data can either be an example or a batch of examples.
+
+    Parameters
+    ----------
+    source_data : :class:`numpy.ndarray`
+        Data from a source.
+        Assuming images of dimensionality (num_samples, channel, x, y, z)
+    source_name : str
+        The name of the source being operated upon.
+    dimension_to_slice: str or int
+        Dimension "x", "y", "z" or 0, 1, 2.
+    slice_location: str
+        Randomly or centerwise.exit
+    batch_or_channel: int
+        If slicing along each dimension: 0 for batchwise or 1 for
+        channelwise concatenation of the output.
+    """
     def __init__(self, data_stream,
                  slice_location='center',
                  dimension_to_slice=None,
@@ -1017,31 +1036,12 @@ class Image2DSlicer(SourcewiseTransformer):
         self.batch_or_channel = batch_or_channel
 
     def transform_source_batch(self, source, name):
-        """Applies a transformation to a source.
-
-        The data can either be an example or a batch of examples.
-
-        Parameters
-        ----------
-        source_data : :class:`numpy.ndarray`
-            Data from a source.
-            Assuming images of dimensionality (num_samples, channel, x, y, z)
-        source_name : str
-            The name of the source being operated upon.
-        dimension_to_slice: str or int
-            Dimension "x", "y", "z" or 0, 1, 2.
-        slice_location: str
-            Randomly or centerwise.exit
-        batch_or_channel: int
-            If slicing along each dimension: 0 for batchwise or 1 for
-            channelwise concatenation of the output.
-        """
         # Assuming all dimensions are of the same size
         src_shape = source.shape
         if self.slice_loc == 'random':
             pick = numpy.random.binomial(src_shape[2], p=0.5, size=3)
         elif self.slice_loc == 'center':
-            pick = numpy.asarray(src_shape) / 2
+            pick = numpy.asarray(src_shape[2:]) / 2
         else:
             raise ValueError('Slice location must be either "random" or '
                              '"center".')
