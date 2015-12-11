@@ -926,7 +926,6 @@ class RandomSpatialFlip(SourcewiseTransformer):
         batch = batch * (1-to_flip_v) + batch[..., ::-1, :] * to_flip_v
         return batch
 
-<<<<<<< HEAD
 
 class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
     """Randomly rotate 2D images in the spatial plane.
@@ -1002,7 +1001,8 @@ class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
                                                                rotation_angle,
                                                                reshape=False)
                             for img in example])
-=======
+
+
 class Image2DSlicer(SourcewiseTransformer):
     def __init__(self, data_stream,
                  slice_location='center',
