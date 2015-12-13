@@ -692,10 +692,7 @@ class Padding(Transformer):
         batch_with_masks = []
         for i, (source, source_batch) in enumerate(
                 zip(self.data_stream.sources, batch)):
-            if source not in self.mask_sources:
-                batch_with_masks.append(source_batch)
-                continue
-
+           
             shapes = [numpy.asarray(sample).shape for sample in source_batch]
             lengths = [shape[0] for shape in shapes]
             max_sequence_length = max(lengths)
@@ -710,12 +707,13 @@ class Padding(Transformer):
             for i, sample in enumerate(source_batch):
                 padded_batch[i, :len(sample)] = sample
             batch_with_masks.append(padded_batch)
-
-            mask = numpy.zeros((len(source_batch), max_sequence_length),
-                               self.mask_dtype)
-            for i, sequence_length in enumerate(lengths):
-                mask[i, :sequence_length] = 1
-            batch_with_masks.append(mask)
+            
+            if source in self.mask_sources:
+                mask = numpy.zeros((len(source_batch), max_sequence_length),
+                    self.mask_dtype)
+                for i, sequence_length in enumerate(lengths):
+                    mask[i, :sequence_length] = 1
+                batch_with_masks.append(mask)
         return tuple(batch_with_masks)
 
 
