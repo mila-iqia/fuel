@@ -23,10 +23,11 @@ version = exec_results['version']
 
 setup(
     name='fuel',
-    version=version,  # PEP 440 compliant
+    version='0.1.1',
     description='Data pipeline framework for machine learning',
     long_description=LONG_DESCRIPTION,
     url='https://github.com/mila-udem/fuel.git',
+    downlaod_url='https://github.com/mila-udem/fuel/archive/v0.1.1.tar.gz',
     author='Universite de Montreal',
     license='MIT',
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
