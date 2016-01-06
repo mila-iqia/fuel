@@ -943,13 +943,16 @@ class OneHotEncoding(SourcewiseTransformer):
         The data stream.
     num_classes : int
         The number of classes.
+    which_sources : tuple of str
+        Which sources to apply the one hot encoding.
 
     """
-    def __init__(self, data_stream, num_classes, **kwargs):
+    def __init__(self, data_stream, num_classes, which_sources, **kwargs):
         if data_stream.axis_labels:
             kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
         super(OneHotEncoding, self).__init__(
-            data_stream, data_stream.produces_examples, **kwargs)
+            data_stream, data_stream.produces_examples, which_sources,
+            **kwargs)
         self.num_classes = num_classes
 
     def transform_source_example(self, source_example, source_name):
@@ -982,6 +985,8 @@ class OneHotEncodingND(OneHotEncoding):
         The data stream.
     num_classes : int
         The number of classes.
+    which_sources : tuple of str
+        Which sources to apply the one hot encoding.
 
     """
     def transform_source_example(self, source_example, source_name):
