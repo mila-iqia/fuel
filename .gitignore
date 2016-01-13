@@ -67,3 +67,4 @@ cover/*
 
 # Atom #
 deployment-config.json
+.remote-sync.json

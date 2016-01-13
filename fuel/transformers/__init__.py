@@ -1198,7 +1198,12 @@ class Duplicate(Transformer):
         self.original_sources = list(data_stream.sources)
         self.new_sources = list(data_stream.sources)
         self.suffix = suffix
-        super(Duplicate, self).__init__(data_stream, produces_example, **kwargs)
+        axis_labels = data_stream.axis_labels
+        for source in self.which_sources:
+            axis_labels[source + u'_' + self.suffix] = axis_labels[source]
+        kwargs.setdefault('axis_labels', axis_labels)
+        super(Duplicate, self).__init__(data_stream, produces_example,
+                                        **kwargs)
 
     @property
     def sources(self):
