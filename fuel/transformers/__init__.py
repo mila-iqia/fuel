@@ -239,6 +239,8 @@ class SourcewiseTransformer(Transformer):
                  **kwargs):
         if which_sources is None:
             which_sources = data_stream.sources
+        elif isinstance(which_sources, str):
+            which_sources = (which_sources,)
         self.which_sources = which_sources
         super(SourcewiseTransformer, self).__init__(
             data_stream, produces_examples, **kwargs)
@@ -996,7 +998,8 @@ class OneHotEncodingND(OneHotEncoding):
         if source_example.shape[0] != 1:
             print 'Warning, source_example has no channel dimension.'
             source_example = numpy.expand_dims(source_example, axis=1)
-        output = numpy.zeros([self.num_classes] + list(source_example.shape[1:]),
+        output = numpy.zeros([self.num_classes] +
+                             list(source_example.shape[1:]),
                              dtype=source_example.dtype)
         if len(source_example.shape) > 1:
             for i in range(self.num_classes):
@@ -1015,9 +1018,10 @@ class OneHotEncodingND(OneHotEncoding):
             if source_batch.shape[1] != 1:
                 print 'Warning, source_batch has no channel dimension.'
                 source_batch = numpy.expand_dims(source_batch, axis=1)
-            output = numpy.zeros([source_batch.shape[0], self.num_classes]
-                                  + list(source_batch.shape[2:]),
-                                  dtype=source_batch.dtype)
+                output = numpy.zeros([source_batch.shape[0], self.num_classes] +
+                                     list(source_batch.shape[2:]),
+                                     dtype=source_batch.dtype)
+
             for i in range(self.num_classes):
                 # Set the output of channel i to be the output of the
                 # indicator function: is source_batch of class i?
@@ -1134,15 +1138,15 @@ class Drop(SourcewiseTransformer):
                 volume[:, :, :, -border:] = 0
             else:
                 raise ValueError("uninterpretable number of dimensions for source "
-                           "volume, expected 4 or 5, got {} instead"
-                           .format(volume.ndim))
+                                 "volume, expected 4 or 5, got {} instead"
+                                 .format(volume.ndim))
+
         elif flag == 'example':
             for i in range(len(volume.shape[1:])):
                 if volume.shape[1+i] <= 2 * border:
                     raise ValueError("border does not fit in image (dimension "
                                      "{} size {}, borders {}"
-                                     .format(i, volume.shape[1+i],
-                                             2 * border))
+                                     .format(i, volume.shape[1+i], 2 * border))
             if volume.ndim == 4:
                 volume[:, :border, :, :] = 0
                 volume[:, :, :border, :] = 0
