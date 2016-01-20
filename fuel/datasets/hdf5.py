@@ -1,3 +1,4 @@
+import numbers
 from itertools import product
 from collections import defaultdict
 
@@ -9,6 +10,7 @@ from six.moves import zip, range
 
 from fuel.datasets import Dataset
 from fuel.utils import do_not_pickle_attributes, Subset
+from fuel.schemes import SequentialExampleScheme
 
 
 @do_not_pickle_attributes('nodes', 'h5file')
@@ -184,6 +186,8 @@ class H5PYDataset(Dataset):
         self.sort_indices = sort_indices
 
         self._parse_dataset_info()
+        self.example_iteration_scheme = SequentialExampleScheme(
+            self.num_examples)
 
         kwargs.setdefault('axis_labels', self.default_axis_labels)
         super(H5PYDataset, self).__init__(**kwargs)
@@ -549,7 +553,7 @@ class H5PYDataset(Dataset):
         return data, shapes
 
     def _out_of_memory_get_data(self, state=None, request=None):
-        if not isinstance(request, (slice, list)):
+        if not isinstance(request, (numbers.Integral, slice, list)):
             raise ValueError()
         data = []
         shapes = []
