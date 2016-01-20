@@ -13,6 +13,7 @@ command-line arguments, and is expected to download the required files.
 from fuel.converters import adult
 from fuel.converters import binarized_mnist
 from fuel.converters import caltech101_silhouettes
+from fuel.converters import celeba
 from fuel.converters import cifar10
 from fuel.converters import cifar100
 from fuel.converters import dogs_vs_cats
@@ -26,6 +27,7 @@ all_converters = (
     ('adult', adult.fill_subparser),
     ('binarized_mnist', binarized_mnist.fill_subparser),
     ('caltech101_silhouettes', caltech101_silhouettes.fill_subparser),
+    ('celeba', celeba.fill_subparser),
     ('cifar10', cifar10.fill_subparser),
     ('cifar100', cifar100.fill_subparser),
     ('dogs_vs_cats', dogs_vs_cats.fill_subparser),
