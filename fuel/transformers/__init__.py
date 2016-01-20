@@ -1184,8 +1184,8 @@ class Duplicate(Transformer):
     -----------
     data_stream : :class:`AbstractDataStream`
         The data stream to wrap.
-    which_sources: list of string
-        List of the sources to duplicate
+    which_sources : tuple of str
+        Which sources to apply the duplicate to.
     suffix: string, default 'duplicate'
         Prefix used to rename the duplicated sources
     produces_example: bool
@@ -1194,11 +1194,10 @@ class Duplicate(Transformer):
     def __init__(self, data_stream, which_sources=None, suffix='duplicate',
                  produces_example=False, **kwargs):
         if which_sources is None:
-            self.which_sources = data_stream.sources
-        elif isinstance(which_sources, list):
-            self.which_sources = which_sources
-        else:
-            self.which_sources = [which_sources]
+            which_sources = data_stream.sources
+        elif isinstance(which_sources, str):
+            which_sources = (which_sources,)
+        self.which_sources = which_sources
         self.original_sources = list(data_stream.sources)
         self.new_sources = list(data_stream.sources)
         self.suffix = suffix
