@@ -4,7 +4,6 @@ import math
 
 import numpy
 import scipy.ndimage
-from picklable_itertools import izip
 from PIL import Image
 from six import PY3
 
@@ -14,8 +13,7 @@ try:
 except ImportError:
     window_batch_bchw_available = False
 
-from . import ExpectsAxisLabels, SourcewiseTransformer, Transformer, \
-    AgnosticSourcewiseTransformer
+from . import ExpectsAxisLabels, SourcewiseTransformer, Transformer
 
 from .. import config
 
@@ -285,7 +283,7 @@ class SamplewiseCropTransformer(Transformer):
         else:
             off = {}
             for i in range(len(volume.shape[2:])):
-                off[i] = (volume.shape[2+i] - self.window_shape[i]) / 2
+                off[i] = (volume.shape[2 + i] - self.window_shape[i]) / 2
             p = []
 
             if len(volume.shape[2:]) == 3:
@@ -293,16 +291,16 @@ class SamplewiseCropTransformer(Transformer):
                     for j in [-1, 0, 1]:
                         for k in [-1, 0, 1]:
                             p.append(volume[:, :,
-                                off[0] + i:off[0] + self.window_shape[0] + i,
-                                off[1] + j:off[1] + self.window_shape[1] + j,
-                                off[2] + k:off[2] + self.window_shape[2] + k]
+                                            off[0] + i:off[0] + self.window_shape[0] + i,
+                                            off[1] + j:off[1] + self.window_shape[1] + j,
+                                            off[2] + k:off[2] + self.window_shape[2] + k]
                                      .sum())
             elif len(volume.shape[2:]) == 2:
                 for i in [-1, 0, 1]:
                     for j in [-1, 0, 1]:
                         p.append(volume[:, :,
-                            off[0] + i:off[0] + self.window_shape[0] + i,
-                            off[1] + j:off[1] + self.window_shape[1] + j]
+                                        off[0] + i:off[0] + self.window_shape[0] + i,
+                                        off[1] + j:off[1] + self.window_shape[1] + j]
                                  .sum())
             return volume / max(p)
 
@@ -343,8 +341,8 @@ class SamplewiseCropTransformer(Transformer):
                               dtype=source.dtype)
             batch_size = source.shape[0]
             if len(self.window_shape) != len(source.shape[2:]):
-                raise(ValueError, "Window shape dimensions ({}) is not " \
-                                   "consistent with source dimensions ({})"
+                raise(ValueError, "Window shape dimensions ({}) is not "
+                      "consistent with source dimensions ({})"
                       .format(len(self.window_shape), len(source[2:])))
             max_indices = {}
             offsets = {}
@@ -397,7 +395,7 @@ class SamplewiseCropTransformer(Transformer):
             rng = numpy.random.RandomState(seed)
 
         if not isinstance(example, numpy.ndarray) or \
-                        example.ndim not in [3, 4]:
+                example.ndim not in [3, 4]:
             raise ValueError("uninterpretable example format; expected "
                              "ndarray with ndim = 3 or ndim = 4")
         if example.ndim != len(self.window_shape) + 1:
@@ -417,13 +415,13 @@ class SamplewiseCropTransformer(Transformer):
 
         if len(self.window_shape) == 2:
             out = example[:,
-                  offsets[0]:offsets[0] + self.window_shape[0],
-                  offsets[1]:offsets[1] + self.window_shape[1]]
+                          offsets[0]:offsets[0] + self.window_shape[0],
+                          offsets[1]:offsets[1] + self.window_shape[1]]
         else:
             out = example[:,
-                  offsets[0]:offsets[0] + self.window_shape[0],
-                  offsets[1]:offsets[1] + self.window_shape[1],
-                  offsets[2]:offsets[2] + self.window_shape[2]]
+                          offsets[0]:offsets[0] + self.window_shape[0],
+                          offsets[1]:offsets[1] + self.window_shape[1],
+                          offsets[2]:offsets[2] + self.window_shape[2]]
         return out.astype(example.dtype)
 
     def transform_example(self, example):
@@ -480,7 +478,7 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
             return [self.transform_source_example(im, source_name)
                     for im in source]
         elif isinstance(source, numpy.ndarray) and \
-                        source.dtype == numpy.object:
+                source.dtype == numpy.object:
             return numpy.array([self.transform_source_example(im,
                                                               source_name)
                                 for im in source])
@@ -558,7 +556,6 @@ class RandomFixedSizeCrop3D(RandomFixedSizeCrop):
     yielded by `data_stream` then lists will be yielded by this
     transformer.
     """
-
     def transform_source_batch(self, source, source_name):
         self.verify_axis_labels(('batch', 'channel', 'x', 'y', 'z'),
                                 self.data_stream.axis_labels,
@@ -566,7 +563,7 @@ class RandomFixedSizeCrop3D(RandomFixedSizeCrop):
         window_x, window_y, window_z = self.window_shape
         if isinstance(source, list) and \
                 all(isinstance(b, numpy.ndarray) and
-                b.ndim == 4 for b in source):
+                    b.ndim == 4 for b in source):
             return [self.transform_source_example(im, source_name)
                     for im in source]
         elif isinstance(source, numpy.ndarray) and source.ndim == 5:
@@ -619,9 +616,10 @@ class RandomFixedSizeCrop3D(RandomFixedSizeCrop):
             off_z = self.rng.random_integers(0, image_z - window_z)
         else:
             off_z = 0
-        return example[:, off_x:off_x + window_x,
-               off_y:off_y + window_y,
-               off_z:off_z + window_z]
+        return example[:,
+                       off_x:off_x + window_x,
+                       off_y:off_y + window_y,
+                       off_z:off_z + window_z]
 
 
 class FixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
@@ -675,7 +673,7 @@ class FixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
             return [self.transform_source_example(im, source_name)
                     for im in source]
         elif isinstance(source, numpy.ndarray) and \
-                        source.dtype == numpy.object:
+                source.dtype == numpy.object:
             return numpy.array([self.transform_source_example(im,
                                                               source_name)
                                 for im in source])
@@ -762,9 +760,6 @@ class FixedSizeCropND(SourcewiseTransformer):
         kwargs.setdefault('produces_examples', data_stream.produces_examples)
         kwargs.setdefault('axis_labels', data_stream.axis_labels)
         super(FixedSizeCropND, self).__init__(data_stream, **kwargs)
-        if not isinstance(self.which_sources, list) and \
-                not isinstance(self.which_sources, tuple):
-            self.which_sources = [self.which_sources]
 
     def transform_source_batch(self, source, source_name):
         if isinstance(source, list) and all(isinstance(b, numpy.ndarray)
@@ -772,22 +767,21 @@ class FixedSizeCropND(SourcewiseTransformer):
             return [self.transform_source_example(im, source_name)
                     for im in source]
         elif isinstance(source, numpy.ndarray) and \
-                        source.dtype == numpy.object:
-            return numpy.array([self.transform_source_example(im,
-                                                              source_name)
+                source.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(im, source_name)
                                 for im in source])
         elif isinstance(source, numpy.ndarray):
             if any(vol_sh < win_sh for vol_sh, win_sh
                    in zip(source.shape[2:], self.window_shape)):
                 raise ValueError("can't obtain {} window from image "
-                                 "dimensions {}".format(
-                                     self.window_shape, source.shape[2:]))
+                                 "dimensions {}"
+                                 .format(self.window_shape, source.shape[2:]))
             for i in range(len(self.window_shape)):
-                off = int(round((source.shape[2 + i] - self.window_shape[i])
-                                * self.location[i]))
+                off = int(round((source.shape[2 + i] - self.window_shape[i]) *
+                          self.location[i]))
                 source = numpy.take(source,
                                     range(off, off + self.window_shape[i]),
-                                    axis=2+i)
+                                    axis=2 + i)
             return source
         else:
             raise ValueError("uninterpretable batch format; expected a list "
@@ -800,15 +794,15 @@ class FixedSizeCropND(SourcewiseTransformer):
         if len(example.shape[1:]) != len(self.window_shape) or \
             any(vol_sh < win_sh for vol_sh, win_sh in zip(example.shape[1:],
                                                           self.window_shape)):
-                raise ValueError("can't obtain {} window from image "
-                                 "dimensions {}".format(
-                                     self.window_shape, example.shape[1:]))
+            raise ValueError("can't obtain {} window from image dimensions {}"
+                             .format(self.window_shape, example.shape[1:]))
         for i in range(len(self.window_shape)):
-            off = int(round((example.shape[1 + i] - self.window_shape[i])
-                            * self.location[i]))
+            off = int(round((example.shape[1 + i] - self.window_shape[i]) *
+                            self.location[i]))
+
             example = numpy.take(example,
                                  range(off, off + self.window_shape[i]),
-                                 axis=1+i)
+                                 axis=1 + i)
         return example
 
 
@@ -922,8 +916,8 @@ class RandomSpatialFlip(SourcewiseTransformer):
 
     @staticmethod
     def flip_batch(batch, to_flip_h, to_flip_v):
-        batch = batch * (1-to_flip_h) + batch[..., ::-1] * to_flip_h
-        batch = batch * (1-to_flip_v) + batch[..., ::-1, :] * to_flip_v
+        batch = batch * (1 - to_flip_h) + batch[..., ::-1] * to_flip_h
+        batch = batch * (1 - to_flip_v) + batch[..., ::-1, :] * to_flip_v
         return batch
 
 
@@ -1051,7 +1045,7 @@ class Image2DSlicer(SourcewiseTransformer):
             check = str(self.dim_to_slice).lower()
             if (check not in 'xyz012') or (len(check) > 1):
                 raise ValueError('Unknown dimension {}. Use either one of '
-                                  '"x", "y", "z" or 0 ,1 ,2.'
+                                 '"x", "y", "z" or 0 ,1 ,2.'
                                  .format(self.dim_to_slice))
             else:
                 # return a 2D slice along the specified dimension
@@ -1060,7 +1054,7 @@ class Image2DSlicer(SourcewiseTransformer):
                 elif check in 'y1':
                     return source[:, :, :, pick[1]]     # dimension y
                 elif check in 'z2':
-                    return source[:, :, : , :, pick[2]] # dimension z
+                    return source[:, :, :, :, pick[2]]  # dimension z
 
         # Slice along each dimension
         else:
