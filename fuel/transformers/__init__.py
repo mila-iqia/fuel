@@ -240,7 +240,7 @@ class SourcewiseTransformer(Transformer):
         if which_sources is None:
             which_sources = data_stream.sources
         elif isinstance(which_sources, str):
-            which_sources = (which_sources,)
+            raise TypeError('which_sources parameter should be a tuple of str.')
         self.which_sources = which_sources
         super(SourcewiseTransformer, self).__init__(
             data_stream, produces_examples, **kwargs)
