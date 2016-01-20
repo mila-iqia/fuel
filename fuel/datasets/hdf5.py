@@ -186,11 +186,15 @@ class H5PYDataset(Dataset):
         self.sort_indices = sort_indices
 
         self._parse_dataset_info()
-        self.example_iteration_scheme = SequentialExampleScheme(
-            self.num_examples)
 
         kwargs.setdefault('axis_labels', self.default_axis_labels)
         super(H5PYDataset, self).__init__(**kwargs)
+
+        # It is really important to do it here, because self.num_examples
+        # call will cause a crash if done before calling
+        # super(...).__init__
+        self.example_iteration_scheme = SequentialExampleScheme(
+            self.num_examples)
 
     def _parse_dataset_info(self):
         """Parses information related to the HDF5 interface.
