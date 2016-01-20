@@ -3,11 +3,11 @@ import zipfile
 
 import h5py
 import numpy
-import six
-from six.moves import range, cPickle
+from six.moves import range
 from PIL import Image
 
 from fuel.converters.base import check_exists, progress_bar
+from fuel.datasets import H5PYDataset
 
 IMAGE_FILE = 'img_align_celeba.zip'
 ATTRIBUTES_FILE = 'list_attr_celeba.txt'
@@ -52,8 +52,8 @@ def convert_celeba(directory, output_directory, output_filename='celeba.hdf5'):
         'attributes', (NUM_EXAMPLES, 40), dtype='uint8')
     attributes_dataset[...] = (
         numpy.loadtxt(os.path.join(directory, ATTRIBUTES_FILE), dtype='int32',
-                      skiprows=2, usecols=tuple(range(1, 41)))
-        + 1) / 2
+                      skiprows=2, usecols=tuple(range(1, 41))) +
+        1) / 2
 
     features_dataset = h5file.create_dataset(
         'features', (NUM_EXAMPLES, 3, 218, 178), dtype='uint8')
@@ -62,7 +62,8 @@ def convert_celeba(directory, output_directory, output_filename='celeba.hdf5'):
         for i in range(NUM_EXAMPLES):
             image_name = 'img_align_celeba/{:06d}.jpg'.format(i + 1)
             features_dataset[i] = numpy.asarray(
-                Image.open(image_file.open(image_name, 'r'))).transpose(2, 0, 1)
+                Image.open(
+                    image_file.open(image_name, 'r'))).transpose(2, 0, 1)
             bar.update(i + 1)
 
     split_dict = {
