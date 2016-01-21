@@ -26,6 +26,9 @@ class CelebA(H5PYDataset):
 
     Parameters
     ----------
+    which_format : {'aligned_cropped, '64'}
+        Either the aligned and cropped version of CelebA, or
+        a 64x64 version of it.
     which_sets : tuple of str
         Which split to load. Valid values are 'train', 'valid' and
         'test' corresponding to the training set (162,770 examples), the
@@ -33,10 +36,15 @@ class CelebA(H5PYDataset):
         examples).
 
     """
-    filename = 'celeba.hdf5'
+    _filename = 'celeba_{}.hdf5'
     default_transformers = uint8_pixels_to_floatX(('features',))
 
-    def __init__(self, which_sets, **kwargs):
+    def __init__(self, which_format, which_sets, **kwargs):
+        self.which_format = which_format
         super(CelebA, self).__init__(
             file_or_path=find_in_data_path(self.filename),
             which_sets=which_sets, **kwargs)
+
+    @property
+    def filename(self):
+        return self._filename.format(self.which_format)
