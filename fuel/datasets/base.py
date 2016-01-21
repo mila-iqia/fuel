@@ -45,7 +45,8 @@ class Dataset(object):
         elements:
             - the Transformer subclass to apply,
             - a list of arguments to pass to the subclass constructor, and
-            - a dict of keyword arguments to pass to the subclass constructor.
+            - a dict of keyword arguments to pass to the subclass
+              constructor.
 
 
     Notes

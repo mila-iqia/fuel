@@ -1,5 +1,6 @@
 import collections
 import os
+import numbers
 
 import h5py
 import six
@@ -235,12 +236,12 @@ class Subset(object):
         """
         # Translate the request within the context of this subset to a
         # request to the indexable object
-        if isinstance(subset_request, int):
+        if isinstance(subset_request, numbers.Integral):
             request, = self[[subset_request]]
         else:
             request = self[subset_request]
         # Integer or slice requests can be processed directly.
-        if isinstance(request, int) or hasattr(request, 'step'):
+        if isinstance(request, numbers.Integral) or hasattr(request, 'step'):
             return indexable[request]
         # If requested, we do fancy indexing in sorted order and reshuffle the
         # result back in the original order.
