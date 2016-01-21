@@ -7,6 +7,7 @@ import shutil
 import struct
 import tarfile
 import tempfile
+import zipfile
 
 import h5py
 import numpy
@@ -19,7 +20,7 @@ from six.moves import range, zip, cPickle
 from fuel.converters.base import (fill_hdf5_file, check_exists,
                                   MissingInputFiles)
 from fuel.converters import (adult, binarized_mnist, caltech101_silhouettes,
-                             iris, cifar10, cifar100, mnist, svhn)
+                             celeba, iris, cifar10, cifar100, mnist, svhn)
 from fuel.downloaders.caltech101_silhouettes import silhouettes_downloader
 from fuel.downloaders.base import default_downloader
 from fuel.utils import remember_cwd
@@ -288,6 +289,70 @@ class TestBinarizedMNIST(object):
         assert_equal(str(h5file['features'].dtype), 'uint8')
         assert_equal(tuple(dim.label for dim in h5file['features'].dims),
                      ('batch', 'channel', 'height', 'width'))
+
+
+class TestCelebA(object):
+    def setUp(self):
+        numpy.random.seed(21 + 1 + 2016)
+        self.tempdir = tempfile.mkdtemp()
+        cwd = os.getcwd()
+        os.chdir(self.tempdir)
+        self.images = numpy.random.randint(
+            0, 256, (10, 218, 178, 3)).astype('uint8')
+        with zipfile.ZipFile('img_align_celeba.zip', 'w') as image_file:
+            for i, image in enumerate(self.images):
+                Image.fromarray(image).save('img.jpeg')
+                image_file.write('img.jpeg',
+                                 'img_align_celeba/{:06d}.jpg'.format(i + 1))
+        with open('list_attr_celeba.txt', 'w') as attr_file:
+            attr_file.write('mock\nmock')
+            for i in range(1, 11):
+                attr_file.write('\n{:06d}.jpg'.format(i) + (' 1' * 40))
+        os.chdir(cwd)
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    @mock.patch('fuel.converters.celeba.NUM_EXAMPLES', 10)
+    def test_64_converter(self):
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('celeba')
+        convert_function = celeba.fill_subparser(subparser)
+        subparser.set_defaults(
+            directory=self.tempdir, output_directory=self.tempdir,
+            output_filename='celeba_64.hdf5')
+        args = parser.parse_args(['celeba', '64'])
+        args_dict = vars(args)
+        filename, = convert_function(**args_dict)
+        h5file = h5py.File(filename, mode='r')
+        assert_equal(h5file['features'].shape, (10, 3, 64, 64))
+        assert_equal(h5file['attributes'].shape, (10, 40))
+
+    @mock.patch('fuel.converters.celeba.NUM_EXAMPLES', 10)
+    def test_aligned_cropped_converter(self):
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        subparser = subparsers.add_parser('celeba')
+        convert_function = celeba.fill_subparser(subparser)
+        subparser.set_defaults(
+            directory=self.tempdir, output_directory=self.tempdir,
+            output_filename='celeba_aligned_cropped.hdf5')
+        args = parser.parse_args(['celeba', 'aligned_cropped'])
+        args_dict = vars(args)
+        filename, = convert_function(**args_dict)
+        h5file = h5py.File(filename, mode='r')
+        assert_equal(h5file['features'].shape, (10, 3, 218, 178))
+        assert_equal(h5file['attributes'].shape, (10, 40))
+
+    @mock.patch('fuel.converters.celeba.convert_celeba_64')
+    def test_converter_default_filename(self, mock_converter_64):
+        celeba.convert_celeba('64', './', './')
+        mock_converter_64.assert_called_with('./', './', 'celeba_64.hdf5')
+
+    def test_converter_error_wrong_format(self):
+        assert_raises(
+            ValueError, celeba.convert_celeba, 'a', './', 'mock.hdf5')
 
 
 class TestCIFAR10(object):

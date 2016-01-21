@@ -83,14 +83,15 @@ def convert_celeba_aligned_cropped(directory, output_directory,
     h5file = _initialize_conversion(directory, output_path, (218, 178))
 
     features_dataset = h5file['features']
-    image_file = zipfile.ZipFile(os.path.join(directory, IMAGE_FILE), 'r')
-    with progress_bar('images', NUM_EXAMPLES) as bar:
-        for i in range(NUM_EXAMPLES):
-            image_name = 'img_align_celeba/{:06d}.jpg'.format(i + 1)
-            features_dataset[i] = numpy.asarray(
-                Image.open(
-                    image_file.open(image_name, 'r'))).transpose(2, 0, 1)
-            bar.update(i + 1)
+    image_file_path = os.path.join(directory, IMAGE_FILE)
+    with zipfile.ZipFile(image_file_path, 'r') as image_file:
+        with progress_bar('images', NUM_EXAMPLES) as bar:
+            for i in range(NUM_EXAMPLES):
+                image_name = 'img_align_celeba/{:06d}.jpg'.format(i + 1)
+                features_dataset[i] = numpy.asarray(
+                    Image.open(
+                        image_file.open(image_name, 'r'))).transpose(2, 0, 1)
+                bar.update(i + 1)
 
     h5file.flush()
     h5file.close()
@@ -135,15 +136,16 @@ def convert_celeba_64(directory, output_directory,
     h5file = _initialize_conversion(directory, output_path, (64, 64))
 
     features_dataset = h5file['features']
-    image_file = zipfile.ZipFile(os.path.join(directory, IMAGE_FILE), 'r')
-    with progress_bar('images', NUM_EXAMPLES) as bar:
-        for i in range(NUM_EXAMPLES):
-            image_name = 'img_align_celeba/{:06d}.jpg'.format(i + 1)
-            image = Image.open(
-                image_file.open(image_name, 'r')).resize(
-                    (78, 64), Image.ANTIALIAS).crop((0, 7, 64, 64 + 7))
-            features_dataset[i] = numpy.asarray(image).transpose(2, 0, 1)
-            bar.update(i + 1)
+    image_file_path = os.path.join(directory, IMAGE_FILE)
+    with zipfile.ZipFile(image_file_path, 'r') as image_file:
+        with progress_bar('images', NUM_EXAMPLES) as bar:
+            for i in range(NUM_EXAMPLES):
+                image_name = 'img_align_celeba/{:06d}.jpg'.format(i + 1)
+                image = Image.open(
+                    image_file.open(image_name, 'r')).resize(
+                        (78, 64), Image.ANTIALIAS).crop((0, 7, 64, 64 + 7))
+                features_dataset[i] = numpy.asarray(image).transpose(2, 0, 1)
+                bar.update(i + 1)
 
     h5file.flush()
     h5file.close()
