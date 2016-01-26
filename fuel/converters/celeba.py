@@ -143,7 +143,7 @@ def convert_celeba_64(directory, output_directory,
                 image_name = 'img_align_celeba/{:06d}.jpg'.format(i + 1)
                 image = Image.open(
                     image_file.open(image_name, 'r')).resize(
-                        (78, 64), Image.ANTIALIAS).crop((0, 7, 64, 64 + 7))
+                        (64, 78), Image.ANTIALIAS).crop((0, 7, 64, 64 + 7))
                 features_dataset[i] = numpy.asarray(image).transpose(2, 0, 1)
                 bar.update(i + 1)
 
