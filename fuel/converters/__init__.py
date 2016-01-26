@@ -15,6 +15,7 @@ from fuel.converters import binarized_mnist
 from fuel.converters import caltech101_silhouettes
 from fuel.converters import cifar10
 from fuel.converters import cifar100
+from fuel.converters import dogs_vs_cats
 from fuel.converters import iris
 from fuel.converters import mnist
 from fuel.converters import svhn
@@ -27,6 +28,7 @@ all_converters = (
     ('caltech101_silhouettes', caltech101_silhouettes.fill_subparser),
     ('cifar10', cifar10.fill_subparser),
     ('cifar100', cifar100.fill_subparser),
+    ('dogs_vs_cats', dogs_vs_cats.fill_subparser),
     ('iris', iris.fill_subparser),
     ('mnist', mnist.fill_subparser),
     ('svhn', svhn.fill_subparser),
