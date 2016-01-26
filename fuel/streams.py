@@ -124,6 +124,13 @@ class DataStream(AbstractDataStream):
     dataset : instance of :class:`Dataset`
         The dataset from which the data is fetched.
 
+    Notes
+    -----
+    :class:`DataStream` assumes that there is only one consumer of its
+    epoch iterator. Re-using data streams at multiple places in the
+    code should be avoided, because it can lead to undefined behaviour.
+    Instead, users should instantiate one data stream per consumer.
+
     """
     def __init__(self, dataset, **kwargs):
         if dataset.axis_labels:
