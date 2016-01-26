@@ -74,7 +74,8 @@ def download(url, file_handle, chunk_size=1024):
     name = file_handle.name
     with progress_bar(name=name, maxval=maxval) as bar:
         for i, chunk in enumerate(r.iter_content(chunk_size)):
-            bar.update(i * chunk_size)
+            if total_length:
+                bar.update(i * chunk_size)
             file_handle.write(chunk)
 
 
