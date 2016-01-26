@@ -8,7 +8,6 @@ from theano.compat.six.moves import xrange
 
 from fuel.utils.exc import EnvironmentVariableError, NoDataPathError
 from fuel.utils.exc import reraise_as
-#from pylearn2.utils.python26 import cmp_to_key
 from fuel.utils.common_strings import environment_variable_essay
 
 

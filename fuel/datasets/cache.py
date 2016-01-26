@@ -2,14 +2,14 @@
 Dataset preloading tool
 This file provides the ability to make a local cache of a dataset or
 part of it. It is meant to help in the case where multiple jobs are
-reading the same dataset from ${PYLEARN2_DATA_PATH}, which may cause a
+reading the same dataset from ${FUEL_DATA_PATH}, which may cause a
 great burden on the network.
 With this file, it is possible to make a local copy
-(in ${PYLEARN2_LOCAL_DATA_PATH}) of any required file and have multiple
+(in ${FUEL_LOCAL_DATA_PATH}) of any required file and have multiple
 processes use it simultaneously instead of each acquiring its own copy
 over the network.
 Whenever a folder or a dataset copy is created locally, it is granted
-the same access as it has under ${PYLEARN2_LOCAL_DATA_PATH}. This is
+the same access as it has under ${FUEL_LOCAL_DATA_PATH}. This is
 gauranteed by default copy.
 """
 
@@ -33,8 +33,8 @@ class LocalDatasetCache:
     """
 
     def __init__(self):
-        default_path = '${PYLEARN2_DATA_PATH}'
-        local_path = '${PYLEARN2_LOCAL_DATA_PATH}'
+        default_path = '${FUEL_DATA_PATH}'
+        local_path = '${FUEL_LOCAL_DATA_PATH}'
         self.pid = os.getpid()
 
         try:
@@ -75,7 +75,7 @@ class LocalDatasetCache:
 
         common_msg = ("Message from Pylearn2 local cache of dataset"
                       "(specified by the environment variable "
-                      "PYLEARN2_LOCAL_DATA_PATH): ")
+                      "FUEL_LOCAL_DATA_PATH): ")
         # Make sure the file to cache exists and really is a file
         if not os.path.exists(remote_name):
             log.error("Error : Specified file %s does not exist" %
@@ -91,11 +91,11 @@ class LocalDatasetCache:
             log.warning(
                 common_msg +
                 "We cache in the local directory only what is"
-                " under $PYLEARN2_DATA_PATH: %s" %
+                " under $FUEL_DATA_PATH: %s" %
                 remote_name)
             return filename
 
-        # Create the $PYLEARN2_LOCAL_DATA_PATH folder if needed
+        # Create the $FUEL_LOCAL_DATA_PATH folder if needed
         self.safe_mkdir(self.dataset_local_dir,
                         (stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR |
                          stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP |
