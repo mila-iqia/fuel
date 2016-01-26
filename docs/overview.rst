@@ -409,9 +409,9 @@ dataset in the order defined by the iteration scheme.
 
 .. warning::
 
-    :class:`DataStream` assumes that there is only one consumer of its
-    epoch iterator. Re-using data streams at multiple places in the
-    code should be avoided, because it can lead to undefined behaviour.
+    :class:`DataStream` assumes that there is only one consumer per
+    stream. Re-using data streams at multiple places in the code
+    should be avoided, because it can lead to undefined behaviour.
     Instead, users should instantiate one data stream per consumer.
 
 
@@ -514,7 +514,7 @@ preprocessing pipeline. The complete pipeline now looks like this:
 .. warning::
 
     Because of :class:`DataStream`'s assumption that there is only one
-    consumer of its epoch iterator, users should avoid instantiating
+    consumer per stream, users should avoid instantiating
     multiple :class:`Transformer` instances using the same
     :class:`DataStream` or :class:`Transformer` instance as input.
 

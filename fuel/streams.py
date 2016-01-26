@@ -126,9 +126,9 @@ class DataStream(AbstractDataStream):
 
     Notes
     -----
-    :class:`DataStream` assumes that there is only one consumer of its
-    epoch iterator. Re-using data streams at multiple places in the
-    code should be avoided, because it can lead to undefined behaviour.
+    :class:`DataStream` assumes that there is only one consumer per
+    stream. Re-using data streams at multiple places in the code
+    should be avoided, because it can lead to undefined behaviour.
     Instead, users should instantiate one data stream per consumer.
 
     """

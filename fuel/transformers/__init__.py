@@ -95,7 +95,7 @@ class Transformer(AbstractDataStream):
     Notes
     -----
     Because of :class:`DataStream`'s assumption that there is only one
-    consumer of its epoch iterator, users should avoid instantiating
+    consumer per stream, users should avoid instantiating
     multiple :class:`Transformer` instances using the same
     :class:`DataStream` or :class:`Transformer` instance as input.
 
