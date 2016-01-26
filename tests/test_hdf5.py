@@ -232,7 +232,7 @@ class TestH5PYDataset(object):
         assert_raises(TypeError, dataset.get_data, handle, [7, 4, 6, 2, 5])
         dataset.close(handle)
 
-    def test_in_of_memory_example_scheme(self):
+    def test_in_memory_example_scheme(self):
         dataset = H5PYDataset(
             self.h5file, which_sets=('train',), load_in_memory=True)
         iter_ = dataset.get_example_stream().get_epoch_iterator()
@@ -409,3 +409,23 @@ class TestH5PYDataset(object):
             assert_equal(val, truth)
         assert_equal(rval[1], expected_targets)
         dataset.close(handle)
+
+    def test_vlen_in_memory_example_scheme(self):
+        dataset = H5PYDataset(
+            self.vlen_h5file, which_sets=('train',), load_in_memory=True,
+            sort_indices=False)
+        iter_ = dataset.get_example_stream().get_epoch_iterator()
+        assert_equal(next(iter_),
+                     (self.vlen_features[0], self.vlen_targets[0]))
+        assert_equal(next(iter_),
+                     (self.vlen_features[1], self.vlen_targets[1]))
+
+    def test_vlen_out_of_memory_example_scheme(self):
+        dataset = H5PYDataset(
+            self.vlen_h5file, which_sets=('train',), load_in_memory=False,
+            sort_indices=False)
+        iter_ = dataset.get_example_stream().get_epoch_iterator()
+        assert_equal(next(iter_),
+                     (self.vlen_features[0], self.vlen_targets[0]))
+        assert_equal(next(iter_),
+                     (self.vlen_features[1], self.vlen_targets[1]))
