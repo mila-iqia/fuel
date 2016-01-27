@@ -20,6 +20,7 @@ from fuel.converters import iris
 from fuel.converters import mnist
 from fuel.converters import svhn
 from fuel.converters import ilsvrc2010
+from fuel.converters import youtube_audio
 
 __version__ = '0.2'
 all_converters = (
@@ -32,4 +33,5 @@ all_converters = (
     ('iris', iris.fill_subparser),
     ('mnist', mnist.fill_subparser),
     ('svhn', svhn.fill_subparser),
-    ('ilsvrc2010', ilsvrc2010.fill_subparser))
+    ('ilsvrc2010', ilsvrc2010.fill_subparser),
+    ('youtube_audio', youtube_audio.fill_subparser))
