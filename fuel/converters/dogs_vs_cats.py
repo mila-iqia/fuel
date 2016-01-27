@@ -21,7 +21,7 @@ def convert_dogs_vs_cats(directory, output_directory,
     :class:`fuel.datasets.dogs_vs_cats`. The converted dataset is saved as
     'dogs_vs_cats.hdf5'.
 
-    It assumes the existence of the following file:
+    It assumes the existence of the following files:
 
     * `dogs_vs_cats.train.zip`
     * `dogs_vs_cats.test1.zip`

@@ -9,7 +9,7 @@ from numpy.testing import assert_equal, assert_raises
 
 from fuel.downloaders import (adult, binarized_mnist,
                               caltech101_silhouettes, cifar10, cifar100,
-                              iris, mnist, svhn)
+                              dogs_vs_cats, iris, mnist, svhn)
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix,
                                    ensure_directory_exists)
@@ -166,6 +166,20 @@ def test_cifar10():
     args = parser.parse_args(['cifar10'])
     filenames = ['cifar-10-python.tar.gz']
     urls = ['http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz']
+    assert_equal(args.filenames, filenames)
+    assert_equal(args.urls, urls)
+    assert download_function is default_downloader
+
+
+def test_dogs_vs_cats():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    download_function = dogs_vs_cats.fill_subparser(
+        subparsers.add_parser('dogs_vs_cats'))
+    args = parser.parse_args(['dogs_vs_cats'])
+    filenames = ['dogs_vs_cats.train.zip', 'dogs_vs_cats.test1.zip']
+    urls = ['https://www.dropbox.com/s/s3u30quvpxqdbz6/train.zip?dl=1',
+            'https://www.dropbox.com/s/21rwu6drnplsbkb/test1.zip?dl=1']
     assert_equal(args.filenames, filenames)
     assert_equal(args.urls, urls)
     assert download_function is default_downloader
