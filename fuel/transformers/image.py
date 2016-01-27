@@ -220,11 +220,7 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
                                 self.data_stream.axis_labels[source_name],
                                 source_name)
         windowed_height, windowed_width = self.window_shape
-        if isinstance(source, list) and all(isinstance(b, numpy.ndarray) and
-                                            b.ndim == 3 for b in source):
-            return [self.transform_source_example(im, source_name)
-                    for im in source]
-        elif isinstance(source, numpy.ndarray) and source.ndim == 4:
+        if isinstance(source, numpy.ndarray) and source.ndim == 4:
             # Hardcoded assumption of (batch, channels, height, width).
             # This is what the fast Cython code supports.
             out = numpy.empty(source.shape[:2] + self.window_shape,
@@ -241,6 +237,9 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
             offsets_h = self.rng.random_integers(0, max_h_off, size=batch_size)
             window_batch_bchw(source, offsets_h, offsets_w, out)
             return out
+        elif all(isinstance(b, numpy.ndarray) and b.ndim == 3 for b in source):
+            return [self.transform_source_example(im, source_name)
+                    for im in source]
         else:
             raise ValueError("uninterpretable batch format; expected a list "
                              "of arrays with ndim = 3, or an array with "
