@@ -359,7 +359,7 @@ class Flatten(SourcewiseTransformer):
         return numpy.asarray(source_example).flatten()
 
     def transform_source_batch(self, source_batch, _):
-        return numpy.asarray(source_batch).reshape((source_batch.shape[0], -1))
+        return numpy.asarray(source_batch).reshape((len(source_batch), -1))
 
 
 class ScaleAndShift(AgnosticSourcewiseTransformer):
