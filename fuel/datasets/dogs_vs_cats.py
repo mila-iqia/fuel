@@ -9,10 +9,14 @@ class DogsVsCats(H5PYDataset):
     Parameters
     ----------
     which_sets : tuple of str
-        Which split to load. Valid values are 'train', 'valid' and 'test'.
-        The 'train' set corresponds to a shuffled subset of 20,000 images
-        of the original training set, while 'valid' contains 5,000 images
-        of the same set. The test set is the one released on Kaggle.
+        Which split to load. Valid values are 'train' and 'test'.
+        The test set is the one released on Kaggle.
+
+    Notes
+    -----
+    The Dogs vs. Cats dataset does not provide an official
+    validation split. Users need to create their own
+    training / validation split using the `subset` argument.
 
     """
     filename = 'dogs_vs_cats.hdf5'
