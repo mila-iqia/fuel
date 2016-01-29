@@ -15,6 +15,7 @@ DATASET_FILES = [IMAGE_FILE, ATTRIBUTES_FILE]
 NUM_EXAMPLES = 202599
 TRAIN_STOP = 162770
 VALID_STOP = 182637
+OUTPUT_FILENAME = 'celeba_aligned_cropped.hdf5'
 
 
 def _initialize_conversion(directory, output_path, image_shape):
@@ -52,7 +53,7 @@ def _initialize_conversion(directory, output_path, image_shape):
 
 @check_exists(required_files=DATASET_FILES)
 def convert_celeba_aligned_cropped(directory, output_directory,
-                                   output_filename='celeba_aligned_cropped.hdf5'):
+                                   output_filename=OUTPUT_FILENAME):
     """Converts the aligned and cropped CelebA dataset to HDF5.
 
     Converts the CelebA dataset to an HDF5 dataset compatible with
