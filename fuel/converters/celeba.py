@@ -22,20 +22,20 @@ def _initialize_conversion(directory, output_path, image_shape):
     split_dict = {
         'train': {
             'features': (0, TRAIN_STOP),
-            'attributes': (0, TRAIN_STOP)},
+            'targets': (0, TRAIN_STOP)},
         'valid': {
             'features': (TRAIN_STOP, VALID_STOP),
-            'attributes': (TRAIN_STOP, VALID_STOP)},
+            'targets': (TRAIN_STOP, VALID_STOP)},
         'test': {
             'features': (VALID_STOP, NUM_EXAMPLES),
-            'attributes': (VALID_STOP, NUM_EXAMPLES)}}
+            'targets': (VALID_STOP, NUM_EXAMPLES)}}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
 
-    attributes_dataset = h5file.create_dataset(
-        'attributes', (NUM_EXAMPLES, 40), dtype='uint8')
-    attributes_dataset.dims[0].label = 'batch'
-    attributes_dataset.dims[1].label = 'attribute'
-    attributes_dataset[...] = (
+    targets_dataset = h5file.create_dataset(
+        'targets', (NUM_EXAMPLES, 40), dtype='uint8')
+    targets_dataset.dims[0].label = 'batch'
+    targets_dataset.dims[1].label = 'target'
+    targets_dataset[...] = (
         numpy.loadtxt(os.path.join(directory, ATTRIBUTES_FILE), dtype='int32',
                       skiprows=2, usecols=tuple(range(1, 41))) +
         1) / 2

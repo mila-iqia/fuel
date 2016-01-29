@@ -15,11 +15,11 @@ def test_celeba():
         f = h5py.File('celeba_64.hdf5', 'w')
         f['features'] = numpy.arange(
             10 * 3 * 64 * 64, dtype='uint8').reshape((10, 3, 64, 64))
-        f['attributes'] = numpy.arange(
+        f['targets'] = numpy.arange(
             10 * 40, dtype='uint8').reshape((10, 40))
-        split_dict = {'train': {'features': (0, 6), 'attributes': (0, 6)},
-                      'valid': {'features': (6, 8), 'attributes': (6, 8)},
-                      'test': {'features': (8, 10), 'attributes': (8, 10)}}
+        split_dict = {'train': {'features': (0, 6), 'targets': (0, 6)},
+                      'valid': {'features': (6, 8), 'targets': (6, 8)},
+                      'test': {'features': (8, 10), 'targets': (8, 10)}}
         f.attrs['split'] = H5PYDataset.create_split_array(split_dict)
         f.close()
         dataset = CelebA(which_format='64', which_sets=('train',))

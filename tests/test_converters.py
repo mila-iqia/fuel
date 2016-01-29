@@ -327,7 +327,7 @@ class TestCelebA(object):
         filename, = convert_function(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(h5file['features'].shape, (10, 3, 64, 64))
-        assert_equal(h5file['attributes'].shape, (10, 40))
+        assert_equal(h5file['targets'].shape, (10, 40))
 
     @mock.patch('fuel.converters.celeba.NUM_EXAMPLES', 10)
     def test_aligned_cropped_converter(self):
@@ -343,7 +343,7 @@ class TestCelebA(object):
         filename, = convert_function(**args_dict)
         h5file = h5py.File(filename, mode='r')
         assert_equal(h5file['features'].shape, (10, 3, 218, 178))
-        assert_equal(h5file['attributes'].shape, (10, 40))
+        assert_equal(h5file['targets'].shape, (10, 40))
 
     @mock.patch('fuel.converters.celeba.convert_celeba_64')
     def test_converter_default_filename(self, mock_converter_64):
