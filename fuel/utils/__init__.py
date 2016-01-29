@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import os
 import numbers
 
@@ -8,6 +9,15 @@ import numpy
 from six.moves import range
 
 from fuel import config
+
+
+@contextlib.contextmanager
+def remember_cwd():
+    curdir = os.getcwd()
+    try:
+        yield
+    finally:
+        os.chdir(curdir)
 
 
 # See http://python3porting.com/differences.html#buffer
