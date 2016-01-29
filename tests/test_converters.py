@@ -295,20 +295,20 @@ class TestCelebA(object):
     def setUp(self):
         numpy.random.seed(21 + 1 + 2016)
         self.tempdir = tempfile.mkdtemp()
-        cwd = os.getcwd()
-        os.chdir(self.tempdir)
-        self.images = numpy.random.randint(
-            0, 256, (10, 218, 178, 3)).astype('uint8')
-        with zipfile.ZipFile('img_align_celeba.zip', 'w') as image_file:
-            for i, image in enumerate(self.images):
-                Image.fromarray(image).save('img.jpeg')
-                image_file.write('img.jpeg',
-                                 'img_align_celeba/{:06d}.jpg'.format(i + 1))
-        with open('list_attr_celeba.txt', 'w') as attr_file:
-            attr_file.write('mock\nmock')
-            for i in range(1, 11):
-                attr_file.write('\n{:06d}.jpg'.format(i) + (' 1' * 40))
-        os.chdir(cwd)
+        with remember_cwd():
+            os.chdir(self.tempdir)
+            self.images = numpy.random.randint(
+                0, 256, (10, 218, 178, 3)).astype('uint8')
+            with zipfile.ZipFile('img_align_celeba.zip', 'w') as image_file:
+                for i, image in enumerate(self.images):
+                    Image.fromarray(image).save('img.jpeg')
+                    image_file.write(
+                        'img.jpeg',
+                        'img_align_celeba/{:06d}.jpg'.format(i + 1))
+            with open('list_attr_celeba.txt', 'w') as attr_file:
+                attr_file.write('mock\nmock')
+                for i in range(1, 11):
+                    attr_file.write('\n{:06d}.jpg'.format(i) + (' 1' * 40))
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
