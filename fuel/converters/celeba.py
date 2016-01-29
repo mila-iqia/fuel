@@ -71,12 +71,14 @@ def convert_celeba_aligned_cropped(directory, output_directory,
     output_directory : str
         Directory in which to save the converted dataset.
     output_filename : str, optional
-        Name of the saved dataset. Defaults to 'celeba_aligned_cropped.hdf5'.
+        Name of the saved dataset. Defaults to
+        'celeba_aligned_cropped.hdf5'.
 
     Returns
     -------
     output_paths : tuple of str
-        Single-element tuple containing the path to the converted dataset.
+        Single-element tuple containing the path to the converted
+        dataset.
 
     """
     output_path = os.path.join(output_directory, output_filename)
@@ -182,8 +184,6 @@ def convert_celeba(which_format, directory, output_directory,
         Single-element tuple containing the path to the converted dataset.
 
     """
-
-
     if which_format not in ('aligned_cropped', '64'):
         raise ValueError("CelebA format needs to be either "
                          "'aligned_cropped' or '64'.")
