@@ -7,9 +7,9 @@ from functools import wraps
 
 from numpy.testing import assert_equal, assert_raises
 
-from fuel.downloaders import (adult, binarized_mnist,
-                              caltech101_silhouettes, cifar10, cifar100,
-                              dogs_vs_cats, iris, mnist, svhn)
+from fuel.downloaders import (adult, binarized_mnist, caltech101_silhouettes,
+                              celeba, cifar10, cifar100, dogs_vs_cats, iris,
+                              mnist, svhn)
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix,
                                    ensure_directory_exists)
@@ -153,6 +153,22 @@ def test_iris():
     urls = ['https://archive.ics.uci.edu/ml/machine-learning-databases/'
             'iris/iris.data']
     filenames = ['iris.data']
+    assert_equal(args.filenames, filenames)
+    assert_equal(args.urls, urls)
+    assert download_function is default_downloader
+
+
+def test_celeba():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    download_function = celeba.fill_subparser(
+        subparsers.add_parser('celeba'))
+    args = parser.parse_args(['celeba'])
+    filenames = ['list_attr_celeba.txt', 'img_align_celeba.zip']
+    urls = ['https://www.dropbox.com/sh/8oqt9vytwxb3s4r/'
+            'AAB7G69NLjRNqv_tyiULHSVUa/list_attr_celeba.txt?dl=1',
+            'https://www.dropbox.com/sh/8oqt9vytwxb3s4r/'
+            'AADVdnYbokd7TXhpvfWLL3sga/img_align_celeba.zip?dl=1']
     assert_equal(args.filenames, filenames)
     assert_equal(args.urls, urls)
     assert download_function is default_downloader

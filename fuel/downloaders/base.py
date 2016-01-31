@@ -28,7 +28,7 @@ def progress_bar(name, maxval):
                    FileTransferSpeed()]
     else:
         widgets = ['{}: '.format(name), ' ', Timer(), ' ', FileTransferSpeed()]
-    bar = ProgressBar(widgets=widgets, maxval=maxval, fd=sys.stdout).start()
+    bar = ProgressBar(widgets=widgets, max_value=maxval, fd=sys.stdout).start()
     try:
         yield bar
     finally:
