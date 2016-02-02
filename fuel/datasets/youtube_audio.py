@@ -3,7 +3,7 @@ from fuel.utils import find_in_data_path
 
 
 class YouTubeAudio(H5PYDataset):
-    """Dataset of audio from YouTube video.
+    r"""Dataset of audio from YouTube video.
 
     Assumes the existence of a dataset file with the name
     `youtube_id.hdf5`. These datasets don't have any split; the entire

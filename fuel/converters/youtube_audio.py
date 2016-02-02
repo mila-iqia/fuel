@@ -28,8 +28,8 @@ def convert_youtube_audio(directory, output_directory, youtube_id, channels,
     sample : int
         The sampling rate to use in Hz, e.g. 44100 or 16000.
     output_filename : str, optional
-        Name of the saved dataset. If `None` (the default), `youtube_id.hdf5`
-        is used.
+        Name of the saved dataset. If `None` (the default),
+        `youtube_id.hdf5` is used.
 
     """
     input_file = os.path.join(directory, '{}.m4a'.format(youtube_id))
