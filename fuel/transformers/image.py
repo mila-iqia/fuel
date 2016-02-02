@@ -21,10 +21,10 @@ class ImagesFromBytes(SourcewiseTransformer):
     Parameters
     ----------
     data_stream : instance of :class:`AbstractDataStream`
-        The wrapped data stream. The individual examples returned by
-        this should be the bytes (in a `bytes` container on Python 3
-        or a `str` on Python 2) comprising an image in a format readable
-        by PIL, such as PNG, JPEG, etc.
+        The wrapped data stream. The individual examples returned by this
+        should be the bytes (in a `bytes` container, or a `str` on legacy
+        Python) comprising an image in a format readable by PIL, such as
+        PNG, JPEG, etc.
     color_mode : str, optional
         Mode to pass to PIL for color space conversion. Default is RGB.
         If `None`, no coercion is performed.
@@ -40,9 +40,9 @@ class ImagesFromBytes(SourcewiseTransformer):
     the sake of uniformity/predictability.
 
     This SourcewiseTransformer supports streams returning single examples
-    as `bytes` objects (`str` on Python 2.x) as well as streams that
-    return iterables containing such objects. In the case of an
-    iterable, a list of loaded images is returned.
+    as `bytes` objects (`str` on legacy Python) as well as streams that
+    return iterables containing such objects. In the case of an iterable, a
+    list of loaded images is returned.
 
     """
     def __init__(self, data_stream, color_mode='RGB', **kwargs):

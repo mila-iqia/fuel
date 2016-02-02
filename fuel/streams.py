@@ -108,8 +108,8 @@ class AbstractDataStream(object):
         However, this behavior only works as long as the ``epochs``
         property is iterated over using e.g. ``for epoch in
         stream.epochs``. If you create the data iterators in advance (e.g.
-        using ``for i, epoch in zip(range(10), stream.epochs`` in Python 2)
-        you must call the :meth:`reset` method yourself.
+        using ``for i, epoch in zip(range(10), stream.epochs`` in legacy
+        Python) you must call the :meth:`reset` method yourself.
 
         """
         while True:

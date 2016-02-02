@@ -13,7 +13,7 @@ class TextFile(Dataset):
         The names of the files in order which they should be read. Each
         file is expected to have a sentence per line. If the filename ends
         with `.gz` it will be opened using `gzip`. Note however that `gzip`
-        file handles aren't picklable on Python 2.
+        file handles aren't picklable on legacy Python.
     dictionary : str or dict
         Either the path to a Pickled dictionary mapping tokens to integers,
         or the dictionary itself. At the very least this dictionary must
