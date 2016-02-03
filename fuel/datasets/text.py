@@ -76,7 +76,7 @@ class TextFile(Dataset):
     ...                      preprocess=lower, contains_unk=False)
     >>> for data in DataStream(text_data).get_epoch_iterator():
     ...     print(data)
-    ([0, 4, 3, 4],)
+    ([0, 4, 3, 5],)
     ([0, 6, 7],)
 
     .. doctest::
