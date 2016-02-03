@@ -10,6 +10,7 @@ from six import add_metaclass, iteritems
 from fuel import config
 from fuel.streams import AbstractDataStream
 from fuel.schemes import BatchSizeScheme
+from fuel.iterator import TransformerDataIterator
 from ..exceptions import AxisLabelsMismatchError
 
 log = logging.getLogger(__name__)
@@ -125,7 +126,7 @@ class Transformer(AbstractDataStream):
     def next_epoch(self):
         self.data_stream.next_epoch()
 
-    def get_epoch_iterator(self, **kwargs):
+    def get_epoch_iterator(self, as_dict=False):
         """Get an epoch iterator for the wrapped data set.
 
         Notes
@@ -136,13 +137,15 @@ class Transformer(AbstractDataStream):
         new epoch iterators from the child data set when necessary.
 
         """
-        self.child_epoch_iterator = self.data_stream.get_epoch_iterator()
-        return super(Transformer, self).get_epoch_iterator(**kwargs)
+        return TransformerDataIterator(
+            self, self.data_stream.get_epoch_iterator(),
+            self.iteration_scheme.get_request_iterator()
+            if self.iteration_scheme else None, as_dict=as_dict)
 
-    def get_data(self, request=None):
+    def get_data(self, child_epoch_iterator, request=None):
         if request is not None:
             raise ValueError
-        data = next(self.child_epoch_iterator)
+        data = next(child_epoch_iterator)
 
         if self.produces_examples != self.data_stream.produces_examples:
             types = {True: 'examples', False: 'batches'}
@@ -215,10 +218,10 @@ class Mapping(Transformer):
         return self.data_stream.sources + (self.add_sources
                                            if self.add_sources else ())
 
-    def get_data(self, request=None):
+    def get_data(self, child_epoch_iterator, request=None):
         if request is not None:
             raise ValueError
-        data = next(self.child_epoch_iterator)
+        data = next(child_epoch_iterator)
         image = self.mapping(data)
         if not self.add_sources:
             return image
@@ -457,8 +460,7 @@ class Filter(Transformer):
         self.predicate = predicate
 
     def get_epoch_iterator(self, **kwargs):
-        super(Filter, self).get_epoch_iterator(**kwargs)
-        return ifilter(self.predicate, self.child_epoch_iterator)
+        return ifilter(self.predicate, self.data_stream.get_epoch_iterator())
 
 
 class Cache(Transformer):
@@ -498,11 +500,11 @@ class Cache(Transformer):
             data_stream, iteration_scheme=iteration_scheme, **kwargs)
         self.cache = [[] for _ in self.sources]
 
-    def get_data(self, request=None):
+    def get_data(self, child_epoch_iterator, request=None):
         if request is None:
             raise ValueError
         if request > len(self.cache[0]):
-            self._cache()
+            self._cache(child_epoch_iterator)
         data = []
         for i, cache in enumerate(self.cache):
             data.append(numpy.asarray(cache[:request]))
@@ -513,8 +515,8 @@ class Cache(Transformer):
         self.cache = [[] for _ in self.sources]
         return super(Cache, self).get_epoch_iterator(**kwargs)
 
-    def _cache(self):
-        for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
+    def _cache(self, child_epoch_iterator):
+        for cache, data in zip(self.cache, next(child_epoch_iterator)):
             cache.extend(data)
 
 
@@ -587,7 +589,7 @@ class Batch(Transformer):
             data_stream, iteration_scheme=iteration_scheme, **kwargs)
         self.strictness = strictness
 
-    def get_data(self, request=None):
+    def get_data(self, child_epoch_iterator, request=None):
         """Get data from the dataset."""
         if request is None:
             raise ValueError
@@ -595,7 +597,7 @@ class Batch(Transformer):
         for i in range(request):
             try:
                 for source_data, example in zip(
-                        data, next(self.child_epoch_iterator)):
+                        data, next(child_epoch_iterator)):
                     source_data.append(example)
             except StopIteration:
                 # If some data has been extracted and `strict` is not set,
@@ -633,17 +635,17 @@ class Unpack(Transformer):
             data_stream, produces_examples=True, **kwargs)
         self.data = None
 
-    def get_data(self, request=None):
+    def get_data(self, child_epoch_iterator, request=None):
         if request is not None:
             raise ValueError
         if not self.data:
-            data = next(self.child_epoch_iterator)
+            data = next(child_epoch_iterator)
             self.data = izip(*data)
         try:
             return next(self.data)
         except StopIteration:
             self.data = None
-            return self.get_data()
+            return self.get_data(child_epoch_iterator)
 
 
 class Padding(Transformer):
@@ -779,16 +781,17 @@ class Merge(AbstractDataStream):
         for data_stream in self.data_streams:
             data_stream.next_epoch()
 
-    def get_epoch_iterator(self, **kwargs):
-        self.child_epoch_iterators = [data_stream.get_epoch_iterator()
-                                      for data_stream in self.data_streams]
-        return super(Merge, self).get_epoch_iterator(**kwargs)
+    def get_epoch_iterator(self, as_dict=False):
+        return TransformerDataIterator(
+            self, [data_stream.get_epoch_iterator() for data_stream in
+            self.data_streams], self.iteration_scheme.get_request_iterator()
+            if self.iteration_scheme else None, as_dict=as_dict)
 
-    def get_data(self, request=None):
+    def get_data(self, child_epoch_iterators, request=None):
         if request is not None:
             raise ValueError
         result = []
-        for child_epoch_iterator in self.child_epoch_iterators:
+        for child_epoch_iterator in child_epoch_iterators:
             result.extend(next(child_epoch_iterator))
         return tuple(result)
 
@@ -860,7 +863,7 @@ class MultiProcessing(Transformer):
         self.proc.daemon = True
         self.proc.start()
 
-    def get_data(self, request=None):
+    def get_data(self, child_epoch_iterator, request=None):
         if request is not None:
             raise ValueError
         data = self.background.get_next_data()
