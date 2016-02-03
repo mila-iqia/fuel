@@ -1,6 +1,7 @@
 from picklable_itertools import iter_, chain
 
 from fuel.datasets import Dataset
+from fuel.utils.formats import open_
 
 
 class TextFile(Dataset):
@@ -10,7 +11,9 @@ class TextFile(Dataset):
     ----------
     files : list of str
         The names of the files in order which they should be read. Each
-        file is expected to have a sentence per line.
+        file is expected to have a sentence per line. If the filename ends
+        with `.gz` it will be opened using `gzip`. Note however that `gzip`
+        file handles aren't picklable on legacy Python.
     dictionary : str or dict
         Either the path to a Pickled dictionary mapping tokens to integers,
         or the dictionary itself. At the very least this dictionary must
@@ -24,7 +27,7 @@ class TextFile(Dataset):
         ``bos_taken``.
     unk_token : str, optional
         The token in the dictionary to fall back on when a token could not
-        be found in the dictionary.
+        be found in the dictionary. ``<UNK>`` by default.
     level : 'word' or 'character', optional
         If 'word' the dictionary is expected to contain full words. The
         sentences in the text file will be split at the spaces, and each
@@ -32,11 +35,16 @@ class TextFile(Dataset):
         in each example being a single list of numbers. If 'character' the
         dictionary is expected to contain single letters as keys. A single
         example will be a list of character numbers, starting with the
-        first non-whitespace character and finishing with the last one.
+        first non-whitespace character and finishing with the last one. The
+        default is 'word'.
     preprocess : function, optional
         A function which takes a sentence (string) as an input and returns
         a modified string. For example ``str.lower`` in order to lowercase
         the sentence before numberizing.
+    encoding : str, optional
+        The encoding to use to read the file. Defaults to ``None``. Use
+        UTF-8 if the dictionary you pass contains UTF-8 characters, but
+        note that this makes the dataset unpicklable on legacy Python.
 
     Examples
     --------
@@ -66,7 +74,8 @@ class TextFile(Dataset):
     example_iteration_scheme = None
 
     def __init__(self, files, dictionary, bos_token='<S>', eos_token='</S>',
-                 unk_token='<UNK>', level='word', preprocess=None):
+                 unk_token='<UNK>', level='word', preprocess=None,
+                 encoding=None):
         self.files = files
         self.dictionary = dictionary
         if bos_token is not None and bos_token not in dictionary:
@@ -82,10 +91,12 @@ class TextFile(Dataset):
             raise ValueError
         self.level = level
         self.preprocess = preprocess
+        self.encoding = encoding
         super(TextFile, self).__init__()
 
     def open(self):
-        return chain(*[iter_(open(f)) for f in self.files])
+        return chain(*[iter_(open_(f, encoding=self.encoding))
+                       for f in self.files])
 
     def get_data(self, state=None, request=None):
         if request is not None:
