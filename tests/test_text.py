@@ -85,4 +85,4 @@ def test_ngram_stream_raises_error_on_request():
                  for sentence_length in [3, 5, 7]]
     stream = DataStream(IterableDataset(sentences))
     ngrams = NGrams(4, stream)
-    assert_raises(ValueError, ngrams.get_data, [0, 1])
+    assert_raises(ValueError, ngrams.get_data, None, [0, 1])

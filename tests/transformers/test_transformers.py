@@ -60,12 +60,12 @@ class TestTransformer(object):
         assert self.data_stream.next_epoch_called
 
     def test_value_error_on_request(self):
-        assert_raises(ValueError, self.transformer.get_data, [0, 1])
+        assert_raises(ValueError, self.transformer.get_data, None, [0, 1])
 
     def test_batch_to_example_and_vice_versa_not_implemented(self):
         self.transformer.produces_examples = False
-        self.transformer.get_epoch_iterator()
-        assert_raises(NotImplementedError, self.transformer.get_data)
+        assert_raises(NotImplementedError, self.transformer.get_data,
+                      self.data_stream.get_epoch_iterator())
 
     def test_transform_example_not_implemented_by_default(self):
         assert_raises(
@@ -141,7 +141,7 @@ class TestMapping(object):
     def test_value_error_on_request(self):
         stream = DataStream(IterableDataset(self.data))
         transformer = Mapping(stream, lambda d: ([2 * i for i in d[0]],))
-        assert_raises(ValueError, transformer.get_data, [0, 1])
+        assert_raises(ValueError, transformer.get_data, None, [0, 1])
 
 
 class TestSourcewiseTransformer(object):
@@ -430,7 +430,7 @@ class TestUnpack(object):
 
     def test_value_error_on_request(self):
         wrapper = Unpack(self.stream)
-        assert_raises(ValueError, wrapper.get_data, [0, 1])
+        assert_raises(ValueError, wrapper.get_data, None, [0, 1])
 
     def test_axis_labels_default(self):
         self.stream.axis_labels = {'features': ('batch', 'index')}
@@ -506,7 +506,7 @@ class TestPadding(object):
                 IterableDataset(
                     dict(features=[[1], [2, 3]], targets=[[4, 5, 6], [7]]))),
             ConstantScheme(2)))
-        assert_raises(ValueError, transformer.get_data, [0, 1])
+        assert_raises(ValueError, transformer.get_data, None, [0, 1])
 
     def test_value_error_on_example_stream(self):
         stream = DataStream(
@@ -618,7 +618,7 @@ class TestMultiprocessing(object):
 
     def test_value_error_on_request(self):
         background = MultiProcessing(self.transformer)
-        assert_raises(ValueError, background.get_data, [0, 1])
+        assert_raises(ValueError, background.get_data, None, [0, 1])
 
     def test_axis_labels_passed_on_by_default(self):
         self.transformer.axis_labels = {'features': ('batch', 'index')}
