@@ -105,11 +105,13 @@ class TextFile(Dataset):
         if unk_token not in dictionary:
             if contains_unk:
                 raise ValueError(
-                    "UNK token '{}' is not in the dictionary".format(unk_token))
+                    "UNK token '{}' is not in the dictionary"
+                    .format(unk_token))
         self.unk_token = unk_token
         if level not in ('word', 'character'):
             raise ValueError(
-                "level should be 'word' or 'character', not '{}'".format(level))
+                "level should be 'word' or 'character', not '{}'"
+                .format(level))
         self.level = level
         self.preprocess = preprocess
         self.encoding = encoding
