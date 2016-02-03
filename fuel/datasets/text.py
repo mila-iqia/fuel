@@ -27,7 +27,10 @@ class TextFile(Dataset):
         ``bos_taken``.
     unk_token : str, optional
         The token in the dictionary to fall back on when a token could not
-        be found in the dictionary. ``<UNK>`` by default.
+        be found in the dictionary. ``<UNK>`` by default. Pass ``None`` if
+        the dataset doesn't contain any out-of-vocabulary words/characters
+        (the data request is going to crash if meets an unknown symbol).
+
     level : 'word' or 'character', optional
         If 'word' the dictionary is expected to contain full words. The
         sentences in the text file will be split at the spaces, and each
@@ -45,12 +48,6 @@ class TextFile(Dataset):
         The encoding to use to read the file. Defaults to ``None``. Use
         UTF-8 if the dictionary you pass contains UTF-8 characters, but
         note that this makes the dataset unpicklable on legacy Python.
-    contains_unk : bool, optional
-        Whether the dataset contains unknown symbols. Perform a check if
-        the UNK token in the vocabulary, which is the
-        default behaviour. Change it to ``False`` if the dataset doesn't
-        contain any out-of-vocabulary words/characters (the data request
-        is going to crash if meets an unknown symbol).
 
     Examples
     --------
@@ -73,7 +70,7 @@ class TextFile(Dataset):
     >>> text_data = TextFile(files=['sentences.txt'],
     ...                      dictionary=full_dictionary, bos_token=None,
     ...                      eos_token=None, unk_token=None,
-    ...                      preprocess=lower, contains_unk=False)
+    ...                      preprocess=lower)
     >>> for data in DataStream(text_data).get_epoch_iterator():
     ...     print(data)
     ([0, 4, 3, 5],)
@@ -91,7 +88,7 @@ class TextFile(Dataset):
 
     def __init__(self, files, dictionary, bos_token='<S>', eos_token='</S>',
                  unk_token='<UNK>', level='word', preprocess=None,
-                 encoding=None, contains_unk=True):
+                 encoding=None):
         self.files = files
         self.dictionary = dictionary
         if bos_token is not None and bos_token not in dictionary:
@@ -102,11 +99,9 @@ class TextFile(Dataset):
             raise ValueError(
                 "EOS token '{}' is not in the dictionary".format(eos_token))
         self.eos_token = eos_token
-        if unk_token not in dictionary:
-            if contains_unk:
-                raise ValueError(
-                    "UNK token '{}' is not in the dictionary"
-                    .format(unk_token))
+        if unk_token is not None and unk_token not in dictionary:
+            raise ValueError(
+                "UNK token '{}' is not in the dictionary".format(unk_token))
         self.unk_token = unk_token
         if level not in ('word', 'character'):
             raise ValueError(
@@ -122,10 +117,12 @@ class TextFile(Dataset):
                        for f in self.files])
 
     def _get_from_dictionary(self, symbol):
-        if symbol in self.dictionary:
-            return self.dictionary[symbol]
+        value = self.dictionary.get(symbol)
+        if value is not None:
+            return value
         else:
-            # Let it crash if the UNK token is not in the dictionary
+            if self.unk_token is None:
+                raise KeyError("UNK token")
             return self.dictionary[self.unk_token]
 
     def get_data(self, state=None, request=None):
