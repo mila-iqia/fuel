@@ -122,7 +122,8 @@ class TextFile(Dataset):
             return value
         else:
             if self.unk_token is None:
-                raise KeyError("UNK token")
+                raise KeyError("token '{}' not found in dictionary and no "
+                               "`unk_token` given".format(symbol))
             return self.dictionary[self.unk_token]
 
     def get_data(self, state=None, request=None):
