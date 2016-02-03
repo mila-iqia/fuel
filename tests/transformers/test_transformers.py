@@ -37,6 +37,14 @@ class FlagDataStream(DataStream):
         super(FlagDataStream, self).next_epoch()
 
 
+class Passthrough(Transformer):
+    def transform_example(self, example):
+        return example
+
+    def transform_batch(self, batch):
+        return batch
+
+
 class TestTransformer(object):
     def setUp(self):
         self.data_stream = FlagDataStream(IterableDataset([1, 2, 3]))
@@ -74,6 +82,17 @@ class TestTransformer(object):
     def test_transform_batch_not_implemented_by_default(self):
         assert_raises(
             NotImplementedError, self.transformer.transform_batch, None)
+
+    def test_transformer_works_with_multiple_clients(self):
+        data_stream = DataStream(
+            IndexableDataset([[1, 2], [3, 4]]),
+            iteration_scheme=SequentialExampleScheme(2))
+        transformer = Passthrough(data_stream, data_stream.produces_examples)
+        iterator_1 = transformer.get_epoch_iterator()
+        iterator_2 = transformer.get_epoch_iterator()
+        for _ in iterator_1:
+            pass
+        next(iterator_2)
 
 
 class TestMapping(object):
