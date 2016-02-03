@@ -27,7 +27,10 @@ class TextFile(Dataset):
         ``bos_taken``.
     unk_token : str, optional
         The token in the dictionary to fall back on when a token could not
-        be found in the dictionary. ``<UNK>`` by default.
+        be found in the dictionary. ``<UNK>`` by default. Pass ``None`` if
+        the dataset doesn't contain any out-of-vocabulary words/characters
+        (the data request is going to crash if meets an unknown symbol).
+
     level : 'word' or 'character', optional
         If 'word' the dictionary is expected to contain full words. The
         sentences in the text file will be split at the spaces, and each
@@ -62,6 +65,16 @@ class TextFile(Dataset):
     ...     print(data)
     ([2, 0, 3, 0, 1],)
     ([2, 0, 4, 1],)
+    >>> full_dictionary = {'this': 0, 'a': 3, 'is': 4, 'sentence': 5,
+    ...                    'another': 6, 'one': 7}
+    >>> text_data = TextFile(files=['sentences.txt'],
+    ...                      dictionary=full_dictionary, bos_token=None,
+    ...                      eos_token=None, unk_token=None,
+    ...                      preprocess=lower)
+    >>> for data in DataStream(text_data).get_epoch_iterator():
+    ...     print(data)
+    ([0, 4, 3, 5],)
+    ([0, 6, 7],)
 
     .. doctest::
        :hide:
@@ -79,16 +92,21 @@ class TextFile(Dataset):
         self.files = files
         self.dictionary = dictionary
         if bos_token is not None and bos_token not in dictionary:
-            raise ValueError
+            raise ValueError(
+                "BOS token '{}' is not in the dictionary".format(bos_token))
         self.bos_token = bos_token
         if eos_token is not None and eos_token not in dictionary:
-            raise ValueError
+            raise ValueError(
+                "EOS token '{}' is not in the dictionary".format(eos_token))
         self.eos_token = eos_token
-        if unk_token not in dictionary:
-            raise ValueError
+        if unk_token is not None and unk_token not in dictionary:
+            raise ValueError(
+                "UNK token '{}' is not in the dictionary".format(unk_token))
         self.unk_token = unk_token
         if level not in ('word', 'character'):
-            raise ValueError
+            raise ValueError(
+                "level should be 'word' or 'character', not '{}'"
+                .format(level))
         self.level = level
         self.preprocess = preprocess
         self.encoding = encoding
@@ -98,6 +116,16 @@ class TextFile(Dataset):
         return chain(*[iter_(open_(f, encoding=self.encoding))
                        for f in self.files])
 
+    def _get_from_dictionary(self, symbol):
+        value = self.dictionary.get(symbol)
+        if value is not None:
+            return value
+        else:
+            if self.unk_token is None:
+                raise KeyError("token '{}' not found in dictionary and no "
+                               "`unk_token` given".format(symbol))
+            return self.dictionary[self.unk_token]
+
     def get_data(self, state=None, request=None):
         if request is not None:
             raise ValueError
@@ -106,12 +134,10 @@ class TextFile(Dataset):
             sentence = self.preprocess(sentence)
         data = [self.dictionary[self.bos_token]] if self.bos_token else []
         if self.level == 'word':
-            data.extend(self.dictionary.get(word,
-                                            self.dictionary[self.unk_token])
+            data.extend(self._get_from_dictionary(word)
                         for word in sentence.split())
         else:
-            data.extend(self.dictionary.get(char,
-                                            self.dictionary[self.unk_token])
+            data.extend(self._get_from_dictionary(char)
                         for char in sentence.strip())
         if self.eos_token:
             data.append(self.dictionary[self.eos_token])
