@@ -93,13 +93,6 @@ class Transformer(AbstractDataStream):
         Whether this transformer produces examples (as opposed to batches
         of examples).
 
-    Notes
-    -----
-    Because of :class:`DataStream`'s assumption that there is only one
-    consumer per stream, users should avoid instantiating
-    multiple :class:`Transformer` instances using the same
-    :class:`DataStream` or :class:`Transformer` instance as input.
-
     """
     def __init__(self, data_stream, produces_examples=None, **kwargs):
         super(Transformer, self).__init__(**kwargs)
