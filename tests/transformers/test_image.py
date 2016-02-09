@@ -16,7 +16,7 @@ from fuel.transformers.image import (ImagesFromBytes, Image2DSlicer,
                                      RandomSpatialFlip,
                                      SamplewiseCropTransformer,
                                      FixedSizeCrop, FixedSizeCropND,
-                                     Random2DRotation)
+                                     Random2DRotation, GammaCorrectionND)
 
 def reorder_axes(shp):
     if len(shp) == 3:
@@ -111,7 +111,7 @@ class TestImagesFromBytes(ImageTestingMixin):
 
     def test_images_from_bytes_example_stream_convert_rgb(self):
         stream = ImagesFromBytes(self.example_stream,
-                                 which_sources=('source1'),
+                                 which_sources=('source1', ),
                                  color_mode='RGB')
         s1, s2 = list(zip(*list(stream.get_epoch_iterator())))
         actual_s1_gen = (reorder_axes(s) for s in self.shapes[:3])
@@ -121,7 +121,7 @@ class TestImagesFromBytes(ImageTestingMixin):
 
     def test_images_from_bytes_example_stream_convert_l(self):
         stream = ImagesFromBytes(self.example_stream,
-                                 which_sources=('source2'),
+                                 which_sources=('source2', ),
                                  color_mode='L')
         s1, s2 = list(zip(*list(stream.get_epoch_iterator())))
         actual_s2_gen = (reorder_axes(s) for s in self.shapes[3:])
@@ -1240,6 +1240,7 @@ class TestFixedSizeCropND_2D(ImageTestingMixin):
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
 
+
 class TestImage2DSlicer(ImageTestingMixin):
     def setup(self):
         self.dataset = IndexableDataset(
@@ -1271,7 +1272,7 @@ class TestImage2DSlicer(ImageTestingMixin):
         batch_shapes = [batch[0].shape for batch
                         in batch_stream.get_epoch_iterator()]
 
-        assert len(batch_shapes[0])==4
+        assert len(batch_shapes[0]) == 4
 
         batch_stream = Image2DSlicer(self.batch_stream,
                                      which_sources=('images',),
@@ -1305,18 +1306,18 @@ class TestImage2DSlicer(ImageTestingMixin):
 
     def test_all_dimensions(self):
         batch_stream = Image2DSlicer(self.batch_stream,
-                             which_sources=('images',),
-                             slice_location='center',
-                             dimension_to_slice=None,
-                             batch_or_channel=None)
+                                     which_sources=('images',),
+                                     slice_location='center',
+                                     dimension_to_slice=None,
+                                     batch_or_channel=None)
         assert_raises(ValueError, batch_stream.transform_source_batch,
                       numpy.random.randn(100, 1, 19, 19), 'images')
 
         batch_stream = Image2DSlicer(self.batch_stream,
-                             which_sources=('images',),
-                             slice_location='center',
-                             dimension_to_slice=None,
-                             batch_or_channel='xyz')
+                                     which_sources=('images',),
+                                     slice_location='center',
+                                     dimension_to_slice=None,
+                                     batch_or_channel='xyz')
         assert_raises(ValueError, batch_stream.transform_source_batch,
                       numpy.random.randn(100, 1, 19, 19), 'images')
 
@@ -1341,3 +1342,56 @@ class TestImage2DSlicer(ImageTestingMixin):
                         in batch_stream.get_epoch_iterator()]
 
         assert batch_shapes[0][1] == 3
+
+
+class TestGammaCorrectionND(ImageTestingMixin):
+    def setUp(self):
+        self.rng = numpy.random.RandomState(123)
+        self.source1 = self.rng.randn(100, 1, 19, 19, 19)
+        axis_labels = {'source1': ('batch', 'channel', 'height', 'width'), }
+
+        self.dataset = IndexableDataset(OrderedDict([('source1',
+                                                      self.source1), ]),
+                                        axis_labels=axis_labels)
+        self.common_setup()
+        self.gamma = 2.5
+        self.transformer = GammaCorrectionND(self.batch_stream, self.gamma,
+                                        which_sources=('source',))
+
+    def test_gamma_correction(self):
+        assert_equal(
+            self.transformer.gamma_correction(self.source1, self.gamma),
+            self.transformer.transform_source_batch(self.source1, 'source1'))
+
+        cast = self.rng.binomial(1, .5, size=(100, 1, 19, 19, 19))
+        source2 = 2 * (self.source1 - cast)
+
+        def condition(array):
+            return numpy.logical_and(array >= 1, array <= 0)
+
+        assert_equal(condition(self.transformer.gamma_correction(source2,
+                                                                 self.gamma)),
+                     condition(source2))
+
+    def test_batch_source_format(self):
+        examples = [self.source1[i] for i in range(self.source1.shape[0])]
+        expected_results = [self.transformer.gamma_correction(
+            example, self.gamma) for example in examples]
+        assert_equal(self.transformer.transform_source_batch(examples, 'lel'),
+                     expected_results)
+
+        obj = numpy.empty(2, dtype=object)
+        obj[0] = self.source1[0]
+        obj[1] = self.source1[1]
+        expected_results = numpy.array(
+                         [self.transformer.transform_source_example(im, 'lel')
+                          for im in obj])
+        assert_equal(self.transformer.transform_source_batch(obj, 'lel'),
+                     expected_results)
+
+        wrong_format = [1, 2, 3, 4]
+        assert_raises(ValueError, self.transformer.transform_source_batch,
+                      wrong_format, 'kek')
+        assert_raises(ValueError, self.transformer.transform_source_example,
+                      wrong_format, 'kek')
+        

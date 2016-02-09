@@ -1072,3 +1072,48 @@ class Image2DSlicer(SourcewiseTransformer):
                 z = source[:, :, :, :, pick[2]]  # z-th slice
 
                 return numpy.concatenate((x, y, z), axis=self.batch_or_channel)
+
+
+class GammaCorrectionND(SourcewiseTransformer):
+    """
+    Applies gamma correction to a source, only to pixel which values are
+    between 0 and 1.
+
+    Parameters
+    ----------
+    gamma: float
+        Gamma correction to apply
+    """
+    def __init__(self, data_stream, gamma, **kwargs):
+        self.gamma = gamma
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        super(GammaCorrectionND, self).__init__(data_stream, **kwargs)
+
+    def transform_source_batch(self, source, source_name):
+        if isinstance(source, list) and all(isinstance(b, numpy.ndarray)
+                                            for b in source):
+            return [self.transform_source_example(im, source_name)
+                    for im in source]
+        elif isinstance(source, numpy.ndarray) and \
+                source.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(im, source_name)
+                                for im in source])
+        elif isinstance(source, numpy.ndarray):
+            return self.gamma_correction(source, self.gamma)
+        else:
+            raise ValueError("uninterpretable batch format; expected a list "
+                             "of arrays, or an array")
+
+    def transform_source_example(self, example, source_name):
+        if not isinstance(example, numpy.ndarray):
+            raise ValueError("uninterpretable example format; expected "
+                             "ndarray")
+        return self.gamma_correction(example, self.gamma)
+
+    @staticmethod
+    def gamma_correction(image, gamma):
+        gamma_corrected = image.copy()
+        mask = numpy.logical_and(gamma_corrected >= 0, gamma_corrected <= 1)
+        gamma_corrected[mask] = numpy.power(gamma_corrected[mask], gamma)
+        return gamma_corrected
