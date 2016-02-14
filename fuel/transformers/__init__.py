@@ -929,28 +929,56 @@ class FilterSources(AgnosticTransformer):
         return [d for d, s in izip(data, self.data_stream.sources)
                 if s in self.sources]
 
-class SegmentSequence(Transformer):
-    """Segments the sequences in a batch.
-    This transformer is useful to do tbptt. All the sequences to segment
-    should have the time dimension as their first dimension.
-    
+class SegmentBatch(Transformer):
+    """Segments a batch by its first dimension.
+
+    This transformer will segment every batch that it processes to provide
+    smaller batches by cutting accross the first dimension all the sources in
+    the 'which sources' parameter. An example of a problem in which this
+    transformer could be useful is for applying truncated backpropagation
+    through time (tbptt). An alternative scenario in which this transformer
+    could be useful is if you want to make sure that your sequences have the
+    number of elements accross the first dimension.
+
+    In the usual case of applying tbptt, and because blocks usually requires
+    sequences' first dimension be the one that corresponds to time. This
+    transformer normally should be applied as one of the last steps. After
+    you make sure that the first dimension corresponds to time.
+
     Parameters
     ----------
     data_stream : instance of :class:`DataStream`
         The wrapped data stream.
     seq_size : int
-        maximum size of the resulting sequences.
+        the standard size of the resulting batch in its first dimension.
     which_sources : tuple of str, optional
-        sequences to segment
+        the sources that the transformer will segment. In case this argument is
+        not provided, all the sources will be segmented.
     add_flag : bool, optional
-        add a flag indicating the beginning of a new sequence.
+        add a flag indicating that this is the last resulting element of the
+        segmented batch. This is useful to reset the hidden state when changing
+        sequences.
     flag_name : str, optional
-        name of the source for the flag
-        
+        name of the source for the flag. In case this argument is not provided,
+        the name will be 'end_flag'
+    min_size : int, optional
+        smallest possible size of sequence for the last element. If the original
+        size of the batch is not a multiple of seq_size, the last element would
+        have a different size. This can cause problems if for example its 1
+        since scan does not work with sequences of length 1.
+    return_last : bool, optional
+        whether to return the last return the last cut of the sequence or not.
+        As it was mentioned the last cut can have a different size. Making this
+        parameter true assures that all provided batches will have the same size.
+    share_value : bool, optional
+        this parameter repeats the last element in the first dimension of each
+        cut as the first element of the following cut. This is useful for tbptt
+        when generating sequences.
     """
-    def __init__(self, data_stream,seq_size=100,which_sources=None,
-                 add_flag=False, flag_name = None, **kwargs):
-        super(SegmentSequence, self).__init__(data_stream=data_stream,
+    def __init__(self, data_stream, seq_size=100, which_sources=None,
+                 add_flag=False, flag_name = None, min_size = 10,
+                 return_last = True, share_value = False, **kwargs):
+        super(SegmentBatch, self).__init__(data_stream=data_stream,
             produces_examples=data_stream.produces_examples,**kwargs)
 
         if which_sources is None:
@@ -962,9 +990,14 @@ class SegmentSequence(Transformer):
         self.data = None
         self.len_data = None
         self.add_flag = add_flag
+        self.min_size = min_size
+        self.share_value = share_value
+
+        if not return_last:
+            self.min_size += self.seq_size
 
         if flag_name is None:
-            flag_name = u"start_flag"
+            flag_name = u"end_flag"
 
         self.flag_name = flag_name
 
@@ -981,7 +1014,6 @@ class SegmentSequence(Transformer):
             idx = self.sources.index(self.which_sources[0])
             self.len_data = self.data[idx].shape[0]
             #flag is one in the first cut of sequence
-            flag = 1
 
         segmented_data = list(self.data)
 
@@ -992,11 +1024,15 @@ class SegmentSequence(Transformer):
                             self.step:(self.step+self.seq_size)]
 
         self.step += self.seq_size
+
+        if self.share_value:
+            self.step -= 1
         
-        if self.step > self.len_data:
+        if self.step + self.min_size >= self.len_data:
             self.data = None
             self.len_data = None
-            self.step = 0
+            self.step = 1
+            flag = 1
 
         if self.add_flag:
             segmented_data.append(flag)
