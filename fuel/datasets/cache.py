@@ -18,6 +18,7 @@ import logging
 import os
 import stat
 import time
+import shutil
 
 import theano.gof.compilelock as compilelock
 
@@ -25,7 +26,7 @@ from fuel.utils import string_utils
 
 log = logging.getLogger(__name__)
 
-class LocalDatasetCache:
+class LocalDatasetCache(object):
 
     """
     A local cache for remote files for faster access and reducing
@@ -210,8 +211,9 @@ class LocalDatasetCache:
         if not os.path.exists(head):
             os.makedirs(os.path.dirname(head))
 
-        command = 'cp ' + remote_fname + ' ' + local_fname
-        os.system(command)
+        shutil.copyfile(remote_fname, local_fname)
+
+
         # Copy the original group id and file permission
         st = os.stat(remote_fname)
         os.chmod(local_fname, st.st_mode)
