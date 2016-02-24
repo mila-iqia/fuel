@@ -120,7 +120,8 @@ def test_process_other_set():
     OFFSET = 50
     prepare_hdf5_file(hdf5_file, OFFSET, len(all_filenames), 0)
     groundtruth = [i % 10 for i in range(len(all_filenames))]
-    process_other_set(hdf5_file, 'valid', io.BytesIO(images), groundtruth, OFFSET)
+    process_other_set(hdf5_file, 'valid', io.BytesIO(images),
+                      groundtruth, OFFSET)
 
     # Other tests cover that the actual images are what they should be.
     # Just do a basic verification of the filenames.
@@ -258,8 +259,7 @@ def test_load_from_tar():
 
 def test_read_devkit():
     skip_if_not_available(datasets=[DEVKIT_ARCHIVE])
-    synsets, raw_valid_gt = read_devkit(
-        find_in_data_path(DEVKIT_ARCHIVE))
+    synsets, raw_valid_gt = read_devkit(find_in_data_path(DEVKIT_ARCHIVE))
     # synset sanity tests appear in test_read_metadata_mat_file
     assert raw_valid_gt.min() == 1
     assert raw_valid_gt.max() == 1000

@@ -31,7 +31,7 @@ TRAIN_IMAGES_TAR = 'ILSVRC2012_img_train.tar'
 VALID_IMAGES_TAR = 'ILSVRC2012_img_val.tar'
 TEST_IMAGES_TAR = 'ILSVRC2012_img_test.tar'
 IMAGE_TARS = (TRAIN_IMAGES_TAR, VALID_IMAGES_TAR, TEST_IMAGES_TAR)
-ALL_FILES = (DEVKIT_ARCHIVE, ) + IMAGE_TARS
+ALL_FILES = (DEVKIT_ARCHIVE,) + IMAGE_TARS
 
 
 @check_exists(required_files=ALL_FILES)
@@ -61,7 +61,8 @@ def convert_ilsvrc2012(directory, output_directory,
     """
     devkit_path = os.path.join(directory, DEVKIT_ARCHIVE)
     train, valid, test = [os.path.join(directory, fn) for fn in IMAGE_TARS]
-    n_train, valid_groundtruth, n_test, wnid_map = prepare_metadata(devkit_path)
+    n_train, valid_groundtruth, n_test, wnid_map = prepare_metadata(
+        devkit_path)
     n_valid = len(valid_groundtruth)
     output_path = os.path.join(output_directory, output_filename)
 
@@ -73,7 +74,7 @@ def convert_ilsvrc2012(directory, output_directory,
         log.info('Processing validation set...')
         process_other_set(f, 'valid', valid, valid_groundtruth, n_train)
         log.info('Processing test set...')
-        process_other_set(f, 'test', test, (None, ) * n_test, n_train + n_valid)
+        process_other_set(f, 'test', test, (None,) * n_test, n_train + n_valid)
         log.info('Done.')
 
     return (output_path,)
@@ -126,7 +127,7 @@ def prepare_metadata(devkit_archive):
 
     # Map the 'ILSVRC2012 ID' to our zero-based ID.
     ilsvrc_id_to_zero_based = dict(zip(synsets['ILSVRC2012_ID'],
-                                   xrange(len(synsets))))
+                                       xrange(len(synsets))))
 
     # Map the validation set groundtruth to 0-999 labels.
     valid_groundtruth = [ilsvrc_id_to_zero_based[id_]
@@ -183,7 +184,8 @@ def prepare_hdf5_file(hdf5_file, n_train, n_valid, n_test):
     vlen_dtype = h5py.special_dtype(vlen=numpy.dtype('uint8'))
     hdf5_file.create_dataset('encoded_images', shape=(n_total,),
                              dtype=vlen_dtype)
-    hdf5_file.create_dataset('targets', shape=(n_labeled, 1), dtype=numpy.int16)
+    hdf5_file.create_dataset('targets', shape=(n_labeled, 1),
+                             dtype=numpy.int16)
     hdf5_file.create_dataset('filenames', shape=(n_total, 1), dtype='S32')
 
 
