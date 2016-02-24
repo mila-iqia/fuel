@@ -155,7 +155,8 @@ def create_splits(n_train, n_valid, n_test):
     tuples['test'] = (n_train + n_valid, n_total)
     sources = ['encoded_images', 'targets', 'filenames']
     return OrderedDict(
-        (split, OrderedDict((source, tuples[split]) for source in sources))
+        (split, OrderedDict((source, tuples[split]) for source in sources
+                            if source != 'targets' or split != 'test'))
         for split in ('train', 'valid', 'test')
     )
 
