@@ -38,5 +38,5 @@ class ToBytes(SourcewiseTransformer):
 
 
 def rgb_images_from_encoded_bytes(which_sources):
-    return ((ToBytes, [], {'which_sources': ('encoded_images',)}),
-            (ImagesFromBytes, [], {'which_sources': ('encoded_images',)}))
+    return ((ToBytes, [], {'which_sources': which_sources}),
+            (ImagesFromBytes, [], {'which_sources': which_sources}))
