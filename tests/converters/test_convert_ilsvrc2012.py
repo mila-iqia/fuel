@@ -9,7 +9,8 @@ from numpy.testing import assert_equal
 from test_convert_ilsvrc2010 import (create_fake_jpeg_tar,
                                      create_fake_tar_of_tars,
                                      MockH5PYFile,
-                                     MockSocket)
+                                     MockSocket,
+                                     MOCK_CONSUMER_MESSAGES)
 # from fuel.server import recv_arrays, send_arrays
 from fuel.converters.ilsvrc2012 import (image_consumer,
                                         load_from_tar,
@@ -159,18 +160,6 @@ def test_train_set_producer():
                     assert image_msg['flags'] == 0
                     image_data = load_from_tar(tar, jpeg)
                     assert image_msg['data'] == image_data
-
-
-MOCK_CONSUMER_MESSAGES = [
-    {'type': 'recv_pyobj', 'flags': zmq.SNDMORE, 'obj': ('foo.jpeg', 2)},
-    {'type': 'recv', 'flags': 0, 'data': numpy.cast['uint8']([6, 6, 6])},
-    {'type': 'recv_pyobj', 'flags': zmq.SNDMORE, 'obj': ('bar.jpeg', 3)},
-    {'type': 'recv', 'flags': 0, 'data': numpy.cast['uint8']([1, 8, 1, 2, 0])},
-    {'type': 'recv_pyobj', 'flags': zmq.SNDMORE, 'obj': ('baz.jpeg', 5)},
-    {'type': 'recv', 'flags': 0, 'data': numpy.cast['uint8']([1, 9, 7, 9])},
-    {'type': 'recv_pyobj', 'flags': zmq.SNDMORE, 'obj': ('bur.jpeg', 7)},
-    {'type': 'recv', 'flags': 0, 'data': numpy.cast['uint8']([1, 8, 6, 7])},
-]
 
 
 def test_image_consumer():
