@@ -1,9 +1,9 @@
-from fuel.converters.ilsvrc2010 import IMAGE_TARS
+from fuel.converters.ilsvrc2012 import ALL_FILES
 from fuel.downloaders.base import default_downloader
 
 
 def fill_subparser(subparser):
-    """Sets up a subparser to download the ILSVRC2010 dataset files.
+    """Sets up a subparser to download the ILSVRC2012 dataset files.
 
     Note that you will need to use `--url-prefix` to download the
     non-public files (namely, the TARs of images). This is a single
@@ -19,16 +19,11 @@ def fill_subparser(subparser):
     Parameters
     ----------
     subparser : :class:`argparse.ArgumentParser`
-        Subparser handling the `ilsvrc2010` command.
+        Subparser handling the `ilsvrc2012` command.
 
     """
-    urls = [
-        ('http://www.image-net.org/challenges/LSVRC/2010/'
-         'ILSVRC2010_test_ground_truth.txt'),
-        ('http://www.image-net.org/challenges/LSVRC/2010/'
-         'download/ILSVRC2010_devkit-1.0.tar.gz'),
-    ] + ([None] * len(IMAGE_TARS))
-    filenames = [None, None] + list(IMAGE_TARS)
+    urls = ([None] * len(ALL_FILES))
+    filenames = list(ALL_FILES)
     subparser.set_defaults(urls=urls, filenames=filenames)
     subparser.add_argument('-P', '--url-prefix', type=str, default=None,
                            help="URL prefix to prepend to the filenames of "
