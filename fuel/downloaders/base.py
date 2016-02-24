@@ -88,11 +88,9 @@ def ensure_directory_exists(directory):
         The directory to create
 
     """
-    try:
-        os.makedirs(directory)
-    except OSError as e:
-        if e.errno != os.errno.EEXIST:
-            raise
+    if os.path.isdir(directory):
+        return
+    os.makedirs(directory)
 
 
 def default_downloader(directory, urls, filenames, url_prefix=None,

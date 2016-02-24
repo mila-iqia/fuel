@@ -87,7 +87,7 @@ def test_ensure_directory_exists():
     with open(filepath, 'w') as f:
         f.write(' ')
 
-    assert_raises(OSError, ensure_directory_exists(filepath))
+    assert_raises(OSError, ensure_directory_exists, filepath)
 
     shutil.rmtree(dirpath, ignore_errors=True)
 
