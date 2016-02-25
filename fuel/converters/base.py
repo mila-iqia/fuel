@@ -117,7 +117,7 @@ def progress_bar(name, maxval, prefix='Converting'):
     """
     widgets = ['{} {}: '.format(prefix, name), Percentage(), ' ',
                Bar(marker='=', left='[', right=']'), ' ', ETA()]
-    bar = ProgressBar(widgets=widgets, maxval=maxval, fd=sys.stdout).start()
+    bar = ProgressBar(widgets=widgets, max_value=maxval, fd=sys.stdout).start()
     try:
         yield bar
     finally:

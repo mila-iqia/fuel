@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from contextlib import contextmanager
 
@@ -27,7 +28,7 @@ def progress_bar(name, maxval):
                    FileTransferSpeed()]
     else:
         widgets = ['{}: '.format(name), ' ', Timer(), ' ', FileTransferSpeed()]
-    bar = ProgressBar(widgets=widgets, maxval=maxval, fd=sys.stdout).start()
+    bar = ProgressBar(widgets=widgets, max_value=maxval, fd=sys.stdout).start()
     try:
         yield bar
     finally:
@@ -46,8 +47,8 @@ def filename_from_url(url, path=None):
     """
     r = requests.get(url, stream=True)
     if 'Content-Disposition' in r.headers:
-        filename = r.headers[
-            'Content-Disposition'].split('filename=')[1].strip('"')
+        filename = re.findall(r'filename=([^;]+)',
+                              r.headers['Content-Disposition'])[0].strip('"\"')
     else:
         filename = os.path.basename(urllib.parse.urlparse(url).path)
     return filename
@@ -70,10 +71,11 @@ def download(url, file_handle, chunk_size=1024):
         maxval = UnknownLength
     else:
         maxval = int(total_length)
-    name = filename_from_url(url)
+    name = file_handle.name
     with progress_bar(name=name, maxval=maxval) as bar:
         for i, chunk in enumerate(r.iter_content(chunk_size)):
-            bar.update(i * chunk_size)
+            if total_length:
+                bar.update(i * chunk_size)
             file_handle.write(chunk)
 
 
@@ -86,11 +88,9 @@ def ensure_directory_exists(directory):
         The directory to create
 
     """
-    try:
-        os.makedirs(directory)
-    except OSError as e:
-        if e.errno != os.errno.EEXIST:
-            raise
+    if os.path.isdir(directory):
+        return
+    os.makedirs(directory)
 
 
 def default_downloader(directory, urls, filenames, url_prefix=None,

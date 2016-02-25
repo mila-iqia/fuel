@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from io import BytesIO
 import numpy
-from numpy.testing import assert_raises
+from numpy.testing import assert_raises, assert_equal
 from PIL import Image
 from picklable_itertools.extras import partition_all
 from six.moves import zip
@@ -11,7 +11,8 @@ from fuel.schemes import ShuffledScheme, SequentialExampleScheme
 from fuel.streams import DataStream
 from fuel.transformers.image import (ImagesFromBytes,
                                      MinimumImageDimensions,
-                                     RandomFixedSizeCrop)
+                                     RandomFixedSizeCrop,
+                                     Random2DRotation)
 
 
 def reorder_axes(shp):
@@ -283,3 +284,154 @@ class TestFixedSizeRandomCrop(ImageTestingMixin):
 
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
+
+
+class TestRandom2DRotation(ImageTestingMixin):
+    def setUp(self):
+        source1 = numpy.zeros((2, 3, 4, 5), dtype='uint8')
+        source1[:] = numpy.arange(3 * 4 * 5, dtype='uint8').reshape((3, 4, 5))
+
+        source2 = numpy.empty(2, dtype=object)
+        source2[0] = numpy.arange(3 * 4 * 5, dtype='uint8').reshape((3, 4, 5))
+        source2[1] = numpy.arange(3 * 4 * 6, dtype='uint8').reshape((3, 4, 6))
+
+        source3 = [source2[0], source2[1]]
+
+        self.source1 = source1
+        self.source2 = source2
+        self.source3 = source3
+
+        axis_labels = {'source1': ('batch', 'channel', 'height', 'width'),
+                       'source2': ('batch', 'channel', 'height', 'width'),
+                       'source3': ('batch', 'channel', 'height', 'width')}
+        self.dataset = \
+            IndexableDataset(OrderedDict([('source1', source1),
+                                          ('source2', source2),
+                                          ('source3', source3)]),
+                             axis_labels=axis_labels)
+        self.common_setup()
+
+    def test_format_exceptions(self):
+        estream = Random2DRotation(self.example_stream,
+                                   which_sources=('source2',))
+        bstream = Random2DRotation(self.batch_stream,
+                                   which_sources=('source2',))
+        assert_raises(ValueError, estream.transform_source_example,
+                      numpy.empty((5, 6)), 'source2')
+        assert_raises(ValueError, bstream.transform_source_batch,
+                      [numpy.empty((7, 6))], 'source2')
+        assert_raises(ValueError, bstream.transform_source_batch,
+                      [numpy.empty((8, 6))], 'source2')
+
+    def test_maximum_rotation_invalid_exception(self):
+        assert_raises(ValueError, Random2DRotation, self.example_stream,
+                      maximum_rotation=0.0,
+                      which_sources=('source2',))
+        assert_raises(ValueError, Random2DRotation, self.example_stream,
+                      maximum_rotation=3.1416,
+                      which_sources=('source2',))
+
+    def test_invalid_resample_exception(self):
+        assert_raises(ValueError, Random2DRotation, self.example_stream,
+                      resample='nonexisting')
+
+    def test_random_2D_rotation_example_stream(self):
+        maximum_rotation = 0.5
+        rng = numpy.random.RandomState(123)
+        estream = Random2DRotation(self.example_stream,
+                                   maximum_rotation,
+                                   rng=rng,
+                                   which_sources=('source1',))
+        # the C x X x Y image should have equal rotation for all c in C
+        out = estream.transform_source_example(self.source1[0], 'source1')
+        expected = numpy.array([[[0,  0,  0,  2,  3],
+                                 [0,  0,  1,  7,  8],
+                                 [0,  5,  6, 12, 13],
+                                 [0, 10, 11, 17, 18]],
+                                [[0,  0,  0, 22, 23],
+                                 [0, 20, 21, 27, 28],
+                                 [0, 25, 26, 32, 33],
+                                 [0, 30, 31, 37, 38]],
+                                [[0,  0,  0, 42, 43],
+                                 [0, 40, 41, 47, 48],
+                                 [0, 45, 46, 52, 53],
+                                 [0, 50, 51, 57, 58]]], dtype='uint8')
+        assert_equal(out, expected)
+
+    def test_random_2D_rotation_batch_stream(self):
+        rng = numpy.random.RandomState(123)
+        bstream = Random2DRotation(self.batch_stream,
+                                   maximum_rotation=0.5,
+                                   rng=rng,
+                                   which_sources=('source1',))
+        # each C x X x Y image should have equal rotation for all c in C
+        out = bstream.transform_source_batch(self.source1, 'source1')
+        expected = numpy.array([[[[0,  0,  0,  2,  3],
+                                  [0,  0,  1,  7,  8],
+                                  [0,  5,  6, 12, 13],
+                                  [0, 10, 11, 17, 18]],
+                                 [[0,  0,  0, 22, 23],
+                                  [0, 20, 21, 27, 28],
+                                  [0, 25, 26, 32, 33],
+                                  [0, 30, 31, 37, 38]],
+                                 [[0,  0,  0, 42, 43],
+                                  [0, 40, 41, 47, 48],
+                                  [0, 45, 46, 52, 53],
+                                  [0, 50, 51, 57, 58]]],
+                                [[[0,  0,  1,  0,  0],
+                                  [0,  5,  6,  2,  3],
+                                  [0, 10, 11,  7,  8],
+                                  [0, 15, 16, 12, 13]],
+                                 [[0, 20, 21,  0,  0],
+                                  [0, 25, 26, 22, 23],
+                                  [0, 30, 31, 27, 28],
+                                  [0, 35, 36, 32, 33]],
+                                 [[0, 40, 41,  0,  0],
+                                  [0, 45, 46, 42, 43],
+                                  [0, 50, 51, 47, 48],
+                                  [0, 55, 56, 52, 53]]]], dtype='uint8')
+        assert_equal(out, expected)
+
+        expected = \
+            [numpy.array([[[0,  0,  0,  2,   3],
+                           [0,  0,  1,  7,   8],
+                           [0,  5,  6,  12, 13],
+                           [0,  10, 11, 17, 18]],
+                          [[0,  0,  0,  22, 23],
+                           [0,  20, 21, 27, 28],
+                           [0,  25, 26, 32, 33],
+                           [0,  30, 31, 37, 38]],
+                          [[0,  0,  0,  42, 43],
+                           [0,  40, 41, 47, 48],
+                           [0,  45, 46, 52, 53],
+                           [0,  50, 51, 57, 58]]], dtype='uint8'),
+             numpy.array([[[0,  0,  1,  2,  0,   0],
+                           [0,  6,  7,  8,  3,   4],
+                           [12, 13, 14, 15, 9,  10],
+                           [18, 19, 20, 15, 16, 17]],
+                          [[0,  24, 25, 26,  0,  0],
+                           [0,  30, 31, 32, 27, 28],
+                           [36, 37, 38, 39, 33, 34],
+                           [42, 43, 44, 39, 40, 41]],
+                          [[0,  48, 49, 50,  0,  0],
+                           [0,  54, 55, 56, 51, 52],
+                           [60, 61, 62, 63, 57, 58],
+                           [66, 67, 68, 63, 64, 65]]], dtype='uint8')]
+
+        rng = numpy.random.RandomState(123)
+        bstream = Random2DRotation(self.batch_stream,
+                                   maximum_rotation=0.5,
+                                   rng=rng,
+                                   which_sources=('source2',))
+        out = bstream.transform_source_batch(self.source2, 'source2')
+        assert_equal(out[0], expected[0])
+        assert_equal(out[1], expected[1])
+
+        rng = numpy.random.RandomState(123)
+        bstream = Random2DRotation(self.batch_stream,
+                                   maximum_rotation=0.5,
+                                   rng=rng,
+                                   which_sources=('source3',))
+        out = bstream.transform_source_batch(self.source3, 'source3')
+        assert_equal(out[0], expected[0])
+        assert_equal(out[1], expected[1])

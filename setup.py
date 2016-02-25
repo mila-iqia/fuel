@@ -27,6 +27,7 @@ setup(
     description='Data pipeline framework for machine learning',
     long_description=LONG_DESCRIPTION,
     url='https://github.com/mila-udem/fuel.git',
+    download_url='https://github.com/mila-udem/fuel/tarball/v' + version,
     author='Universite de Montreal',
     license='MIT',
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers

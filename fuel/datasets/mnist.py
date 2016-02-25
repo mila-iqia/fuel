@@ -19,7 +19,7 @@ class MNIST(H5PYDataset):
     ----------
     which_sets : tuple of str
         Which split to load. Valid values are 'train' and 'test',
-        corresponding to the training set (50,000 examples) and the test
+        corresponding to the training set (60,000 examples) and the test
         set (10,000 examples).
 
     """

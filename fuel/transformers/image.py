@@ -21,10 +21,10 @@ class ImagesFromBytes(SourcewiseTransformer):
     Parameters
     ----------
     data_stream : instance of :class:`AbstractDataStream`
-        The wrapped data stream. The individual examples returned by
-        this should be the bytes (in a `bytes` container on Python 3
-        or a `str` on Python 2) comprising an image in a format readable
-        by PIL, such as PNG, JPEG, etc.
+        The wrapped data stream. The individual examples returned by this
+        should be the bytes (in a `bytes` container, or a `str` on legacy
+        Python) comprising an image in a format readable by PIL, such as
+        PNG, JPEG, etc.
     color_mode : str, optional
         Mode to pass to PIL for color space conversion. Default is RGB.
         If `None`, no coercion is performed.
@@ -40,9 +40,9 @@ class ImagesFromBytes(SourcewiseTransformer):
     the sake of uniformity/predictability.
 
     This SourcewiseTransformer supports streams returning single examples
-    as `bytes` objects (`str` on Python 2.x) as well as streams that
-    return iterables containing such objects. In the case of an
-    iterable, a list of loaded images is returned.
+    as `bytes` objects (`str` on legacy Python) as well as streams that
+    return iterables containing such objects. In the case of an iterable, a
+    list of loaded images is returned.
 
     """
     def __init__(self, data_stream, color_mode='RGB', **kwargs):
@@ -220,11 +220,7 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
                                 self.data_stream.axis_labels[source_name],
                                 source_name)
         windowed_height, windowed_width = self.window_shape
-        if isinstance(source, list) and all(isinstance(b, numpy.ndarray) and
-                                            b.ndim == 3 for b in source):
-            return [self.transform_source_example(im, source_name)
-                    for im in source]
-        elif isinstance(source, numpy.ndarray) and source.ndim == 4:
+        if isinstance(source, numpy.ndarray) and source.ndim == 4:
             # Hardcoded assumption of (batch, channels, height, width).
             # This is what the fast Cython code supports.
             out = numpy.empty(source.shape[:2] + self.window_shape,
@@ -241,6 +237,9 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
             offsets_h = self.rng.random_integers(0, max_h_off, size=batch_size)
             window_batch_bchw(source, offsets_h, offsets_w, out)
             return out
+        elif all(isinstance(b, numpy.ndarray) and b.ndim == 3 for b in source):
+            return [self.transform_source_example(im, source_name)
+                    for im in source]
         else:
             raise ValueError("uninterpretable batch format; expected a list "
                              "of arrays with ndim = 3, or an array with "
@@ -270,3 +269,100 @@ class RandomFixedSizeCrop(SourcewiseTransformer, ExpectsAxisLabels):
             off_w = 0
         return example[:, off_h:off_h + windowed_height,
                        off_w:off_w + windowed_width]
+
+
+class Random2DRotation(SourcewiseTransformer, ExpectsAxisLabels):
+    """Randomly rotate 2D images in the spatial plane.
+
+    Parameters
+    ----------
+    data_stream : :class:`AbstractDataStream`
+        The data stream to wrap.
+    maximum_rotation : float, default `math.pi`
+        Maximum amount of rotation in radians. The image will be rotated by
+        an angle in the range [-maximum_rotation, maximum_rotation].
+    resample : str, optional
+        Resampling filter for PIL to use to upsample any images requiring
+        it. Options include 'nearest' (default), 'bilinear', and 'bicubic'.
+        See the PIL documentation for more detailed information.
+
+    Notes
+    -----
+    This transformer expects to act on stream sources which provide one of
+
+     * Single images represented as 3-dimensional ndarrays, with layout
+       `(channel, height, width)`.
+     * Batches of images represented as lists of 3-dimensional ndarrays,
+       possibly of different shapes (i.e. images of differing
+       heights/widths).
+     * Batches of images represented as 4-dimensional ndarrays, with
+       layout `(batch, channel, height, width)`.
+
+    The format of the stream will be un-altered, i.e. if lists are
+    yielded by `data_stream` then lists will be yielded by this
+    transformer.
+
+    """
+    def __init__(self, data_stream, maximum_rotation=math.pi,
+                 resample='nearest', **kwargs):
+        if maximum_rotation <= 0 or maximum_rotation > math.pi:
+            raise ValueError('maximum_rotation ({:.5f}) must be in the range '
+                             '(0, math.pi]'.format(maximum_rotation))
+        self.maximum_rotation = numpy.rad2deg(maximum_rotation)
+        try:
+            self.resample = getattr(Image, resample.upper())
+        except AttributeError:
+            raise ValueError("unknown resampling filter '{}'".format(resample))
+
+        self.rng = kwargs.pop('rng', None)
+        self.warned_axis_labels = False
+        if self.rng is None:
+            self.rng = numpy.random.RandomState(config.default_seed)
+        kwargs.setdefault('produces_examples', data_stream.produces_examples)
+        kwargs.setdefault('axis_labels', data_stream.axis_labels)
+        super(Random2DRotation, self).__init__(data_stream, **kwargs)
+
+    def transform_source_batch(self, source, source_name):
+        self.verify_axis_labels(('batch', 'channel', 'height', 'width'),
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
+        rotation_angles = self.rng.uniform(-self.maximum_rotation,
+                                           self.maximum_rotation,
+                                           len(source))
+        if isinstance(source, list) and all(isinstance(b, numpy.ndarray) and
+                                            b.ndim == 3 for b in source):
+            return [self._example_transform(im, angle)
+                    for im, angle in zip(source, rotation_angles)]
+        elif isinstance(source, numpy.ndarray) and source.dtype == object and \
+                all(isinstance(b, numpy.ndarray) and b.ndim == 3 for b in
+                    source):
+            out = numpy.empty(len(source), dtype=object)
+            for im_idx, (im, angle) in enumerate(zip(source, rotation_angles)):
+                out[im_idx] = self._example_transform(im, angle)
+            return out
+        elif isinstance(source, numpy.ndarray) and source.ndim == 4:
+            return numpy.array([self._example_transform(im, angle)
+                                for im, angle in zip(source, rotation_angles)],
+                               dtype=source.dtype)
+        else:
+            raise ValueError("uninterpretable batch format; expected a list "
+                             "of arrays with ndim = 3, or an array with "
+                             "ndim = 4")
+
+    def transform_source_example(self, example, source_name):
+        self.verify_axis_labels(('channel', 'height', 'width'),
+                                self.data_stream.axis_labels[source_name],
+                                source_name)
+        if not isinstance(example, numpy.ndarray) or example.ndim != 3:
+            raise ValueError("uninterpretable example format; expected "
+                             "ndarray with ndim = 3")
+        rotation_angle = self.rng.uniform(-self.maximum_rotation,
+                                          self.maximum_rotation)
+        return self._example_transform(example, rotation_angle)
+
+    def _example_transform(self, example, rotation_angle):
+        dt = example.dtype
+        im = Image.fromarray(example.transpose(1, 2, 0))
+        example = numpy.array(im.rotate(rotation_angle,
+                                        resample=self.resample)).astype(dt)
+        return example.transpose(2, 0, 1)
