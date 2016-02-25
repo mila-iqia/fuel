@@ -38,11 +38,11 @@ class NGrams(Transformer):
         self.sentence = []
         self.index = 0
 
-    def get_data(self, request=None):
+    def get_data(self, child_epoch_iterator, request=None):
         if request is not None:
             raise ValueError
         while not self.index < len(self.sentence) - self.ngram_order:
-            self.sentence, = next(self.child_epoch_iterator)
+            self.sentence, = next(child_epoch_iterator)
             self.index = 0
         ngram = self.sentence[self.index:self.index + self.ngram_order]
         target = self.sentence[self.index + self.ngram_order]

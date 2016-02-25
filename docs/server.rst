@@ -40,11 +40,11 @@ data:
 ...         self.slowdown = kwargs.pop('slowdown', 0)
 ...         super(Bottleneck, self).__init__(*args, **kwargs)
 ...
-...     def get_data(self, request=None):
+...     def get_data(self, child_epoch_iterator, request=None):
 ...         if request is not None:
 ...             raise ValueError
 ...         time.sleep(self.slowdown)
-...         return next(self.child_epoch_iterator)
+...         return next(child_epoch_iterator)
 
 We'll also create a context manager to time a block of code and print the
 result:
@@ -149,11 +149,11 @@ Here's those two files:
             self.slowdown = kwargs.pop('slowdown', 0)
             super(Bottleneck, self).__init__(*args, **kwargs)
 
-        def get_data(self, request=None):
+        def get_data(self, child_epoch_iterator, request=None):
             if request is not None:
                 raise ValueError
             time.sleep(self.slowdown)
-            return next(self.child_epoch_iterator)
+            return next(child_epoch_iterator)
 
 
     def create_data_stream(slowdown=0):
