@@ -43,7 +43,7 @@ class TestServer(object):
                 for data in zip(s, e):
                     assert_allclose(*data, rtol=1e-3)
         except AssertionError as e:
-            raise SkipTest("Skip test_that failed with:".format(e))
+            raise SkipTest("Skip test_that failed with: {}".format(e))
         assert_raises(StopIteration, next, server_data)
 
     def test_value_error_on_request(self):
