@@ -71,7 +71,7 @@ def convert_ilsvrc2012(directory, output_directory,
         log.info('Processing validation set...')
         process_other_set(f, 'valid', valid, patch, valid_groundtruth, n_train)
         log.info('Processing test set...')
-        process_other_set(f, 'test', patch, None, (None,) * n_test,
+        process_other_set(f, 'test', test, patch, (None,) * n_test,
                           n_train + n_valid)
         log.info('Done.')
 
