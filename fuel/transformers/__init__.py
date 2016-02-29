@@ -507,8 +507,13 @@ class Cache(Transformer):
         return super(Cache, self).get_epoch_iterator(**kwargs)
 
     def _cache(self):
-        for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
-            cache.extend(data)
+        try:
+            for cache, data in zip(self.cache,
+                                   next(self.child_epoch_iterator)):
+                cache.extend(data)
+        except StopIteration:
+            if not self.cache[0]:
+                raise
 
 
 class SortMapping(object):

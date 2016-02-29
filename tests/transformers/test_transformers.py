@@ -325,6 +325,14 @@ class TestCache(object):
         assert_equal(len(data[-1][0]), 100 % 7)
         assert not cached_stream.cache[0]
 
+        stream = Batch(DataStream(IterableDataset(range(3000))),
+                       ConstantScheme(3200))
+
+        cached_stream = Cache(stream, ConstantScheme(64))
+        data = list(cached_stream.get_epoch_iterator())
+        assert_equal(len(data[-1][0]), 3000 % 64)
+        assert not cached_stream.cache[0]
+
     def test_epoch_transition(self):
         cached_stream = Cache(self.stream, ConstantScheme(7, times=3))
         for _, epoch in zip(range(2), cached_stream.iterate_epochs()):
