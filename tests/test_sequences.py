@@ -8,7 +8,7 @@ from six.moves import cPickle
 from fuel.datasets import TextFile, IterableDataset, IndexableDataset
 from fuel.schemes import SequentialScheme
 from fuel.streams import DataStream
-from fuel.transformers.text import NGrams
+from fuel.transformers.sequences import Window, NGrams
 
 
 def lower(s):
@@ -61,6 +61,28 @@ def test_ngram_stream():
     stream = DataStream(IterableDataset(sentences))
     ngrams = NGrams(4, stream)
     assert len(list(ngrams.get_epoch_iterator())) == 4
+
+
+def test_window_stream():
+    sentences = [list(numpy.random.randint(10, size=sentence_length))
+                 for sentence_length in [3, 5, 7]]
+    stream = DataStream(IterableDataset(sentences))
+    windows = Window(0, 4, 4, True, stream)
+    for i, (source, target) in enumerate(windows.get_epoch_iterator()):
+        assert source == target
+    assert i == 5  # Total of 6 windows
+
+    # Make sure that negative indices work
+    windows = Window(-2, 4, 4, False, stream)
+    for i, (source, target) in enumerate(windows.get_epoch_iterator()):
+        assert source[-2:] == target[:2]
+    assert i == 1  # Should get 2 examples
+
+    # Even for overlapping negative indices should work
+    windows = Window(-2, 4, 4, True, stream)
+    for i, (source, target) in enumerate(windows.get_epoch_iterator()):
+        assert source[:2] == target[-2:]
+    assert i == 1  # Should get 2 examples
 
 
 def test_ngram_stream_error_on_multiple_sources():
