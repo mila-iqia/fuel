@@ -717,7 +717,7 @@ class TestOneHotEncoding(object):
             DataStream(IndexableDataset(self.data),
                        iteration_scheme=SequentialExampleScheme(4)),
             num_classes=4,
-            which_sources='targets')
+            which_sources=('targets',))
         assert_equal(
             list(wrapper.get_epoch_iterator()),
             [(numpy.ones((2, 2)), numpy.array([[1, 0, 0, 0]])),
@@ -730,7 +730,7 @@ class TestOneHotEncoding(object):
             DataStream(IndexableDataset(self.data),
                        iteration_scheme=SequentialExampleScheme(4)),
             num_classes=2,
-            which_sources='targets')
+            which_sources=('targets',))
         assert_raises(ValueError, list, wrapper.get_epoch_iterator())
 
     def test_one_hot_batches(self):
@@ -738,7 +738,7 @@ class TestOneHotEncoding(object):
             DataStream(IndexableDataset(self.data),
                        iteration_scheme=SequentialScheme(4, 2)),
             num_classes=4,
-            which_sources='targets')
+            which_sources=('targets',))
         assert_equal(
             list(wrapper.get_epoch_iterator()),
             [(numpy.ones((2, 2, 2)),
@@ -751,7 +751,7 @@ class TestOneHotEncoding(object):
             DataStream(IndexableDataset(self.data),
                        iteration_scheme=SequentialScheme(4, 2)),
             num_classes=2,
-            which_sources='targets')
+            which_sources=('targets',))
         assert_raises(ValueError, list, wrapper.get_epoch_iterator())
 
 
@@ -842,17 +842,17 @@ class TestDrop(object):
         self.stream['volume'] = DataStream(IterableDataset(
             self.data['volume']), axis_labels=self.axis_labels_vol)
         self.dropstream = Drop(stream=self.stream['image'],
-                               which_sources='weight')
+                               which_sources=('weight',))
 
     def test_init(self):
         # Illegal border
         kwargs = {'stream': self.stream['image'],
-                  'which_sources': 'weight',
+                  'which_sources': ('weight',),
                   'border': 'kek'}
         assert_raises(ValueError, Drop, **kwargs)
         # Illegal dropout
         kwargs = {'stream': self.stream['image'],
-                  'which_sources': 'weight',
+                  'which_sources': ('weight',),
                   'dropout': 'lel'}
         assert_raises(ValueError, Drop, **kwargs)
 
@@ -919,7 +919,8 @@ class TestDrop(object):
         assert numpy.allclose(self.dropstream.transform_source_example(
             array, '420'), array)
         # Border drop
-        dropstream = Drop(stream=self.stream['image'], which_sources='weight',
+        dropstream = Drop(stream=self.stream['image'],
+                          which_sources=('weight',),
                           border=2)
         result = numpy.zeros([5, 5, 5]).reshape([1, 5, 5, 5])
         result[:, 2, 2, 2] = 62
@@ -932,7 +933,8 @@ class TestDrop(object):
         result[:, 1, 1] = 0
         result[:, 4, 1] = 0
         kwargs = {'rng': rng}
-        dropstream = Drop(stream=self.stream['image'], which_sources='weight',
+        dropstream = Drop(stream=self.stream['image'],
+                          which_sources=('weight',),
                           dropout=0.2, **kwargs)
         assert numpy.allclose(result,
                               dropstream.transform_source_example(
@@ -950,7 +952,8 @@ class TestDrop(object):
         assert numpy.allclose(self.dropstream.transform_source_batch(
             array, '420'), array)
         # Border drop
-        dropstream = Drop(stream=self.stream['image'], which_sources='weight',
+        dropstream = Drop(stream=self.stream['image'],
+                          which_sources=('weight',),
                           border=2)
         result = numpy.zeros([5, 5, 5]).reshape([1, 1, 5, 5, 5])
         result[:, :, 2, 2, 2] = 62
@@ -963,7 +966,8 @@ class TestDrop(object):
         result[:, :, 1, 1] = 0
         result[:, :, 4, 1] = 0
         kwargs = {'rng': rng}
-        dropstream = Drop(stream=self.stream['image'], which_sources='weight',
+        dropstream = Drop(stream=self.stream['image'],
+                          which_sources=('weight',),
                           dropout=0.2, **kwargs)
         assert numpy.allclose(result,
                               dropstream.transform_source_batch(array, '420'))
