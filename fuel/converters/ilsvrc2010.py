@@ -10,13 +10,12 @@ import os.path
 import h5py
 import numpy
 from picklable_itertools.extras import equizip
-from progressbar import ProgressBar
 from PIL import Image
 from scipy.io.matlab import loadmat
 from six.moves import zip, xrange
 import zmq
 
-from fuel.converters.base import check_exists
+from fuel.converters.base import check_exists, progress_bar
 from fuel.datasets import H5PYDataset
 from fuel.utils.formats import tar_open
 from fuel.utils.parallel import producer_consumer
@@ -302,7 +301,7 @@ def image_consumer(socket, hdf5_file, num_expected, shuffle_seed=None,
         received examples. Defaults to 0.
 
     """
-    with ProgressBar(maxval=num_expected) as pb:
+    with progress_bar('images', maxval=num_expected) as pb:
         if shuffle_seed is None:
             index_gen = iter(xrange(num_expected))
         else:

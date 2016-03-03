@@ -40,6 +40,14 @@ class Dataset(object):
     example_iteration_scheme : :class:`.IterationScheme` or ``None``
         The iteration scheme the class uses in order to produce a stream of
         examples.
+    default_transformers: It is expected to be a tuple with one element per
+        transformer in the pipeline. Each element is a tuple with three
+        elements:
+            - the Transformer subclass to apply,
+            - a list of arguments to pass to the subclass constructor, and
+            - a dict of keyword arguments to pass to the subclass
+              constructor.
+
 
     Notes
     -----

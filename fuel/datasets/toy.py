@@ -4,6 +4,7 @@ import numpy
 
 from collections import OrderedDict
 
+from fuel import config
 from fuel.datasets import IndexableDataset
 
 
@@ -50,18 +51,19 @@ class Spiral(IndexableDataset):
     """
     def __init__(self, num_examples=1000, classes=1, cycles=1., noise=0.0,
                  **kwargs):
+        seed = kwargs.pop('seed', config.default_seed)
+        rng = numpy.random.RandomState(seed)
         # Create dataset
-        pos = numpy.random.uniform(size=num_examples, low=0, high=cycles)
-        label = numpy.random.randint(size=num_examples, low=0, high=classes)
-
-        radius = (2*pos+1) / 3.
+        pos = rng.uniform(size=num_examples, low=0, high=cycles)
+        label = rng.randint(size=num_examples, low=0, high=classes)
+        radius = (2 * pos + 1) / 3.
         phase_offset = label * (2*numpy.pi) / classes
 
         features = numpy.zeros(shape=(num_examples, 2), dtype='float32')
 
         features[:, 0] = radius * numpy.sin(2*numpy.pi*pos + phase_offset)
         features[:, 1] = radius * numpy.cos(2*numpy.pi*pos + phase_offset)
-        features += noise * numpy.random.normal(size=(num_examples, 2))
+        features += noise * rng.normal(size=(num_examples, 2))
 
         data = OrderedDict([
             ('features', features),
@@ -113,20 +115,21 @@ class SwissRoll(IndexableDataset):
     """
     def __init__(self, num_examples=1000, noise=0.0, **kwargs):
         cycles = 1.5
-
-        pos = numpy.random.uniform(size=num_examples, low=0, high=1)
+        seed = kwargs.pop('seed', config.default_seed)
+        rng = numpy.random.RandomState(seed)
+        pos = rng.uniform(size=num_examples, low=0, high=1)
         phi = cycles * numpy.pi * (1 + 2*pos)
-        radius = (1+2*pos) / 3
+        radius = (1 + 2 * pos) / 3
 
         x = radius * numpy.cos(phi)
         y = radius * numpy.sin(phi)
-        z = numpy.random.uniform(size=num_examples, low=-1, high=1)
+        z = rng.uniform(size=num_examples, low=-1, high=1)
 
         features = numpy.zeros(shape=(num_examples, 3), dtype='float32')
         features[:, 0] = x
         features[:, 1] = y
         features[:, 2] = z
-        features += noise * numpy.random.normal(size=(num_examples, 3))
+        features += noise * rng.normal(size=(num_examples, 3))
 
         position = numpy.zeros(shape=(num_examples, 2), dtype='float32')
         position[:, 0] = pos

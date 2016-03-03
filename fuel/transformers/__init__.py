@@ -359,7 +359,7 @@ class Flatten(SourcewiseTransformer):
         return numpy.asarray(source_example).flatten()
 
     def transform_source_batch(self, source_batch, _):
-        return numpy.asarray(source_batch).reshape((source_batch.shape[0], -1))
+        return numpy.asarray(source_batch).reshape((len(source_batch), -1))
 
 
 class ScaleAndShift(AgnosticSourcewiseTransformer):
@@ -507,8 +507,13 @@ class Cache(Transformer):
         return super(Cache, self).get_epoch_iterator(**kwargs)
 
     def _cache(self):
-        for cache, data in zip(self.cache, next(self.child_epoch_iterator)):
-            cache.extend(data)
+        try:
+            for cache, data in zip(self.cache,
+                                   next(self.child_epoch_iterator)):
+                cache.extend(data)
+        except StopIteration:
+            if not self.cache[0]:
+                raise
 
 
 class SortMapping(object):
