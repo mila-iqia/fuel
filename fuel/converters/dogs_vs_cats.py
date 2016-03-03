@@ -49,7 +49,7 @@ def convert_dogs_vs_cats(directory, output_directory,
                                          dtype=dtype)
     hdf_shapes = h5file.create_dataset('image_features_shapes', (37500, 3),
                                        dtype='int32')
-    hdf_labels = h5file.create_dataset('targets', (37500, 1), dtype='uint8')
+    hdf_labels = h5file.create_dataset('targets', (25000, 1), dtype='uint8')
 
     # Attach shape annotations and scales
     hdf_features.dims.create_scale(hdf_shapes, 'shapes')
@@ -90,7 +90,8 @@ def convert_dogs_vs_cats(directory, output_directory,
                 hdf_shapes[i] = image.shape
 
                 # Cats are 0, Dogs are 1
-                hdf_labels[i] = 0 if 'cat' in image_name else 1
+                if split == TRAIN:
+                    hdf_labels[i] = 0 if 'cat' in image_name else 1
 
                 # Update progress
                 i += 1
