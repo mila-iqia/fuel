@@ -99,9 +99,8 @@ def convert_dogs_vs_cats(directory, output_directory,
     # Add the labels
     split_dict = {}
     sources = ['image_features', 'targets']
-    for name, slice_ in zip(['train', 'test'],
-                            [(0, 25000), (25000, 37500)]):
-        split_dict[name] = dict(zip(sources, [slice_] * len(sources)))
+    split_dict['train'] = dict(zip(sources, [(0, 25000)] * 2))
+    split_dict['test'] = {sources[0]: (25000, 37500)}
     h5file.attrs['split'] = H5PYDataset.create_split_array(split_dict)
 
     h5file.flush()
