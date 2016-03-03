@@ -284,5 +284,5 @@ def receive_integers(socket):
 
 def test_producer_consumer():
     assert (producer_consumer(partial(send_integers, n=2000),
-                              receive_integers)
-            == sum(i ** 2 for i in range(2000)))
+                              receive_integers) ==
+            sum(i ** 2 for i in range(2000)))

@@ -7,9 +7,9 @@ from functools import wraps
 
 from numpy.testing import assert_equal, assert_raises
 
-from fuel.downloaders import (adult, binarized_mnist,
-                              caltech101_silhouettes, cifar10, cifar100,
-                              iris, mnist, svhn)
+from fuel.downloaders import (adult, binarized_mnist, caltech101_silhouettes,
+                              celeba, cifar10, cifar100, dogs_vs_cats, iris,
+                              mnist, svhn)
 from fuel.downloaders.base import (download, default_downloader,
                                    filename_from_url, NeedURLPrefix,
                                    ensure_directory_exists)
@@ -87,7 +87,7 @@ def test_ensure_directory_exists():
     with open(filepath, 'w') as f:
         f.write(' ')
 
-    assert_raises(ensure_directory_exists(filepath))
+    assert_raises(OSError, ensure_directory_exists, filepath)
 
     shutil.rmtree(dirpath, ignore_errors=True)
 
@@ -158,6 +158,22 @@ def test_iris():
     assert download_function is default_downloader
 
 
+def test_celeba():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    download_function = celeba.fill_subparser(
+        subparsers.add_parser('celeba'))
+    args = parser.parse_args(['celeba'])
+    filenames = ['list_attr_celeba.txt', 'img_align_celeba.zip']
+    urls = ['https://www.dropbox.com/sh/8oqt9vytwxb3s4r/'
+            'AAB7G69NLjRNqv_tyiULHSVUa/list_attr_celeba.txt?dl=1',
+            'https://www.dropbox.com/sh/8oqt9vytwxb3s4r/'
+            'AADVdnYbokd7TXhpvfWLL3sga/img_align_celeba.zip?dl=1']
+    assert_equal(args.filenames, filenames)
+    assert_equal(args.urls, urls)
+    assert download_function is default_downloader
+
+
 def test_cifar10():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
@@ -166,6 +182,20 @@ def test_cifar10():
     args = parser.parse_args(['cifar10'])
     filenames = ['cifar-10-python.tar.gz']
     urls = ['http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz']
+    assert_equal(args.filenames, filenames)
+    assert_equal(args.urls, urls)
+    assert download_function is default_downloader
+
+
+def test_dogs_vs_cats():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    download_function = dogs_vs_cats.fill_subparser(
+        subparsers.add_parser('dogs_vs_cats'))
+    args = parser.parse_args(['dogs_vs_cats'])
+    filenames = ['dogs_vs_cats.train.zip', 'dogs_vs_cats.test1.zip']
+    urls = ['https://www.dropbox.com/s/s3u30quvpxqdbz6/train.zip?dl=1',
+            'https://www.dropbox.com/s/21rwu6drnplsbkb/test1.zip?dl=1']
     assert_equal(args.filenames, filenames)
     assert_equal(args.urls, urls)
     assert download_function is default_downloader

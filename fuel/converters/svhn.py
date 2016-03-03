@@ -236,7 +236,9 @@ def convert_svhn_format_1(directory, output_directory,
                 h5file['features'].dims[0]['shapes'][index] = image.shape
                 for field in BoundingBoxes._fields:
                     name = 'bbox_{}'.format(field)
-                    h5file[name][index] = getattr(bounding_boxes, field)
+                    h5file[name][index] = numpy.maximum(0,
+                                                        getattr(bounding_boxes,
+                                                                field))
                     h5file[name].dims[0]['shapes'][index] = [num_boxes, 1]
 
                 # Replace label '10' with '0'.

@@ -7,7 +7,6 @@ from numpy.lib.format import header_data_from_array_1_0
 from fuel.utils import buffer_
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level='INFO')
 
 
 def send_arrays(socket, arrays, stop=False):
@@ -109,6 +108,8 @@ def start_server(data_stream, port=5557, hwm=10):
         receiving end as well.
 
     """
+    logging.basicConfig(level='INFO')
+
     context = zmq.Context()
     socket = context.socket(zmq.PUSH)
     socket.set_hwm(hwm)
