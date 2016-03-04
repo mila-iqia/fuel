@@ -1,11 +1,11 @@
 h5py==2.5.0
-numpy==1.10.2
+numpy==1.10.4
 tables==3.2.2
 picklable-itertools==0.1.1
-pillow==3.1.0
-progressbar2==3.6.0
+pillow==3.1.1
+progressbar2==3.6.2
 pyyaml==3.11
 pyzmq==15.2.0
 requests==2.9.1
-scipy==0.16.1
+scipy==0.17.0
 six==1.10.0
