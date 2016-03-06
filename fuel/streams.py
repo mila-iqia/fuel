@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
 import zmq
+import numpy
 from six import add_metaclass, iteritems
 
 from fuel.iterator import DataIterator
@@ -231,6 +232,8 @@ class ServerDataStream(AbstractDataStream):
         if not self.connected:
             self.connect()
         data = recv_arrays(self.socket)
+        data = [numpy.require(arr, requirements='A')
+                for arr in data]
         return tuple(data)
 
     def get_epoch_iterator(self, **kwargs):
