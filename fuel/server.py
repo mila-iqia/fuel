@@ -122,10 +122,10 @@ def start_server(data_stream, port=5557, hwm=10):
         try:
             data = next(it)
             stop = False
-            logger.info("sending {} arrays".format(len(data)))
+            logger.debug("sending {} arrays".format(len(data)))
         except StopIteration:
             it = data_stream.get_epoch_iterator()
             data = None
             stop = True
-            logger.info("sending StopIteration")
+            logger.debug("sending StopIteration")
         send_arrays(socket, data, stop=stop)
