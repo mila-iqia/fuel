@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
 import zmq
-import numpy
 from six import add_metaclass, iteritems
 
 from fuel.iterator import DataIterator
