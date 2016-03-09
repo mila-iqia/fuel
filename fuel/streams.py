@@ -232,8 +232,6 @@ class ServerDataStream(AbstractDataStream):
         if not self.connected:
             self.connect()
         data = recv_arrays(self.socket)
-        data = [numpy.require(arr, requirements='A')
-                for arr in data]
         return tuple(data)
 
     def get_epoch_iterator(self, **kwargs):

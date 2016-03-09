@@ -70,7 +70,7 @@ def recv_arrays(socket):
         raise StopIteration
     arrays = []
     for header in headers:
-        data = socket.recv()
+        data = socket.recv(copy=False)
         buf = buffer_(data)
         array = numpy.frombuffer(buf, dtype=numpy.dtype(header['descr']))
         array.shape = header['shape']
