@@ -1,6 +1,9 @@
 .. image:: https://travis-ci.org/Scyfer/fuel.svg?branch=master
    :target: https://travis-ci.org/Scyfer/fuel
 
+.. image:: https://img.shields.io/badge/license-MIT-blue.svg       
+   :target: https://github.com/mila-udem/fuel/blob/master/LICENSE
+
 Fuel
 ====
 
