@@ -8,6 +8,9 @@ import warnings
 from picklable_itertools import chain, ifilter, izip
 from six import add_metaclass, iteritems
 
+import pyximport
+pyximport.install()
+
 from fuel import config
 from fuel.streams import AbstractDataStream
 from fuel.schemes import BatchSizeScheme
