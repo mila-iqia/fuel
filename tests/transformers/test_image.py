@@ -1248,7 +1248,7 @@ class TestFixedSizeCropND_2D(ImageTestingMixin):
 
 
 class TestImage2DSlicer(ImageTestingMixin):
-    def setup(self):
+    def setUp(self):
         self.dataset = IndexableDataset(
             indexables=OrderedDict(
                 [('images',numpy.random.randn(100, 1, 19, 19, 19)),
