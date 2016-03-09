@@ -238,7 +238,7 @@ class BalancedSamplingScheme(ShuffledScheme):
     Parameters
     ----------
     targets : list of int
-        The targets that represents the groups membership per class.
+        Represents for each datapoint the class (or group).
     samples_per_class : int, optional
         How many examples are sampled per class. If not set, the amount of
         samples per class will be equal to the amount of examples in the
