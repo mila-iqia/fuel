@@ -341,9 +341,10 @@ class SamplewiseCropTransformer(Transformer):
                               dtype=source.dtype)
             batch_size = source.shape[0]
             if len(self.window_shape) != len(source.shape[2:]):
-                raise(ValueError, "Window shape dimensions ({}) is not "
-                      "consistent with source dimensions ({})"
-                      .format(len(self.window_shape), len(source[2:])))
+                raise ValueError("Window shape dimensions ({}) not "
+                                 "consistent with source dimensions ({})"
+                                 .format(len(self.window_shape),
+                                         len(source[2:])))
             max_indices = {}
             offsets = {}
             for i in range(len(self.window_shape)):
@@ -882,9 +883,11 @@ class RandomSpatialFlip(SourcewiseTransformer):
 
             output = numpy.empty(source.shape[0], dtype=object)
 
-            for i in xrange(source.shape[0]):
-                output[i] = self.transform_source_example(source[i], source_name,
-                                                          to_flip_h[i], to_flip_v[i])
+            for i in range(source.shape[0]):
+                output[i] = self.transform_source_example(source[i],
+                                                          source_name,
+                                                          to_flip_h[i],
+                                                          to_flip_v[i])
 
             return output
 

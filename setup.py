@@ -55,7 +55,7 @@ setup(
                             'fuel-download = fuel.bin.fuel_download:main',
                             'fuel-info = fuel.bin.fuel_info:main']
     },
-    ext_modules=[Extension("fuel.transformers._image",
-                           ["fuel/transformers/_image.c"],
-                           extra_compile_args=extra_compile_args)]
+    #ext_modules=[Extension("fuel.transformers._image",
+    #                       ["fuel/transformers/_image.c"],
+    #                       extra_compile_args=extra_compile_args)]
 )

@@ -4,8 +4,12 @@ import logging
 from multiprocessing import Process, Queue
 
 import numpy
+import warnings
 from picklable_itertools import chain, ifilter, izip
 from six import add_metaclass, iteritems
+
+import pyximport
+pyximport.install()
 
 from fuel import config
 from fuel.streams import AbstractDataStream
@@ -1001,7 +1005,7 @@ class OneHotEncodingND(OneHotEncoding):
             raise ValueError("source_example must be lower than num_classes "
                              "({})".format(self.num_classes))
         if source_example.shape[0] != 1:
-            print 'Warning, source_example has no channel dimension.'
+            warnings.warn("source_example has no channel dimension.")
             source_example = numpy.expand_dims(source_example, axis=1)
         output = numpy.zeros([self.num_classes] +
                              list(source_example.shape[1:]),
@@ -1021,7 +1025,7 @@ class OneHotEncodingND(OneHotEncoding):
                                  .format(self.num_classes,
                                          numpy.max(source_batch)))
             if source_batch.shape[1] != 1:
-                print 'Warning, source_batch has no channel dimension.'
+                warnings.warn("source_example has no channel dimension.")
                 source_batch = numpy.expand_dims(source_batch, axis=1)
                 output = numpy.zeros([source_batch.shape[0], self.num_classes] +
                                      list(source_batch.shape[2:]),
@@ -1072,9 +1076,12 @@ class Drop(SourcewiseTransformer):
         if border is None or isinstance(border, int):
             self.border = border
         else:
-            raise ValueError("Parameter border should be an int "
+            raise TypeError("Parameter border should be an int "
                              "(type passed {}).".format(type(border)))
         if dropout is not None:
+            if not isinstance(dropout, (float, int)):
+                raise TypeError("Parameter dropout should be float or int, "
+                                "received type {}".format(type(dropout)))
             if 0 <= dropout <= 1:
                 self.dropout = dropout
             else:
