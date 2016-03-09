@@ -848,13 +848,13 @@ class TestDrop(object):
         # Illegal border
         kwargs = {'stream': self.stream['image'],
                   'which_sources': ('weight',),
-                  'border': 'kek'}
-        assert_raises(ValueError, Drop, **kwargs)
+                  'border': 'illegal'}
+        assert_raises(TypeError, Drop, **kwargs)
         # Illegal dropout
         kwargs = {'stream': self.stream['image'],
                   'which_sources': ('weight',),
-                  'dropout': 'lel'}
-        assert_raises(ValueError, Drop, **kwargs)
+                  'dropout': 'illegal'}
+        assert_raises(TypeError, Drop, **kwargs)
 
     def test_border_func(self):
         # Test illegal flag

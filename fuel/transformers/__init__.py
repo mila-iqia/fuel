@@ -1076,9 +1076,12 @@ class Drop(SourcewiseTransformer):
         if border is None or isinstance(border, int):
             self.border = border
         else:
-            raise ValueError("Parameter border should be an int "
+            raise TypeError("Parameter border should be an int "
                              "(type passed {}).".format(type(border)))
         if dropout is not None:
+            if not isinstance(dropout, (float, int)):
+                raise TypeError("Parameter dropout should be float or int, "
+                                "received type {}".format(type(dropout)))
             if 0 <= dropout <= 1:
                 self.dropout = dropout
             else:
