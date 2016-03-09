@@ -232,16 +232,17 @@ class ShuffledScheme(BatchScheme):
 class BalancedSamplingScheme(ShuffledScheme):
     """Balanced sampling batches iterator.
 
-    Samples an equal amount of examples from each group and iterates over them
-    in shuffled batches.
+    Samples an equal amount of examples from each class (or group) and
+    iterates over them in shuffled batches.
 
     Parameters
     ----------
     targets : list of int
         The targets that represents the groups membership per class.
     samples_per_class : int, optional
-        If `True`, enforce that indices within a batch are ordered.
-        Defaults to `False`.
+        How many examples are sampled per class. If not set, the amount of
+        samples per class will be equal to the amount of examples in the
+        smallest class.
 
     Notes
     -----
