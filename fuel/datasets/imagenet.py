@@ -14,7 +14,7 @@ class ILSVRC2010(H5PYDataset):
     test data groundtruth is available.
 
     Note that the download site for the images is not publicly
-    accessible. To downlaod the images, you may sign up for an account
+    accessible. To download the images, you may sign up for an account
     at [SIGNUP].
 
     .. [ILSVRC] Olga Russakovsky, Jia Deng, Hao Su, Jonathan Krause,
