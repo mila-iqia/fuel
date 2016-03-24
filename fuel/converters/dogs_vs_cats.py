@@ -77,8 +77,9 @@ def convert_dogs_vs_cats(directory, output_directory,
         image_names = zip_file.namelist()[1:]  # Discard the directory name
 
         # Shuffle the examples
-        rng = numpy.random.RandomState(123522)
-        rng.shuffle(image_names)
+        if split == TRAIN:
+            rng = numpy.random.RandomState(123522)
+            rng.shuffle(image_names)
 
         # Convert from JPEG to NumPy arrays
         with progress_bar(filename, split_size) as bar:
