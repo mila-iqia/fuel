@@ -36,10 +36,10 @@ def _make_dummy_data(output_directory):
         for i in range(25000):
             zip_file.writestr('train/cat.{}.jpeg'.format(i), image)
     with zipfile.ZipFile(output_files[1], 'w') as zip_file:
-        zif = zipfile.ZipInfo('train/')
+        zif = zipfile.ZipInfo('test1/')
         zip_file.writestr(zif, "")
         for i in range(12500):
-            zip_file.writestr('test/dog.{}.jpeg'.format(i), image)
+            zip_file.writestr('test1/{}.jpeg'.format(i), image)
 
 
 def teardown():
