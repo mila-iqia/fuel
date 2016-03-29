@@ -58,12 +58,19 @@ def main(args=None):
         subparser.add_argument(
             "-o", "--output-directory", help="where to save the dataset",
             type=str, default=os.getcwd(), action=CheckDirectoryAction)
+        subparser.add_argument(
+            "-r", "--output_filename", help="new name of the created dataset",
+            type=str, default=None)
         # Allows the parser to know which subparser was called.
         subparser.set_defaults(which_=name)
         convert_functions[name] = fill_subparser(subparser)
 
     args = parser.parse_args(args)
     args_dict = vars(args)
+    if args_dict['output_filename'] is not None and\
+        os.path.splitext(args_dict['output_filename'])[1] not in\
+            ('.hdf5', '.hdf', '.h5'):
+        args_dict['output_filename'] += '.hdf5'
     convert_function = convert_functions[args_dict.pop('which_')]
     try:
         output_paths = convert_function(**args_dict)
