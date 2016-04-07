@@ -71,6 +71,9 @@ def main(args=None):
         os.path.splitext(args_dict['output_filename'])[1] not in\
             ('.hdf5', '.hdf', '.h5'):
         args_dict['output_filename'] += '.hdf5'
+    if args_dict['output_filename'] is None:
+        args_dict.pop('output_filename')
+
     convert_function = convert_functions[args_dict.pop('which_')]
     try:
         output_paths = convert_function(**args_dict)
