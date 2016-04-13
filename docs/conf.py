@@ -331,6 +331,8 @@ def linkcode_resolve(domain, info):
             obj = getattr(obj, part)
         except:
             return None
+    if hasattr(obj, '__wrapped__'):
+        obj = obj.__wrapped__
 
     try:
         fn = inspect.getsourcefile(obj)
@@ -340,10 +342,7 @@ def linkcode_resolve(domain, info):
         return None
 
     try:
-        if hasattr(obj, '__wrapped__'):
-            _, lineno = inspect.findsource(obj.__wrapped__)
-        else:
-            _, lineno = inspect.findsource(obj)
+        _, lineno = inspect.findsource(obj)
     except:
         lineno = None
 
