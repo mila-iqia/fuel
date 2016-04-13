@@ -1,7 +1,7 @@
 import os
 import sys
 from contextlib import contextmanager
-from functools import wraps
+from six import wraps
 
 import numpy
 from progressbar import (ProgressBar, Percentage, Bar, ETA)
