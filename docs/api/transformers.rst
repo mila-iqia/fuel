@@ -17,10 +17,10 @@ Transformers for image
     :undoc-members:
     :show-inheritance:
 
-Transformers for text
----------------------
+Transformers for sequences
+--------------------------
 
-.. automodule:: fuel.transformers.text
+.. automodule:: fuel.transformers.sequences
     :members:
     :undoc-members:
     :show-inheritance:
