@@ -1,6 +1,7 @@
 """Installation script."""
 from os import path
 import sys
+from io import open
 from setuptools import find_packages, setup
 from distutils.extension import Extension
 
