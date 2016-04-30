@@ -1,4 +1,5 @@
 """Installation script."""
+from io import open
 from os import path
 import sys
 from setuptools import find_packages, setup
