@@ -4,8 +4,12 @@ import logging
 from multiprocessing import Process, Queue
 
 import numpy
+import warnings
 from picklable_itertools import chain, ifilter, izip
 from six import add_metaclass, iteritems
+
+import pyximport
+pyximport.install()
 
 from fuel import config
 from fuel.streams import AbstractDataStream
@@ -239,6 +243,8 @@ class SourcewiseTransformer(Transformer):
                  **kwargs):
         if which_sources is None:
             which_sources = data_stream.sources
+        elif isinstance(which_sources, str):
+            raise TypeError('which_sources parameter should be a tuple of str.')
         self.which_sources = which_sources
         super(SourcewiseTransformer, self).__init__(
             data_stream, produces_examples, **kwargs)
@@ -933,3 +939,161 @@ class FilterSources(AgnosticTransformer):
     def transform_any(self, data):
         return [d for d, s in izip(data, self.data_stream.sources)
                 if s in self.sources]
+
+
+class OneHotEncoding(SourcewiseTransformer):
+    """Converts integer target variables to one hot encoding.
+
+    It assumes that the targets are integer numbers from 0,... , N-1.
+    Since it works on the fly the number of classes N needs to be
+    specified.
+
+    Parameters
+    ----------
+    data_stream : :class:`DataStream` or :class:`Transformer`.
+        The data stream.
+    num_classes : int
+        The number of classes.
+    which_sources : tuple of str
+        Which sources to apply the one hot encoding.
+
+    """
+    def __init__(self, data_stream, num_classes, which_sources, **kwargs):
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
+        super(OneHotEncoding, self).__init__(
+            data_stream, data_stream.produces_examples, which_sources,
+            **kwargs)
+        self.num_classes = num_classes
+
+    def transform_source_example(self, source_example, source_name):
+        if source_example >= self.num_classes:
+            raise ValueError("source_example must be lower than num_classes")
+        output = numpy.zeros((1, self.num_classes))
+        output[0, source_example] = 1
+        return output
+
+    def transform_source_batch(self, source_batch, source_name):
+        if numpy.max(source_batch) >= self.num_classes:
+            raise ValueError("all entries in source_batch must be lower than "
+                             "num_classes")
+        output = numpy.zeros((source_batch.shape[0], self.num_classes),
+                             dtype=source_batch.dtype)
+        for i in range(self.num_classes):
+            output[source_batch[:, 0] == i, i] = 1
+        return output
+
+
+class OneHotEncodingND(OneHotEncoding):
+    """An extension of the OneHotEncoding that works for ND arrays.
+
+    It assumes that the first dimension (2nd in batch mode) are the channels.
+    All other dimension will be preserved.
+
+    Parameters
+    ----------
+    data_stream : :class:`DataStream` or :class:`Transformer`.
+        The data stream.
+    num_classes : int
+        The number of classes.
+    which_sources : tuple of str
+        Which sources to apply the one hot encoding.
+
+    """
+    def transform_source_example(self, source_example, source_name):
+        if source_example.max() >= self.num_classes:
+            raise ValueError("source_example must be lower than num_classes "
+                             "({})".format(self.num_classes))
+        if source_example.shape[0] != 1:
+            warnings.warn("source_example has no channel dimension.")
+            source_example = numpy.expand_dims(source_example, axis=1)
+        output = numpy.zeros([self.num_classes] +
+                             list(source_example.shape[1:]),
+                             dtype=source_example.dtype)
+        if len(source_example.shape) > 1:
+            for i in range(self.num_classes):
+                output[i, source_example[0] == i] = 1
+        else:
+            output[source_example[0]] = 1
+        return output
+
+    def transform_source_batch(self, source_batch, source_name):
+        if issubclass(source_batch.dtype.type, numpy.number):
+            if numpy.max(source_batch) >= self.num_classes:
+                raise ValueError("all entries in source_batch must be lower "
+                                 "than num_classes ({}), found {}"
+                                 .format(self.num_classes,
+                                         numpy.max(source_batch)))
+            if source_batch.shape[1] != 1:
+                warnings.warn("source_example has no channel dimension.")
+                source_batch = numpy.expand_dims(source_batch, axis=1)
+                output = numpy.zeros(
+                    [source_batch.shape[0], self.num_classes] +
+                    list(source_batch.shape[2:]), dtype=source_batch.dtype)
+
+            for i in range(self.num_classes):
+                # Set the output of channel i to be the output of the
+                # indicator function: is source_batch of class i?
+                output[:, i][source_batch[:, 0] == i] = 1
+            return output
+        elif source_batch.dtype == numpy.object:
+            return numpy.array([self.transform_source_example(example,
+                                                              source_name)
+                                for example in source_batch])
+        else:
+            raise ValueError("source_batch is of unusable input datatype {}"
+                             .format(source_batch.dtype))
+
+
+class Duplicate(Transformer):
+    """
+    Duplicate the sources directed by which_sources, insert them after their
+    original.
+
+    Parameters:
+    -----------
+    data_stream : :class:`AbstractDataStream`
+        The data stream to wrap.
+    which_sources : tuple of str
+        Which sources to apply the duplicate to.
+    suffix: string, default 'duplicate'
+        Prefix used to rename the duplicated sources
+    produces_example: bool
+        True for example streams, False for batch streams
+    """
+    def __init__(self, data_stream, which_sources=None, suffix='duplicate',
+                 produces_example=False, **kwargs):
+        if which_sources is None:
+            which_sources = data_stream.sources
+        elif isinstance(which_sources, str):
+            which_sources = (which_sources,)
+        self.which_sources = which_sources
+        self.original_sources = list(data_stream.sources)
+        self.new_sources = list(data_stream.sources)
+        self.suffix = suffix
+        axis_labels = data_stream.axis_labels
+        for source in self.which_sources:
+            axis_labels[source + u'_' + self.suffix] = axis_labels[source]
+        kwargs.setdefault('axis_labels', axis_labels)
+        super(Duplicate, self).__init__(data_stream, produces_example,
+                                        **kwargs)
+
+    @property
+    def sources(self):
+        temp_sources = list(self.original_sources)
+        for i, source_name in enumerate(temp_sources):
+            if source_name in self.which_sources:
+                temp_sources.insert(i+1, source_name + '_' + self.suffix)
+        return temp_sources
+
+    def get_data(self, request=None):
+        if request is not None:
+            raise ValueError
+        data = next(self.child_epoch_iterator)
+        data = list(data)
+        temp_sources = list(self.original_sources)
+        for i, (source, source_name) in enumerate(zip(data, temp_sources)):
+            if source_name in self.which_sources:
+                temp_sources.insert(i+1, source_name + 'duplicate')
+                data.insert(i+1, source)
+        return data

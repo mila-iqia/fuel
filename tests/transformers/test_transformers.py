@@ -1,20 +1,23 @@
 import logging
 import operator
+import warnings
 from collections import OrderedDict
 
 import numpy
 from numpy.testing import assert_raises, assert_equal
 from six.moves import zip, cPickle
+from picklable_itertools import izip
 
 from fuel import config
 from fuel.datasets import IterableDataset, IndexableDataset
 from fuel.schemes import (ConstantScheme, SequentialScheme,
-                          SequentialExampleScheme)
+                          SequentialExampleScheme, ShuffledScheme)
 from fuel.streams import DataStream
 from fuel.transformers import (
     ExpectsAxisLabels, Transformer, Mapping, SortMapping, ForceFloatX, Filter,
     Cache, Batch, Padding, MultiProcessing, Unpack, Merge,
-    SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename, FilterSources)
+    SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename,
+    FilterSources, OneHotEncoding, Duplicate)
 from fuel.transformers.defaults import ToBytes
 
 
@@ -703,6 +706,55 @@ class TestFilterSources(object):
                      {'features': ('batch', 'width', 'height')})
 
 
+class TestOneHotEncoding(object):
+    def setUp(self):
+        self.data = OrderedDict(
+            [('features', numpy.ones((4, 2, 2))),
+             ('targets', numpy.array([[0], [1], [2], [3]]))])
+
+    def test_one_hot_examples(self):
+        wrapper = OneHotEncoding(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialExampleScheme(4)),
+            num_classes=4,
+            which_sources=('targets',))
+        assert_equal(
+            list(wrapper.get_epoch_iterator()),
+            [(numpy.ones((2, 2)), numpy.array([[1, 0, 0, 0]])),
+             (numpy.ones((2, 2)), numpy.array([[0, 1, 0, 0]])),
+             (numpy.ones((2, 2)), numpy.array([[0, 0, 1, 0]])),
+             (numpy.ones((2, 2)), numpy.array([[0, 0, 0, 1]]))])
+
+    def test_one_hot_examples_invalid_inputs(self):
+        wrapper = OneHotEncoding(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialExampleScheme(4)),
+            num_classes=2,
+            which_sources=('targets',))
+        assert_raises(ValueError, list, wrapper.get_epoch_iterator())
+
+    def test_one_hot_batches(self):
+        wrapper = OneHotEncoding(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2)),
+            num_classes=4,
+            which_sources=('targets',))
+        assert_equal(
+            list(wrapper.get_epoch_iterator()),
+            [(numpy.ones((2, 2, 2)),
+              numpy.array([[1, 0, 0, 0], [0, 1, 0, 0]])),
+             (numpy.ones((2, 2, 2)),
+              numpy.array([[0, 0, 1, 0], [0, 0, 0, 1]]))])
+
+    def test_one_hot_batches_invalid_input(self):
+        wrapper = OneHotEncoding(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2)),
+            num_classes=2,
+            which_sources=('targets',))
+        assert_raises(ValueError, list, wrapper.get_epoch_iterator())
+
+
 class VerifyWarningHandler(logging.Handler):
     def __init__(self, *args, **kwargs):
         self.records = []
@@ -755,3 +807,33 @@ class TestToBytes(object):
         decoded_stream = ToBytes(stream)
         assert_equal([self.string_data],
                      [s for s, in decoded_stream.get_epoch_iterator()])
+
+
+class TestDuplicate(object):
+    def setUp(self):
+        rng = numpy.random.RandomState(123)
+        self.stream = DataStream(
+            IndexableDataset(
+                OrderedDict([('features', rng.rand(4, 2, 2)),
+                             ('targets', numpy.array([0, 1, 0, 1]))]),
+                axis_labels={'features': ('batch', 'width', 'height'),
+                             'targets': ('batch',)}),
+            iteration_scheme=SequentialScheme(4, 2))
+
+        self.duplicate = Duplicate(self.stream, 'features')
+
+    def test_init(self):
+        duplicate = Duplicate(self.stream)
+        assert_equal(duplicate.which_sources, self.stream.sources)
+        assert_equal(self.duplicate.which_sources, ['features'])
+
+    def test_sources(self):
+        assert_equal(self.duplicate.sources, ['features',
+                                              'features_duplicate',
+                                              'targets'])
+
+    def test_get_data(self):
+        self.duplicate.get_epoch_iterator()
+        assert_raises(ValueError, self.duplicate.get_data, **{'request': 'k'})
+        data = self.duplicate.get_data()
+        assert_equal(data[0], data[1])

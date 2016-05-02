@@ -56,3 +56,15 @@ target/
 # Editors
 *~
 *.sw[op]
+
+# nose #
+nose_debug
+cover/*
+
+# PyCharm #
+*.idea
+.idea/*
+
+# Atom #
+deployment-config.json
+.remote-sync.json
