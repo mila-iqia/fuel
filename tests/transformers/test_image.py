@@ -13,7 +13,7 @@ from fuel.streams import DataStream
 from fuel.transformers.image import (ImagesFromBytes, Image2DSlicer,
                                      MinimumImageDimensions,
                                      RandomFixedSizeCrop,
-                                     RandomSpatialFlip,
+                                     RandomSpatialFlip, Drop,
                                      SamplewiseCropTransformer,
                                      FixedSizeCrop, FixedSizeCropND,
                                      Random2DRotation, GammaCorrectionND)
@@ -842,7 +842,7 @@ class TestSamplewiseCropTransformer(object):
         # Unspecified randint
         # Cropping through transformer
         new_volume = self.swctransformer.transform_source_batch(self.volume,
-                                                                'lel', None)
+                                                                'any', None)
         # Cropping manually
         rng = numpy.random.RandomState(config.default_seed)
         out = numpy.empty(self.volume.shape[:2] + self.window_shape,
@@ -860,7 +860,7 @@ class TestSamplewiseCropTransformer(object):
         # Specified randint
         # Cropping through transformer
         new_volume = self.swctransformer.transform_source_batch(self.volume,
-                                                                'lel',
+                                                                'any',
                                                                 self.seed)
         # Cropping manually
         out = numpy.empty(self.volume.shape[:2] + self.window_shape,
@@ -923,9 +923,10 @@ class TestSamplewiseCropTransformer(object):
                 self.image[0].shape[1:][i] - \
                 swctransformer.window_shape[i]
             offsets[i] = self.rng.random_integers(0, max_indices[i])
-        expected = self.image[0][:,
-                   offsets[0]:offsets[0] + swctransformer.window_shape[0],
-                   offsets[1]:offsets[1] + swctransformer.window_shape[1]]
+        expected = self.image[0][
+            :,
+            offsets[0]:offsets[0] + swctransformer.window_shape[0],
+            offsets[1]:offsets[1] + swctransformer.window_shape[1]]
         assert_allclose(result, expected)
 
 
@@ -1051,7 +1052,7 @@ class TestFixedSizeCropND_3D(ImageTestingMixin):
         num_channels = 2
         for shp in shapes:
             biggest = max(biggest, shp[0] * shp[1] * shp[2] * 2)
-            ex = numpy.arange(shp[0] * shp[1] *shp[2] * num_channels).reshape(
+            ex = numpy.arange(shp[0] * shp[1] * shp[2] * num_channels).reshape(
                 (num_channels,) + shp).astype('uint16')
             source2.append(ex)
         self.source2_biggest = biggest
@@ -1108,7 +1109,7 @@ class TestFixedSizeCropND_3D(ImageTestingMixin):
         # Make sure that with 4 corner crops we sample everything.
         seen_indices = numpy.array([], dtype='uint16')
         for x in (0, 1):
-            for y in (0,1):
+            for y in (0, 1):
                 for z in (0, 1):
                     stream = FixedSizeCropND(self.batch_stream, (5, 4, 3),
                                              which_sources=('source3',),
@@ -1131,7 +1132,7 @@ class TestFixedSizeCropND_3D(ImageTestingMixin):
                                  which_sources=('source3',),
                                  location=(0, 0, 0))
         assert_raises(ValueError, stream.transform_source_example, [5, 7],
-                      'kek')
+                      'any')
 
 
 class TestFixedSizeCropND_2D(ImageTestingMixin):
@@ -1223,9 +1224,9 @@ class TestFixedSizeCropND_2D(ImageTestingMixin):
 
     def test_format_exceptions(self):
         estream = FixedSizeCropND(self.example_stream, (5, 4),
-                                which_sources=('source2',), location=[0, 0])
+                                  which_sources=('source2',), location=[0, 0])
         bstream = FixedSizeCropND(self.batch_stream, (5, 4),
-                                which_sources=('source2',), location=[0, 0])
+                                  which_sources=('source2',), location=[0, 0])
         assert_raises(ValueError, estream.transform_source_example,
                       numpy.empty((5, 6)), 'source2')
         assert_raises(ValueError, bstream.transform_source_batch,
@@ -1235,13 +1236,13 @@ class TestFixedSizeCropND_2D(ImageTestingMixin):
 
     def test_window_too_big_exceptions(self):
         stream = FixedSizeCropND(self.example_stream, (5, 4),
-                               which_sources=('source2',), location=[0, 0])
+                                 which_sources=('source2',), location=[0, 0])
 
         assert_raises(ValueError, stream.transform_source_example,
                       numpy.empty((3, 4, 2)), 'source2')
 
         bstream = FixedSizeCropND(self.batch_stream, (5, 4),
-                                which_sources=('source1',), location=[0, 0])
+                                  which_sources=('source1',), location=[0, 0])
 
         assert_raises(ValueError, bstream.transform_source_batch,
                       numpy.empty((5, 3, 4, 2)), 'source1')
@@ -1251,7 +1252,7 @@ class TestImage2DSlicer(ImageTestingMixin):
     def setUp(self):
         self.dataset = IndexableDataset(
             indexables=OrderedDict(
-                [('images',numpy.random.randn(100, 1, 19, 19, 19)),
+                [('images', numpy.random.randn(100, 1, 19, 19, 19)),
                  ('targets', numpy.random.randint(1, size=100))]))
         self.common_setup()
 
@@ -1271,9 +1272,9 @@ class TestImage2DSlicer(ImageTestingMixin):
                       numpy.random.randn(100, 1, 19, 19), 'images')
 
         batch_stream = Image2DSlicer(self.batch_stream,
-                               which_sources=('images',),
-                               slice_location='center',
-                               dimension_to_slice='z')
+                                     which_sources=('images',),
+                                     slice_location='center',
+                                     dimension_to_slice='z')
 
         batch_shapes = [batch[0].shape for batch
                         in batch_stream.get_epoch_iterator()]
@@ -1362,7 +1363,7 @@ class TestGammaCorrectionND(ImageTestingMixin):
         self.common_setup()
         self.gamma = 2.5
         self.transformer = GammaCorrectionND(self.batch_stream, self.gamma,
-                                        which_sources=('source',))
+                                             which_sources=('source',))
 
     def test_gamma_correction(self):
         assert_equal(
@@ -1383,20 +1384,207 @@ class TestGammaCorrectionND(ImageTestingMixin):
         examples = [self.source1[i] for i in range(self.source1.shape[0])]
         expected_results = [self.transformer.gamma_correction(
             example, self.gamma) for example in examples]
-        assert_equal(self.transformer.transform_source_batch(examples, 'lel'),
+        assert_equal(self.transformer.transform_source_batch(examples, 'any'),
                      expected_results)
 
         obj = numpy.empty(2, dtype=object)
         obj[0] = self.source1[0]
         obj[1] = self.source1[1]
         expected_results = numpy.array(
-                         [self.transformer.transform_source_example(im, 'lel')
+                         [self.transformer.transform_source_example(im, 'any')
                           for im in obj])
-        assert_equal(self.transformer.transform_source_batch(obj, 'lel'),
+        assert_equal(self.transformer.transform_source_batch(obj, 'any'),
                      expected_results)
 
         wrong_format = [1, 2, 3, 4]
         assert_raises(ValueError, self.transformer.transform_source_batch,
-                      wrong_format, 'kek')
+                      wrong_format, 'any')
         assert_raises(ValueError, self.transformer.transform_source_example,
-                      wrong_format, 'kek')
+                      wrong_format, 'any')
+
+
+class TestDrop(object):
+    def setUp(self):
+        self.sources = ['volume1', 'volume2', 'weight']
+        self.which_weight = 'weight'
+        self.im_shape = (10, 10)
+        self.vo_shape = (10, 10, 10)
+
+        self.data_im = {}
+        self.data_vo = {}
+        for k in range(len(self.sources)):
+            self.data_im[self.sources[k]] = [0 for x in range(10)]
+            self.data_vo[self.sources[k]] = [0 for x in range(10)]
+
+        for k in range(10):
+            self.data_im[self.sources[0]][k] = numpy.arange(
+                numpy.prod(self.im_shape)).reshape(
+                [1, 1] + list(self.im_shape)).astype(numpy.float32)
+            self.data_vo[self.sources[0]][k] = numpy.arange(
+                numpy.prod(self.vo_shape)).reshape(
+                [1, 1] + list(self.vo_shape)).astype(numpy.float32)
+            self.data_im[self.sources[1]][k] = numpy.arange(
+                numpy.prod(self.im_shape)).reshape(
+                [1, 1] + list(self.im_shape)).astype(numpy.float32)
+            self.data_vo[self.sources[1]][k] = numpy.arange(
+                numpy.prod(self.vo_shape)).reshape(
+                [1, 1] + list(self.vo_shape)).astype(numpy.float32)
+            self.data_im[self.sources[2]][k] = numpy.random.uniform(
+                size=self.im_shape).reshape(
+                [1, 1] + list(self.im_shape)).astype(numpy.float32)
+            self.data_vo[self.sources[2]][k] = numpy.random.uniform(
+                size=self.vo_shape).reshape(
+                [1, 1] + list(self.vo_shape)).astype(numpy.float32)
+
+        self.data = {}
+        for type, data in zip(['image', 'volume'],
+                              [self.data_im, self.data_vo]):
+            self.data[type] = OrderedDict([('volume1', data[self.sources[0]]),
+                                           ('volume2', data[self.sources[1]]),
+                                           ('weight', data[self.sources[2]])])
+
+        layout_im = ('batch', 'channel', 'width', 'height')
+        layout_vol = ('batch', 'channel', 'x', 'y', 'z')
+        self.axis_labels_im = {self.sources[0]: layout_im,
+                               self.sources[1]: layout_im,
+                               self.sources[2]: layout_im}
+        self.axis_labels_vol = {self.sources[0]: layout_vol,
+                                self.sources[1]: layout_vol,
+                                self.sources[2]: layout_vol}
+
+        self.stream = {}
+        self.stream['image'] = DataStream(IterableDataset(
+            self.data['image']), axis_labels=self.axis_labels_im)
+
+        self.stream['volume'] = DataStream(IterableDataset(
+            self.data['volume']), axis_labels=self.axis_labels_vol)
+        self.dropstream = Drop(stream=self.stream['image'],
+                               which_sources=('weight',))
+
+    def test_init(self):
+        # Illegal border
+        kwargs = {'stream': self.stream['image'],
+                  'which_sources': ('weight',),
+                  'border': 'illegal'}
+        assert_raises(TypeError, Drop, **kwargs)
+        # Illegal dropout
+        kwargs = {'stream': self.stream['image'],
+                  'which_sources': ('weight',),
+                  'dropout': 'illegal'}
+        assert_raises(TypeError, Drop, **kwargs)
+
+    def test_border_func(self):
+        # Test illegal flag
+        kwargs = {'volume': 0, 'border': 0, 'flag': 'iswearonmemum'}
+        assert_raises(ValueError, self.dropstream._border_func, **kwargs)
+        # Test uninterpretable number of dimensions
+        kwargs = {'volume': numpy.asarray(0), 'border': 0, 'flag': 'source'}
+        assert_raises(ValueError, self.dropstream._border_func, **kwargs)
+        kwargs = {'volume': numpy.asarray(0), 'border': 0, 'flag': 'example'}
+        assert_raises(ValueError, self.dropstream._border_func, **kwargs)
+        # Test illegal border
+        kwargs = {'volume': self.data_im['volume1'][0], 'border': 5,
+                  'flag': 'source'}
+        assert_raises(ValueError, self.dropstream._border_func, **kwargs)
+        kwargs = {'volume': self.data_im['volume1'][0][0], 'border': 5,
+                  'flag': 'example'}
+        assert_raises(ValueError, self.dropstream._border_func, **kwargs)
+        # Test border dropping for images
+        # Source
+        array = numpy.arange(5*5).reshape([1, 1, 5, 5])
+        result = numpy.zeros([5, 5]).reshape([1, 1, 5, 5])
+        result[:, :, 2, 2] = 12
+        kwargs = {'volume': array, 'border': 2, 'flag': 'source'}
+        assert numpy.allclose(result, self.dropstream._border_func(**kwargs))
+        # Example
+        array = numpy.arange(5*5).reshape([1, 5, 5])
+        result = numpy.zeros([5, 5]).reshape([1, 5, 5])
+        result[:, 2, 2] = 12
+        kwargs = {'volume': array, 'border': 2, 'flag': 'example'}
+        assert numpy.allclose(result, self.dropstream._border_func(**kwargs))
+        # Test border dropping for volumes
+        # Source
+        array = numpy.arange(5*5*5).reshape([1, 1, 5, 5, 5])
+        result = numpy.zeros([5, 5, 5]).reshape([1, 1, 5, 5, 5])
+        result[:, :, 2, 2, 2] = 62
+        kwargs = {'volume': array, 'border': 2, 'flag': 'source'}
+        assert numpy.allclose(result, self.dropstream._border_func(**kwargs))
+        # Example
+        array = numpy.arange(5*5*5).reshape([1, 5, 5, 5])
+        result = numpy.zeros([5, 5, 5]).reshape([1, 5, 5, 5])
+        result[:, 2, 2, 2] = 62
+        kwargs = {'volume': array, 'border': 2, 'flag': 'example'}
+        assert numpy.allclose(result, self.dropstream._border_func(**kwargs))
+
+    def test_dropout_func(self):
+        rng = numpy.random.RandomState(123)
+        array = numpy.arange(5*5).reshape([5, 5])
+        result = array.copy()
+        result[1, 1] = 0
+        result[4, 1] = 0
+        assert numpy.allclose(result, self.dropstream._dropout_func(array,
+                                                                    0.2, rng))
+
+    def test_transform_source_example(self):
+        # Test illegal input
+        kwargs = {'example': numpy.asarray(0), 'source_name': 'any'}
+        assert_raises(ValueError, self.dropstream.transform_source_example,
+                      **kwargs)
+        # No transformation
+        array = numpy.arange(5*5*5).reshape([1, 5, 5, 5])
+        kwargs = {'example': array, 'source_name': 'any'}
+        assert numpy.allclose(self.dropstream.transform_source_example(
+            array, 'any'), array)
+        # Border drop
+        dropstream = Drop(stream=self.stream['image'],
+                          which_sources=('weight',),
+                          border=2)
+        result = numpy.zeros([5, 5, 5]).reshape([1, 5, 5, 5])
+        result[:, 2, 2, 2] = 62
+        assert numpy.allclose(dropstream.transform_source_example(
+            array, 'any'), result)
+        # Dropout
+        rng = numpy.random.RandomState(123)
+        array = numpy.arange(5*5).reshape([1, 5, 5])
+        result = array.copy()
+        result[:, 1, 1] = 0
+        result[:, 4, 1] = 0
+        kwargs = {'rng': rng}
+        dropstream = Drop(stream=self.stream['image'],
+                          which_sources=('weight',),
+                          dropout=0.2, **kwargs)
+        assert numpy.allclose(result,
+                              dropstream.transform_source_example(
+                                  array, 'any'))
+
+    def test_transform_source_batch(self):
+        # Test illegal source input
+        kwargs = {'source': numpy.asarray(0), 'source_name': 'any'}
+        assert_raises(ValueError, self.dropstream.transform_source_batch,
+                      **kwargs)
+        # Test batch
+        # No transformation
+        array = numpy.arange(5*5*5).reshape([1, 1, 5, 5, 5])
+        kwargs = {'source': array, 'source_name': 'any'}
+        assert numpy.allclose(self.dropstream.transform_source_batch(
+            array, 'any'), array)
+        # Border drop
+        dropstream = Drop(stream=self.stream['image'],
+                          which_sources=('weight',),
+                          border=2)
+        result = numpy.zeros([5, 5, 5]).reshape([1, 1, 5, 5, 5])
+        result[:, :, 2, 2, 2] = 62
+        assert numpy.allclose(dropstream.transform_source_batch(array, 'any'),
+                              result)
+        # Dropout
+        rng = numpy.random.RandomState(123)
+        array = numpy.arange(5*5).reshape([1, 1, 5, 5])
+        result = array.copy()
+        result[:, :, 1, 1] = 0
+        result[:, :, 4, 1] = 0
+        kwargs = {'rng': rng}
+        dropstream = Drop(stream=self.stream['image'],
+                          which_sources=('weight',),
+                          dropout=0.2, **kwargs)
+        assert numpy.allclose(result,
+                              dropstream.transform_source_batch(array, 'any'))

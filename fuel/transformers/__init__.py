@@ -1027,9 +1027,9 @@ class OneHotEncodingND(OneHotEncoding):
             if source_batch.shape[1] != 1:
                 warnings.warn("source_example has no channel dimension.")
                 source_batch = numpy.expand_dims(source_batch, axis=1)
-                output = numpy.zeros([source_batch.shape[0], self.num_classes] +
-                                     list(source_batch.shape[2:]),
-                                     dtype=source_batch.dtype)
+                output = numpy.zeros(
+                    [source_batch.shape[0], self.num_classes] +
+                    list(source_batch.shape[2:]), dtype=source_batch.dtype)
 
             for i in range(self.num_classes):
                 # Set the output of channel i to be the output of the
@@ -1043,148 +1043,6 @@ class OneHotEncodingND(OneHotEncoding):
         else:
             raise ValueError("source_batch is of unusable input datatype {}"
                              .format(source_batch.dtype))
-
-
-class Drop(SourcewiseTransformer):
-    """
-    Implement border drop (of size `border) and dropout`(with probability of
-    dropping of `dropout`) on the volume directed by the variable
-    `which_weight`.
-
-    Parameters:
-    -----------
-    stream: instance of :class:`DataStream`
-        The wrapped data stream.
-    which_sources: str or list of str
-        Name of the sources that will be affected by the transformer.
-    border: int
-        Size of the border of the volume.
-    dropout: float
-        Probability of dropping out an element of the volume.
-    produces_examples: bool
-        True for example streams, False for batch streams
-    """
-    def __init__(self, stream, which_sources,
-                 border=None, dropout=None,
-                 produces_examples=False,
-                 **kwargs):
-        self.rng = kwargs.pop('rng', None)
-        if self.rng is None:
-            self.rng = numpy.random.RandomState(config.default_seed)
-        super(Drop, self).__init__(stream, produces_examples, which_sources,
-                                   **kwargs)
-        if border is None or isinstance(border, int):
-            self.border = border
-        else:
-            raise TypeError("Parameter border should be an int "
-                             "(type passed {}).".format(type(border)))
-        if dropout is not None:
-            if not isinstance(dropout, (float, int)):
-                raise TypeError("Parameter dropout should be float or int, "
-                                "received type {}".format(type(dropout)))
-            if 0 <= dropout <= 1:
-                self.dropout = dropout
-            else:
-                raise ValueError("Parameter dropout should be between "
-                                 "0 and 1 (value passed: {}).".format(dropout))
-        else:
-            self.dropout = dropout
-
-    def get_data(self, request=None):
-        if request is not None:
-            raise ValueError
-        data = next(self.child_epoch_iterator)
-        if self.produces_examples:
-            return self.transform_example(data)
-        else:
-            return self.transform_batch(data)
-
-    def transform_source_batch(self, source, source_name):
-        if isinstance(source, numpy.ndarray) and source.dtype == numpy.object:
-            return numpy.array([self.transform_source_example(im, source_name)
-                                for im in source])
-        elif isinstance(source, numpy.ndarray) and \
-                (source.ndim == 4 or source.ndim == 5):
-            if self.border is not None:
-                source = self._border_func(source, self.border, 'source')
-            if self.dropout is not None:
-                source = self._dropout_func(source, self.dropout, self.rng)
-            return source
-        else:
-            raise ValueError("uninterpretable source format; expected ndarray "
-                             "with ndim = 4 or ndim = 5, got {} instead."
-                             .format(type(source)))
-
-    def transform_source_example(self, example, source_name):
-        if isinstance(example, numpy.ndarray) and \
-                        example.ndim in [3, 4]:
-            if self.border is not None:
-                example = self._border_func(example, self.border, 'example')
-            if self.dropout is not None:
-                example = self._dropout_func(example, self.dropout, self.rng)
-            return example
-        else:
-            raise ValueError("uninterpretable example format; expected "
-                             "ndarray with ndim = 3 or ndim = 4, "
-                             "got {} instead".format(type(example)))
-
-    def _border_func(self, volume, border, flag=None):
-        if flag == 'source':
-            for i in range(len(volume.shape[2:])):
-                if volume.shape[2+i] <= 2 * border:
-                    raise ValueError("border does not fit in image (dimension"
-                                     "{} size {}, borders {}"
-                                     .format(i, volume.shape[2+i],
-                                             2 * border))
-            if volume.ndim == 5:
-                volume[:, :, :border, :, :] = 0
-                volume[:, :, :, :border, :] = 0
-                volume[:, :, :, :, :border] = 0
-                volume[:, :, -border:, :, :] = 0
-                volume[:, :, :, -border:, :] = 0
-                volume[:, :, :, :, -border:] = 0
-            elif volume.ndim == 4:
-                volume[:, :, :border, :] = 0
-                volume[:, :, :, :border] = 0
-                volume[:, :, -border:, :] = 0
-                volume[:, :, :, -border:] = 0
-            else:
-                raise ValueError("uninterpretable number of dimensions for source "
-                                 "volume, expected 4 or 5, got {} instead"
-                                 .format(volume.ndim))
-
-        elif flag == 'example':
-            for i in range(len(volume.shape[1:])):
-                if volume.shape[1+i] <= 2 * border:
-                    raise ValueError("border does not fit in image (dimension "
-                                     "{} size {}, borders {}"
-                                     .format(i, volume.shape[1+i], 2 * border))
-            if volume.ndim == 4:
-                volume[:, :border, :, :] = 0
-                volume[:, :, :border, :] = 0
-                volume[:, :, :, :border] = 0
-                volume[:, -border:, :, :] = 0
-                volume[:, :, -border:, :] = 0
-                volume[:, :, :, -border:] = 0
-            elif volume.ndim == 3:
-                volume[:, :border, :] = 0
-                volume[:, :, :border] = 0
-                volume[:, -border:, :] = 0
-                volume[:, :, -border:] = 0
-            else:
-                raise ValueError("uninterpretable number of dimensions for source "
-                                 "volume, expected 3 or 4, got {} instead"
-                                 .format(volume.ndim))
-        else:
-            raise ValueError("Expected flag as 'source' or 'example' "
-                             "got {} instead".format(flag))
-        return volume.astype(volume.dtype)
-
-    def _dropout_func(self, volume, dropout, rng):
-        dropout_cast = rng.binomial(1,
-                                    1 - dropout,
-                                    size=volume.shape)
-        return (volume * dropout_cast).astype(volume.dtype)
 
 
 class Duplicate(Transformer):
