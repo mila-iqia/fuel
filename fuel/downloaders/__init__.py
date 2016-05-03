@@ -18,6 +18,7 @@ from fuel.downloaders import mnist
 from fuel.downloaders import svhn
 from fuel.downloaders import ilsvrc2010
 from fuel.downloaders import youtube_audio
+from fuel.downloaders import mjsynth
 
 all_downloaders = (
     ('adult', adult.fill_subparser),
@@ -31,4 +32,5 @@ all_downloaders = (
     ('svhn', svhn.fill_subparser),
     ('ilsvrc2010', ilsvrc2010.fill_subparser),
     ('dogs_vs_cats', dogs_vs_cats.fill_subparser),
-    ('youtube_audio', youtube_audio.fill_subparser))
+    ('youtube_audio', youtube_audio.fill_subparser),
+    ('mjsynth', mjsynth.fill_subparser))
