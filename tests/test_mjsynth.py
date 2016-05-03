@@ -3,9 +3,12 @@ import numpy
 from fuel.datasets import MJSynth
 from fuel.streams import DataStream
 from fuel.schemes import SequentialScheme
+from tests import skip_if_not_available
 
 
 def test_mjsynth():
+    skip_if_not_available(datasets=['mjsynth.hdf5'])
+
     train = MJSynth(('train',), load_in_memory=False)
     assert train.num_examples == 7224586
     handle = train.open()
