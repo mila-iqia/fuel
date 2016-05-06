@@ -658,6 +658,17 @@ class TestRename(object):
     def test_raises_error_on_nonexistent_source_name(self):
         assert_raises(KeyError, Rename, self.stream, {'Z': 'features'})
 
+    def test_raises_on_invalid_kwargs(self):
+        assert_raises(ValueError, Rename, self.stream,
+                      {'X': 'features'}, on_non_existent='foo')
+
+    def test_intentionally_ignore_missing(self):
+        assert_equal(Rename(self.stream,
+                            {'X': 'features', 'y': 'targets',
+                             'Z': 'fudgesicle'},
+                            on_non_existent='ignore').sources,
+                     ('features', 'targets'))
+
     def test_renames_axis_labels(self):
         assert_equal(self.transformer.axis_labels,
                      {'features': ('batch', 'width', 'height'),
