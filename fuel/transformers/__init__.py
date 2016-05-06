@@ -887,8 +887,14 @@ class Rename(AgnosticTransformer):
         if on_non_existent not in ('raise', 'ignore', 'warn'):
             raise ValueError("on_non_existent must be one of 'raise', "
                              "'ignore', 'warn'")
-        if len(set(names.values())) != len(names):
-            # Mapping has to be 1-to-1 for behaviour to be deterministic.
+        # We allow duplicate values in the full dictionary, but those
+        # that correspond to keys that are real sources in the data stream
+        # must be unique. This lets you use one piece of code including
+        # a Rename transformer to map disparately named sources in
+        # different datasets to a common name.
+        usable_names = {k: v for k, v in iteritems(names)
+                        if k in data_stream.sources}
+        if len(set(usable_names.values())) != len(usable_names):
             raise KeyError("multiple old source names cannot map to "
                            "the same new source name")
         sources = list(data_stream.sources)

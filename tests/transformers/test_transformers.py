@@ -682,6 +682,13 @@ class TestRename(object):
                             on_non_existent='ignore').sources,
                      ('features', 'targets'))
 
+    def test_not_one_to_one_ok_if_not_a_source_in_data_stream(self):
+        assert_equal(Rename(self.stream,
+                            {'X': 'features', 'y': 'targets',
+                             'Z': 'targets'},
+                            on_non_existent='ignore').sources,
+                     ('features', 'targets'))
+
     def test_renames_axis_labels(self):
         assert_equal(self.transformer.axis_labels,
                      {'features': ('batch', 'width', 'height'),
