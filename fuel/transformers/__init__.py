@@ -887,6 +887,10 @@ class Rename(AgnosticTransformer):
         if on_non_existent not in ('raise', 'ignore', 'warn'):
             raise ValueError("on_non_existent must be one of 'raise', "
                              "'ignore', 'warn'")
+        if len(set(names.values())) != len(names):
+            # Mapping has to be 1-to-1 for behaviour to be deterministic.
+            raise KeyError("multiple old source names cannot map to "
+                           "the same new source name")
         sources = list(data_stream.sources)
         for old, new in iteritems(names):
             if old not in sources:

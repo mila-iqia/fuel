@@ -662,6 +662,10 @@ class TestRename(object):
         assert_raises(ValueError, Rename, self.stream,
                       {'X': 'features'}, on_non_existent='foo')
 
+    def test_raises_on_not_one_to_one(self):
+        assert_raises(KeyError, Rename, self.stream, {'X': 'features',
+                                                      'y': 'features'})
+
     def test_intentionally_ignore_missing(self):
         assert_equal(Rename(self.stream,
                             {'X': 'features', 'y': 'targets',
