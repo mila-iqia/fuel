@@ -665,6 +665,12 @@ class TestRename(object):
     def test_name_clash(self):
         assert_raises(KeyError, Rename, self.stream, {'X': 'y'})
 
+    def test_name_swap(self):
+        assert_equal(Rename(self.stream,
+                            {'X': 'y', 'y': 'X'},
+                            on_non_existent='ignore').sources,
+                     ('y', 'X'))
+
     def test_raises_on_not_one_to_one(self):
         assert_raises(KeyError, Rename, self.stream, {'X': 'features',
                                                       'y': 'features'})

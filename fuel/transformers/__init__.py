@@ -892,13 +892,14 @@ class Rename(AgnosticTransformer):
             raise KeyError("multiple old source names cannot map to "
                            "the same new source name")
         sources = list(data_stream.sources)
+        sources_lookup = {n: i for i, n in enumerate(sources)}
         for old, new in iteritems(names):
-            if new in sources and new not in names:
+            if new in sources_lookup and new not in names:
                 message = ("Renaming source '{}' to '{}' "
                            "would create two sources named '{}'"
                            .format(old, new, new))
                 raise KeyError(message)
-            if old not in sources:
+            if old not in sources_lookup:
                 message = ("Renaming source '{}' to '{}': "
                            "stream does not provide a source '{}'"
                            .format(old, new, old))
@@ -909,7 +910,7 @@ class Rename(AgnosticTransformer):
                                  'ignore': logging.DEBUG}
                     log.log(log_level[on_non_existent], message)
             else:
-                sources[sources.index(old)] = new
+                sources[sources_lookup[old]] = new
         self.sources = tuple(sources)
         if data_stream.axis_labels:
             kwargs.setdefault(
