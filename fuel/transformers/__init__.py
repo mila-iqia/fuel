@@ -893,6 +893,11 @@ class Rename(AgnosticTransformer):
                            "the same new source name")
         sources = list(data_stream.sources)
         for old, new in iteritems(names):
+            if new in sources and new not in names:
+                message = ("Renaming source '{}' to '{}' "
+                           "would create two sources named '{}'"
+                           .format(old, new, new))
+                raise KeyError(message)
             if old not in sources:
                 message = ("Renaming source '{}' to '{}': "
                            "stream does not provide a source '{}'"
