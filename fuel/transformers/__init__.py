@@ -877,15 +877,46 @@ class Rename(AgnosticTransformer):
     names : dict
         A dictionary mapping the old and new names of the sources
         to rename.
+    on_non_existent : str, optional
+        Desired behaviour when a source specified as a key in `names`
+        is not provided by the streams: see `on_overwrite` above for
+        description of possible values. Default is 'raise'.
 
     """
-    def __init__(self, data_stream, names, **kwargs):
+    def __init__(self, data_stream, names, on_non_existent='raise', **kwargs):
+        if on_non_existent not in ('raise', 'ignore', 'warn'):
+            raise ValueError("on_non_existent must be one of 'raise', "
+                             "'ignore', 'warn'")
+        # We allow duplicate values in the full dictionary, but those
+        # that correspond to keys that are real sources in the data stream
+        # must be unique. This lets you use one piece of code including
+        # a Rename transformer to map disparately named sources in
+        # different datasets to a common name.
+        usable_names = {k: v for k, v in iteritems(names)
+                        if k in data_stream.sources}
+        if len(set(usable_names.values())) != len(usable_names):
+            raise KeyError("multiple old source names cannot map to "
+                           "the same new source name")
         sources = list(data_stream.sources)
+        sources_lookup = {n: i for i, n in enumerate(sources)}
         for old, new in iteritems(names):
-            if old not in sources:
-                raise KeyError("%s not in the sources of the stream" % old)
+            if new in sources_lookup and new not in names:
+                message = ("Renaming source '{}' to '{}' "
+                           "would create two sources named '{}'"
+                           .format(old, new, new))
+                raise KeyError(message)
+            if old not in sources_lookup:
+                message = ("Renaming source '{}' to '{}': "
+                           "stream does not provide a source '{}'"
+                           .format(old, new, old))
+                if on_non_existent == 'raise':
+                    raise KeyError(message)
+                else:
+                    log_level = {'warn': logging.WARNING,
+                                 'ignore': logging.DEBUG}
+                    log.log(log_level[on_non_existent], message)
             else:
-                sources[sources.index(old)] = new
+                sources[sources_lookup[old]] = new
         self.sources = tuple(sources)
         if data_stream.axis_labels:
             kwargs.setdefault(
