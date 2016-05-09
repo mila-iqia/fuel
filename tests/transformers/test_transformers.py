@@ -665,6 +665,15 @@ class TestRename(object):
     def test_name_clash(self):
         assert_raises(KeyError, Rename, self.stream, {'X': 'y'})
 
+    def test_not_really_a_name_clash(self):
+        try:
+            # This should not raise an error, because we're ignoring
+            # non-existent sources. So renaming a non-existent source
+            # cannot create a name clash.
+            Rename(self.stream, {'foobar': 'y'}, on_non_existent='ignore')
+        except KeyError:
+            assert False   # Regression.
+
     def test_name_swap(self):
         assert_equal(Rename(self.stream,
                             {'X': 'y', 'y': 'X'},
