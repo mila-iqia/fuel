@@ -901,10 +901,11 @@ class Rename(AgnosticTransformer):
         sources_lookup = {n: i for i, n in enumerate(sources)}
         for old, new in iteritems(names):
             if new in sources_lookup and new not in names:
-                message = ("Renaming source '{}' to '{}' "
-                           "would create two sources named '{}'"
-                           .format(old, new, new))
-                raise KeyError(message)
+                if old in usable_names:
+                    message = ("Renaming source '{}' to '{}' "
+                               "would create two sources named '{}'"
+                               .format(old, new, new))
+                    raise KeyError(message)
             if old not in sources_lookup:
                 message = ("Renaming source '{}' to '{}': "
                            "stream does not provide a source '{}'"
