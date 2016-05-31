@@ -1,12 +1,13 @@
 """Installation script."""
 from os import path
 import sys
+from io import open
 from setuptools import find_packages, setup
 from distutils.extension import Extension
 
 HERE = path.abspath(path.dirname(__file__))
 
-with open(path.join(HERE, 'README.rst')) as f:
+with open(path.join(HERE, 'README.rst'), encoding='utf-8') as f:
     LONG_DESCRIPTION = f.read().strip()
 
 # Visual C++ apparently doesn't respect/know what to do with this flag.
