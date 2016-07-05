@@ -564,6 +564,10 @@ class H5PYDataset(Dataset):
             raise ValueError()
         data = []
         shapes = []
+        # TODO: This is not an ideal solution, really unpickling should be 
+        # restoring the state of the dataset fully, i.e. load() must be
+        # modified to account for the out-of-memory case.
+        # See https://git.io/vKkSm
         try:
             handle = self._file_handle
         except IOError:
