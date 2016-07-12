@@ -429,3 +429,12 @@ class TestH5PYDataset(object):
                      (self.vlen_features[0], self.vlen_targets[0]))
         assert_equal(next(iter_),
                      (self.vlen_features[1], self.vlen_targets[1]))
+
+    def test_dataset_get_data_without_open(self):
+        dataset = H5PYDataset(self.h5file, which_sets=('train',),
+                              load_in_memory=False)
+        try:
+            dataset.get_data(request=(slice(0, 2)))
+        except IOError:
+            assert False
+        dataset.close(None)
