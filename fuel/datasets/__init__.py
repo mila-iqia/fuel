@@ -15,3 +15,4 @@ from fuel.datasets.mnist import MNIST
 from fuel.datasets.svhn import SVHN
 from fuel.datasets.text import TextFile
 from fuel.datasets.billion import OneBillionWord
+from fuel.datasets.mjsynth import MJSynth
