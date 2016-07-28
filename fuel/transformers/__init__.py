@@ -4,6 +4,7 @@ from .simple import (AgnosticTransformer, Mapping, SourcewiseTransformer,
                      Cast, ForceFloatX, Filter, FilterSources, Cache,
                      SortMapping, Batch, Unpack, Padding, Merge,
                      BackgroundProcess, MultiProcessing, Rename)
+from .pipes import Pipe, CompositePipe
 
 
 __all__ = ("Transformer", "ExpectsAxisLabels", "AgnosticTransformer",
@@ -11,7 +12,8 @@ __all__ = ("Transformer", "ExpectsAxisLabels", "AgnosticTransformer",
            "AgnosticSourcewiseTransformer", "Flatten", "ScaleAndShift",
            "Cast", "ForceFloatX", "Filter", "FilterSources", "Cache",
            "SortMapping", "Batch", "Unpack", "Padding", "Merge",
-           "BackgroundProcess", "MultiProcessing", "Rename")
+           "BackgroundProcess", "MultiProcessing", "Rename", "Pipe",
+           "CompositePipe")
 
 
 
