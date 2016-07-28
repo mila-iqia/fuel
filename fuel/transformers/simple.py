@@ -64,14 +64,17 @@ class Mapping(Transformer):
         return self.data_stream.sources + (self.add_sources
                                            if self.add_sources else ())
 
-    def get_data(self, request=None):
-        if request is not None:
-            raise ValueError
-        data = next(self.child_epoch_iterator)
+    def transform(self, data):
         image = self.mapping(data)
         if not self.add_sources:
             return image
         return data + image
+
+    def transform_batch(self, batch):
+        return self.transform(batch)
+
+    def transform_example(self, example):
+        return self.transform(example)
 
 
 @add_metaclass(ABCMeta)
