@@ -749,9 +749,9 @@ class Merge(AbstractDataStream):
     ('Hello world!', 'Bonjour le monde!')
 
     """
-    def __init__(self, data_streams, sources, axis_labels=None):
+    def __init__(self, data_streams, sources, axis_labels=None, **kwargs):
         super(Merge, self).__init__(
-            iteration_scheme=None, axis_labels=axis_labels)
+            iteration_scheme=None, axis_labels=axis_labels, **kwargs)
         if not all(data_stream.produces_examples ==
                    data_streams[0].produces_examples
                    for data_stream in data_streams):
