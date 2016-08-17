@@ -6,6 +6,6 @@ pillow==3.3.0
 progressbar2==3.10.0
 pyyaml==3.11
 pyzmq==15.4.0
-requests==2.11.0
+requests==2.11.1
 scipy==0.18.0
 six==1.10.0
