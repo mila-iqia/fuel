@@ -49,7 +49,18 @@ The following configurations are supported:
 .. option:: floatX
 
    The default :class:`~numpy.dtype` to use for floating point numbers. The
-   default value is ``float64``. A lower value can save memory.
+   default value is taken from ``theano.config.floatX`` if Theano_ can be
+   imported, ``float64`` otherwise. Use of ``float32`` can save memory and
+   prepare data for easy use with Theano (and Blocks_) in GPU mode.
+
+.. _Theano: http://deeplearning.net/software/theano/
+.. _Blocks: http://blocks.readthedocs.org/
+
+.. note::
+
+   If the Theano import causes you problems, setting the environment variable
+   ``FUEL_NO_THEANO`` to 1 can circumvent this import attempt entirely and
+   force ``float64`` as the default.
 
 .. option:: extra_downloaders
 
@@ -198,11 +209,15 @@ config.add_config('extra_converters', type_=extra_downloader_converter,
                   default=[], env_var='FUEL_EXTRA_CONVERTERS')
 
 # Default to Theano's floatX if possible
-try:
-    from theano import config as theano_config
-    default_floatX = theano_config.floatX
-except Exception:
+if not os.environ.get('FUEL_NO_THEANO', False):
+    try:
+        from theano import config as theano_config
+        default_floatX = theano_config.floatX
+    except Exception:
+        default_floatX = 'float64'
+else:
     default_floatX = 'float64'
+
 config.add_config('floatX', type_=str, env_var='FUEL_FLOATX',
                   default=default_floatX)
 
