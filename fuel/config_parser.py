@@ -209,7 +209,7 @@ config.add_config('extra_converters', type_=extra_downloader_converter,
                   default=[], env_var='FUEL_EXTRA_CONVERTERS')
 
 # Default to Theano's floatX if possible
-if not os.environ.get('FUEL_NO_THEANO', False):
+if not int(os.environ.get('FUEL_NO_THEANO', 0)):
     try:
         from theano import config as theano_config
         default_floatX = theano_config.floatX
