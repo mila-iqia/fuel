@@ -948,6 +948,8 @@ class OneHotEncoding(SourcewiseTransformer):
 
     """
     def __init__(self, data_stream, num_classes, **kwargs):
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
         super(OneHotEncoding, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
         self.num_classes = num_classes
