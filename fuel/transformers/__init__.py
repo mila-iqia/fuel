@@ -966,6 +966,9 @@ class OneHotEncoding(SourcewiseTransformer):
                              "num_classes ({})".format(self.num_classes))
         output = numpy.zeros((source_batch.shape[0], self.num_classes),
                              dtype=source_batch.dtype)
+        # if batch is of shape N x 1
+        if source_batch.ndim == 2 and source_batch.shape[1] == 1:
+            source_batch = source_batch[:, 0]
         for i in range(self.num_classes):
-            output[source_batch[:, 0] == i, i] = 1
+            output[source_batch == i, i] = 1
         return output
