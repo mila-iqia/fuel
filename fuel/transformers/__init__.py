@@ -935,8 +935,9 @@ class OneHotEncoding(SourcewiseTransformer):
 
     It assumes that the targets are integer numbers from 0,... , N-1.
     Since it works on the fly the number of classes N needs to be
-    specified. The targets are assumed to be in source_name 'targets',
-    but can be specified otherwise.
+    specified.
+
+    Batch input is assumed to be of shape (N,) or (N, 1).
 
     Parameters
     ----------
