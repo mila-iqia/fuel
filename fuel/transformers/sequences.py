@@ -31,13 +31,15 @@ class Window(Transformer):
     data_stream : :class:`.DataStream` instance
         The data stream providing sequences. Each example is assumed to be
         an object that supports slicing.
+    step_size : int, optional
+        The offset from one source window to the next one
     target_source : str, optional
         This data stream adds a new source for the target words. By default
         this source is 'targets'.
 
     """
     def __init__(self, offset, source_window, target_window,
-                 overlapping, data_stream, target_source='targets', **kwargs):
+                 overlapping, data_stream, step_size=1, target_source='targets', **kwargs):
         if not data_stream.produces_examples:
             raise ValueError('the wrapped data stream must produce examples, '
                              'not batches of examples.')
@@ -53,6 +55,7 @@ class Window(Transformer):
         self.source_window = source_window
         self.target_window = target_window
         self.overlapping = overlapping
+        self.step_size = step_size
 
         self.sentence = []
         self._set_index()
@@ -82,7 +85,7 @@ class Window(Transformer):
         source = self.sentence[self.index:self.index + self.source_window]
         target = self.sentence[self._get_target_index():
                                self._get_target_index() + self.target_window]
-        self.index += 1
+        self.index += self.step_size
         return (source, target)
 
 
