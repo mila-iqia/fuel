@@ -32,7 +32,8 @@ class Window(Transformer):
         The data stream providing sequences. Each example is assumed to be
         an object that supports slicing.
     step_size : int, optional
-        The offset from one source window to the next one
+        The offset from one source window to the next one. By default this
+        value is 1 (i.e dense windowing).
     target_source : str, optional
         This data stream adds a new source for the target words. By default
         this source is 'targets'.

@@ -84,6 +84,16 @@ def test_window_stream():
         assert source[:2] == target[-2:]
     assert i == 1  # Should get 2 examples
 
+    # Test step_size param
+    sentences = [[i for i in range(10)]]
+    stream = DataStream(IterableDataset(sentences))
+    windows = Window(1, 4, 4, True, stream, step_size=3)
+    expected_sources = [[0, 1, 2, 3], [3, 4, 5, 6]]
+    expected_targets = [[1, 2, 3, 4], [4, 5, 6, 7]]
+    for i, (source, target) in enumerate(windows.get_epoch_iterator()):
+        assert source == expected_sources[i]
+        assert target == expected_targets[i]
+    assert i == 1  # Should get 2 examples
 
 def test_ngram_stream_error_on_multiple_sources():
     # Check that NGram accepts only data streams with one source
