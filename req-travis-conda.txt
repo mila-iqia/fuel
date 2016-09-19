@@ -8,5 +8,5 @@ pytables==3.2.2
 pyyaml==3.12
 pyzmq==15.4.0
 requests==2.11.1
-scipy==0.18.0
+scipy==0.18.1
 six==1.10.0
