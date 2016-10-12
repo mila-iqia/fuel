@@ -236,7 +236,8 @@ def _write_to_hdf5(hdf5_file, index, image_filename, image_data,
                    class_index):
     hdf5_file['filenames'][index] = image_filename.encode('ascii')
     hdf5_file['encoded_images'][index] = image_data
-    hdf5_file['targets'][index] = class_index
+    if class_index is not None:
+        hdf5_file['targets'][index] = class_index
 
 
 def train_set_producer(socket, train_archive, patch_archive, wnid_map):
