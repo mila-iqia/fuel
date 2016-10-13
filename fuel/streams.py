@@ -84,15 +84,12 @@ class AbstractDataStream(object):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def reset(self):
         """Reset the data stream."""
 
-    @abstractmethod
     def close(self):
         """Gracefully close the data stream, e.g. releasing file handles."""
 
-    @abstractmethod
     def next_epoch(self):
         """Switch the data stream to the next epoch."""
 
