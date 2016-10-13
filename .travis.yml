@@ -48,6 +48,7 @@ script:
   - |
       if [[ $TESTS == 'blocks' ]]; then
         bokeh-server &> /dev/null &
+        export PYTHONPATH=$HOME/blocks
         nose2 tests --start-dir $HOME/blocks || fail
         nose2 doctests --start-dir $HOME/blocks || fail
         return $FAILED
