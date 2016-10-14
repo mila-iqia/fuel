@@ -67,7 +67,6 @@ class AbstractDataStream(object):
                                  self.iteration_scheme))
         self._produces_examples = value
 
-    @abstractmethod
     def get_data(self, request=None):
         """Request data from the dataset or the wrapped stream.
 
@@ -76,17 +75,21 @@ class AbstractDataStream(object):
         request : object
             A request fetched from the `request_iterator`.
 
-        """
+        Notes
+        -----
+        It is possible to build a usable stream in terms of underlying
+        streams for the purposes of training by only implementing
+        `get_epoch_iterator`, thus this method is optional.
 
-    @abstractmethod
+        """
+        raise NotImplementedError
+
     def reset(self):
         """Reset the data stream."""
 
-    @abstractmethod
     def close(self):
         """Gracefully close the data stream, e.g. releasing file handles."""
 
-    @abstractmethod
     def next_epoch(self):
         """Switch the data stream to the next epoch."""
 
