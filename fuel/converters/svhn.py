@@ -255,10 +255,11 @@ def convert_svhn_format_1(directory, output_directory,
             for split in splits:
                 fill_split(split, bar=bar)
     finally:
-        if os.path.isdir(TMPDIR):
+        if 'TMPDIR' in locals() and os.path.isdir(TMPDIR):
             shutil.rmtree(TMPDIR)
-        h5file.flush()
-        h5file.close()
+        if 'h5file' in locals():
+            h5file.flush()
+            h5file.close()
 
     return (output_path,)
 
