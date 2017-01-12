@@ -166,9 +166,9 @@ def test_celeba():
     args = parser.parse_args(['celeba'])
     filenames = ['list_attr_celeba.txt', 'img_align_celeba.zip']
     urls = ['https://www.dropbox.com/sh/8oqt9vytwxb3s4r/'
-            'AAB7G69NLjRNqv_tyiULHSVUa/list_attr_celeba.txt?dl=1',
+            'AAC7-uCaJkmPmvLX2_P5qy0ga/Anno/list_attr_celeba.txt?dl=1',
             'https://www.dropbox.com/sh/8oqt9vytwxb3s4r/'
-            'AADVdnYbokd7TXhpvfWLL3sga/img_align_celeba.zip?dl=1']
+            'AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1']
     assert_equal(args.filenames, filenames)
     assert_equal(args.urls, urls)
     assert download_function is default_downloader
