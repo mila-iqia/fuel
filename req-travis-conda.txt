@@ -7,6 +7,6 @@ pillow==4.0.0
 pytables==3.2.2
 pyyaml==3.12
 pyzmq==16.0.2
-requests==2.12.4
+requests==2.12.5
 scipy==0.18.1
 six==1.10.0
