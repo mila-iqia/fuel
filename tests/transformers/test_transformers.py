@@ -16,6 +16,7 @@ from fuel.transformers import (
     Cache, Batch, Padding, MultiProcessing, Unpack, Merge,
     SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename, FilterSources)
 from fuel.transformers.defaults import ToBytes
+from fuel.utils import accepts_dict
 
 
 class FlagDataStream(DataStream):
@@ -87,6 +88,24 @@ class TestMapping(object):
         transformer = Mapping(stream, lambda d: ([2 * i for i in d[0]],))
         assert_equal(list(transformer.get_epoch_iterator()),
                      list(zip([[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
+
+    def test_mapping_dict(self):
+        @accepts_dict
+        def mapping(d):
+            return [2 * i for i in d['data']],
+        stream = DataStream(IterableDataset(self.data))
+        transformer = Mapping(stream, mapping)
+        assert_equal(list(transformer.get_epoch_iterator()),
+                     list(zip([[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
+
+    def test_mapping_incorrect_annotation(self):
+        def mapping(d):
+            return [2 * i for i in d['data']],
+        mapping.__annotations__ = {'d': list, 'c': list}
+        stream = DataStream(IterableDataset(self.data))
+        assert_raises(ValueError, lambda : Mapping(stream, mapping))
+        mapping.__annotations__ = {'d': 'list'}
+        assert_raises(ValueError, lambda : Mapping(stream, mapping))
 
     def test_add_sources(self):
         stream = DataStream(IterableDataset(self.data))

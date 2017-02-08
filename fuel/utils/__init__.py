@@ -511,3 +511,23 @@ def do_not_pickle_attributes(*lazy_properties):
 
         return cls
     return wrap_class
+
+
+def _func_annotation_for(func):
+    """Retrieve the function annotation for a given function or create it"""
+    current = getattr(func, '__annotations__', None)
+    if current is None:
+        current = func.__annotations__ = {}
+    return current 
+
+
+def accepts_list(function):
+    base = _func_annotation_for(function)
+    base.update({None: list})
+    return function
+
+
+def accepts_dict(function):
+    base = _func_annotation_for(function)
+    base.update({None: dict})
+    return function

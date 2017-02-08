@@ -1,10 +1,11 @@
 from abc import ABCMeta, abstractmethod
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import logging
 from multiprocessing import Process, Queue
 
 import numpy
 from picklable_itertools import chain, ifilter, izip
+from picklable_itertools.extras import equizip
 from six import add_metaclass, iteritems
 
 from fuel import config
@@ -200,6 +201,17 @@ class Mapping(Transformer):
     def __init__(self, data_stream, mapping, add_sources=None, **kwargs):
         super(Mapping, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
+        annotations = getattr(mapping, '__annotations__', {None: list})
+        annotations.pop('return', None)
+        if len(annotations) > 1:
+            raise ValueError('`mapping` function should accept one argument')
+        if annotations:
+            self.mapping_accepts = list(annotations.values())[0]
+        else:
+            self.mapping_accepts = list
+        if not self.mapping_accepts in [list, dict]:
+            raise ValueError('`mapping` function should accept `list` or'
+                             '`dict`, not `{}`'.format(self.mapping_accepts))
         self.mapping = mapping
         self.add_sources = add_sources
 
@@ -212,6 +224,8 @@ class Mapping(Transformer):
         if request is not None:
             raise ValueError
         data = next(self.child_epoch_iterator)
+        if self.mapping_accepts == dict:
+            data = OrderedDict(equizip(self.data_stream.sources, data))
         image = self.mapping(data)
         if not self.add_sources:
             return image
