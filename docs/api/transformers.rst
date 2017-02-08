@@ -25,3 +25,10 @@ Transformers for sequences
     :undoc-members:
     :show-inheritance:
 
+Other
+-----
+
+.. automodule:: fuel.transformers
+    :members:
+    :undoc-members:
+    :show-inheritance:

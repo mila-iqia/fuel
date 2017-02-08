@@ -522,12 +522,14 @@ def _func_annotation_for(func):
 
 
 def accepts_list(function):
+    """A decorator to add an annotation that the input is a list"""
     base = _func_annotation_for(function)
     base.update({None: list})
     return function
 
 
 def accepts_dict(function):
+    """A decorator to add an annotation that the input is a dict"""
     base = _func_annotation_for(function)
     base.update({None: dict})
     return function

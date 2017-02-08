@@ -192,10 +192,21 @@ class Mapping(Transformer):
     data_stream : instance of :class:`DataStream`
         The wrapped data stream.
     mapping : callable
-        The mapping to be applied.
+        The mapping to be applied. The mapping function is supposed
+        to accept a tuple and return a tuple by default. It is possible
+        change this behavior by annotating_ the input as a dictionary.
+        In this case the mapping function is provided an ordered 
+        dictionary with source names as keys.
+
+        Convenience functions :func:`~.accepts_dict` and 
+        :func:`~.accepts_list` are provided for using with legacy python.
     add_sources : tuple of str, optional
         When given, the data produced by the mapping is added to original
         data under source names `add_sources`.
+
+
+    .. _annotating: https://docs.python.org/3.6/tutorial/
+                    controlflow.html#function-annotations
 
     """
     def __init__(self, data_stream, mapping, add_sources=None, **kwargs):
