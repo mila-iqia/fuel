@@ -1,5 +1,5 @@
-"""
-Dataset preloading tool
+"""Dataset preloading tool
+
 This file provides the ability to make a local cache of a dataset or
 part of it. It is meant to help in the case where multiple jobs are
 reading the same dataset from ${FUEL_DATA_PATH}, which may cause a
@@ -10,9 +10,9 @@ processes use it simultaneously instead of each acquiring its own copy
 over the network.
 Whenever a folder or a dataset copy is created locally, it is granted
 the same access as it has under ${FUEL_LOCAL_DATA_PATH}. This is
-gauranteed by default copy.
-"""
+guaranteed by default copy.
 
+"""
 import atexit
 import logging
 import os
@@ -26,11 +26,13 @@ from fuel.utils import string_utils
 
 log = logging.getLogger(__name__)
 
-class LocalDatasetCache(object):
 
-    """
-    A local cache for remote files for faster access and reducing
+class LocalDatasetCache(object):
+    """A local cache for remote files.
+
+    A local cache is used for faster access and reducing
     network stress.
+
     """
 
     def __init__(self):
@@ -51,20 +53,24 @@ class LocalDatasetCache(object):
             log.debug("Local dataset cache is deactivated")
 
     def cache_file(self, filename):
-        """
-        Caches a file locally if possible. If caching was succesfull, or if
+        """Caches a file locally if possible.
+
+        If caching was succesfull, or if
         the file was previously successfully cached, this method returns the
         path to the local copy of the file. If not, it returns the path to
         the original file.
+
         Parameters
         ----------
         filename : string
             Remote file to cache locally
+
         Returns
         -------
         output : string
             Updated (if needed) filename to use to access the remote
             file.
+
         """
 
         remote_name = string_utils.preprocess(filename)
@@ -195,8 +201,8 @@ class LocalDatasetCache(object):
         return local_name
 
     def copy_from_server_to_local(self, remote_fname, local_fname):
-        """
-        Copies a remote file locally
+        """Copies a remote file locally.
+
         Parameters
         ----------
         remote_fname : string
@@ -204,6 +210,7 @@ class LocalDatasetCache(object):
         local_fname : string
             Path and name of the local copy to be made of the remote
             file.
+
         """
 
         head, tail = os.path.split(local_fname)
@@ -212,7 +219,6 @@ class LocalDatasetCache(object):
             os.makedirs(os.path.dirname(head))
 
         shutil.copyfile(remote_fname, local_fname)
-
 
         # Copy the original group id and file permission
         st = os.stat(remote_fname)
@@ -247,8 +253,8 @@ class LocalDatasetCache(object):
                     pass
 
     def disk_usage(self, path):
-        """
-        Return free usage about the given path, in bytes
+        """Return free usage about the given path, in bytes.
+
         Parameters
         ----------
         path : string
@@ -258,6 +264,7 @@ class LocalDatasetCache(object):
         output : tuple
             Tuple containing total space in the folder and currently
             used space in the folder
+
         """
 
         st = os.statvfs(path)
@@ -267,9 +274,11 @@ class LocalDatasetCache(object):
 
     def check_enough_space(self, remote_fname, local_fname,
                            max_disk_usage=0.9):
-        """
+        """Check if the given local folder has enough space.
+
         Check if the given local folder has enough space to store
-        the specified remote file
+        the specified remote file.
+
         Parameters
         ----------
         remote_fname : string
@@ -284,6 +293,7 @@ class LocalDatasetCache(object):
         -------
         output : boolean
             True if there is enough space to store the remote file.
+
         """
 
         storage_need = os.path.getsize(remote_fname)
@@ -295,15 +305,17 @@ class LocalDatasetCache(object):
                 (storage_total * max_disk_usage))
 
     def safe_mkdir(self, folderName, force_perm=None):
-        """
-        Create the specified folder. If the parent folders do not
-        exist, they are also created. If the folder already exists,
-        nothing is done.
+        """Create the specified folder.
+
+        If the parent folders do not exist, they are also created.
+        If the folder already exists, nothing is done.
+
         Parameters
         ----------
         folderName : string
             Name of the folder to create
         force_perm : mode to use for folder creation
+
         """
         if os.path.exists(folderName):
             return
@@ -328,12 +340,13 @@ class LocalDatasetCache(object):
                 os.chmod(folderToCreate, force_perm)
 
     def get_readlock(self, path):
-        """
-        Obtain a readlock on a file
+        """Obtain a readlock on a file
+
         Parameters
         ----------
         path : string
             Name of the file on which to obtain a readlock
+
         """
 
         timestamp = int(time.time() * 1e6)
@@ -344,12 +357,13 @@ class LocalDatasetCache(object):
         atexit.register(self.release_readlock, lockdirName=lockdirName)
 
     def release_readlock(self, lockdirName):
-        """
-        Release a previously obtained readlock
+        """Release a previously obtained readlock
+
         Parameters
         ----------
         lockdirName : string
             Name of the previously obtained readlock
+
         """
 
         # Make sure the lock still exists before deleting it
@@ -357,13 +371,15 @@ class LocalDatasetCache(object):
             os.rmdir(lockdirName)
 
     def get_writelock(self, filename):
-        """
-        Obtain a writelock on a file.
+        """Obtain a writelock on a file.
+
         Only one write lock may be held at any given time.
+
         Parameters
         ----------
         filename : string
             Name of the file on which to obtain a writelock
+
         """
 
         # compilelock expect locks to be on folder. Since we want a lock on a
@@ -373,13 +389,8 @@ class LocalDatasetCache(object):
         compilelock.get_lock(filename + ".writelock")
 
     def release_writelock(self):
-        """
-        Release the previously obtained writelock
-        """
+        """Release the previously obtained writelock."""
         compilelock.release_lock()
 
 
 datasetCache = LocalDatasetCache()
-
-
-
