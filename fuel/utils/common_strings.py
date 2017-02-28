@@ -19,3 +19,44 @@ Mac OS X
 Environment variables on Mac OS X work the same as in Linux, except you should
 modify and run the "source" command on ~/.profile rather than ~/.bashrc.
 """
+
+viewer_command_error_essay = """
+PYLEARN2_VIEWER_COMMAND not defined. PLEASE READ THE FOLLOWING MESSAGE
+CAREFULLY TO SET UP THIS ENVIRONMENT VARIABLE:
+pylearn2 uses an external program to display images. Because different
+systems have different image programs available, pylearn2 requires the
+ user to specify what image viewer program to use.
+
+You need to choose an image viewer program that pylearn2 should use.
+Then tell pylearn2 to use that image viewer program by defining your
+PYLEARN2_VIEWER_COMMAND environment variable.
+
+You need to choose PYLEARN_VIEWER_COMMAND such that running
+
+${PYLEARN2_VIEWER_COMMAND} image.png
+
+in a command prompt on your machine will do the following:
+    -open an image viewer in a new process.
+    -not return until you have closed the image.
+
+Platform-specific recommendations follow.
+
+Linux
+=====
+
+Acceptable commands include:
+    gwenview
+    eog --new-instance
+
+This is assuming that you have gwenview or a version of eog that supports
+--new-instance installed on your machine. If you don't, install one of those,
+or figure out a command that has the above properties that is available from
+your setup.
+
+Mac OS X
+========
+
+Acceptable commands include:
+    open -Wn
+
+"""

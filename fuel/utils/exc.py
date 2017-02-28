@@ -1,5 +1,4 @@
 """Exceptions used by basic support utilities."""
-__author__ = "Ian Goodfellow"
 import sys
 
 from fuel.utils.common_strings import environment_variable_essay
@@ -7,12 +6,13 @@ from theano.compat import six
 
 
 class EnvironmentVariableError(Exception):
-    """
-    An exception raised when a required environment variable is not defined
+    """An exception raised when a required environment variable is not defined.
+
     Parameters
     ----------
     *args: list
         Arguments passed to Exception()
+
     """
 
     def __init__(self, *args):
@@ -22,9 +22,9 @@ class EnvironmentVariableError(Exception):
 # This exception is here as string_utils need it and setting it in
 # datasets.exc would create a circular import.
 class NoDataPathError(EnvironmentVariableError):
-    """
-    Exception raised when PYLEARN2_DATA_PATH is required but has not been
+    """Exception raised when PYLEARN2_DATA_PATH is required but has not been
     defined.
+
     """
     def __init__(self):
         super(NoDataPathError, self).__init__(data_path_essay +
@@ -37,8 +37,8 @@ using a computer at LISA, this should be set to /data/lisa/data.
 
 
 def reraise_as(new_exc):
-    """
-    Re-raise current exception as a new exception.
+    """Re-raise current exception as a new exception.
+
     Parameters
     ----------
     new_exc : Exception isinstance
@@ -58,6 +58,7 @@ def reraise_as(new_exc):
     ...     do_something_crazy()
     ... except Exception:
     ...     reraise_as(UnhandledException("Informative message"))
+
     """
     orig_exc_type, orig_exc_value, orig_exc_traceback = sys.exc_info()
 
