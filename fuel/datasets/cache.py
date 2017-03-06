@@ -20,9 +20,8 @@ import stat
 import time
 import shutil
 
-import theano.gof.compilelock as compilelock
-
-from fuel.utils import string_utils
+from fuel.utils import write_lock
+from fuel import config
 
 log = logging.getLogger(__name__)
 
@@ -34,20 +33,10 @@ class LocalDatasetCache(object):
     network stress.
 
     """
-
     def __init__(self):
-        default_path = '${FUEL_DATA_PATH}'
-        local_path = '${FUEL_LOCAL_DATA_PATH}'
+        self.dataset_remote_dir = config.data_path
+        self.dataset_local_dir = config.local_data_path
         self.pid = os.getpid()
-
-        try:
-            self.dataset_remote_dir = string_utils.preprocess(default_path)
-            self.dataset_local_dir = string_utils.preprocess(local_path)
-        except (ValueError, string_utils.NoDataPathError,
-                string_utils.EnvironmentVariableError):
-            # Local cache seems to be deactivated
-            self.dataset_remote_dir = ""
-            self.dataset_local_dir = ""
 
         if self.dataset_remote_dir == "" or self.dataset_local_dir == "":
             log.debug("Local dataset cache is deactivated")
@@ -62,18 +51,18 @@ class LocalDatasetCache(object):
 
         Parameters
         ----------
-        filename : string
+        filename : str
             Remote file to cache locally
 
         Returns
         -------
-        output : string
+        output : str
             Updated (if needed) filename to use to access the remote
             file.
 
         """
 
-        remote_name = string_utils.preprocess(filename)
+        remote_name = filename
 
         # Check if a local directory for data has been defined. Otherwise,
         # do not locally copy the data
@@ -184,7 +173,7 @@ class LocalDatasetCache(object):
             log.warning(common_msg +
                         "File %s in cache isn't readable. We will use the"
                         " remote version. Manually fix the permission."
-                        % (local_name))
+                        % local_name)
             self.release_writelock()
             return filename
         else:
@@ -205,9 +194,9 @@ class LocalDatasetCache(object):
 
         Parameters
         ----------
-        remote_fname : string
+        remote_fname : str
             Remote file to copy
-        local_fname : string
+        local_fname : str
             Path and name of the local copy to be made of the remote
             file.
 
@@ -257,8 +246,9 @@ class LocalDatasetCache(object):
 
         Parameters
         ----------
-        path : string
+        path : str
             Folder for which to return disk usage
+
         Returns
         -------
         output : tuple
@@ -281,14 +271,15 @@ class LocalDatasetCache(object):
 
         Parameters
         ----------
-        remote_fname : string
+        remote_fname : str
             Path to the remote file
-        remote_fname : string
+        remote_fname : str
             Path to the local folder
         max_disk_usage : float
             Fraction indicating how much of the total space in the
             local folder can be used before the local cache must stop
             adding to it.
+
         Returns
         -------
         output : boolean
@@ -304,7 +295,7 @@ class LocalDatasetCache(object):
         return ((storage_used + storage_need) <
                 (storage_total * max_disk_usage))
 
-    def safe_mkdir(self, folderName, force_perm=None):
+    def safe_mkdir(self, folder_name, force_perm=None):
         """Create the specified folder.
 
         If the parent folders do not exist, they are also created.
@@ -312,63 +303,64 @@ class LocalDatasetCache(object):
 
         Parameters
         ----------
-        folderName : string
-            Name of the folder to create
-        force_perm : mode to use for folder creation
+        folder_name : str
+            Name of the folder to create.
+        force_perm : str
+            Mode to use for folder creation.
 
         """
-        if os.path.exists(folderName):
+        if os.path.exists(folder_name):
             return
-        intermediaryFolders = folderName.split(os.path.sep)
+        intermediary_folders = folder_name.split(os.path.sep)
 
-        # Remove invalid elements from intermediaryFolders
-        if intermediaryFolders[-1] == "":
-            intermediaryFolders = intermediaryFolders[:-1]
+        # Remove invalid elements from intermediary_folders
+        if intermediary_folders[-1] == "":
+            intermediary_folders = intermediary_folders[:-1]
         if force_perm:
-            force_perm_path = folderName.split(os.path.sep)
+            force_perm_path = folder_name.split(os.path.sep)
             if force_perm_path[-1] == "":
                 force_perm_path = force_perm_path[:-1]
-            base = len(force_perm_path) - len(intermediaryFolders)
+            base = len(force_perm_path) - len(intermediary_folders)
 
-        for i in range(1, len(intermediaryFolders)):
-            folderToCreate = os.path.sep.join(intermediaryFolders[:i + 1])
+        for i in range(1, len(intermediary_folders)):
+            folder_to_create = os.path.sep.join(intermediary_folders[:i + 1])
 
-            if os.path.exists(folderToCreate):
+            if os.path.exists(folder_to_create):
                 continue
-            os.mkdir(folderToCreate)
+            os.mkdir(folder_to_create)
             if force_perm:
-                os.chmod(folderToCreate, force_perm)
+                os.chmod(folder_to_create, force_perm)
 
     def get_readlock(self, path):
         """Obtain a readlock on a file
 
         Parameters
         ----------
-        path : string
+        path : str
             Name of the file on which to obtain a readlock
 
         """
 
         timestamp = int(time.time() * 1e6)
-        lockdirName = "%s.readlock.%i.%i" % (path, self.pid, timestamp)
-        os.mkdir(lockdirName)
+        lockdir_name = "%s.readlock.%i.%i" % (path, self.pid, timestamp)
+        os.mkdir(lockdir_name)
 
         # Register function to release the readlock at the end of the script
-        atexit.register(self.release_readlock, lockdirName=lockdirName)
+        atexit.register(self.release_readlock, lockdirName=lockdir_name)
 
-    def release_readlock(self, lockdirName):
+    def release_readlock(self, lockdir_name):
         """Release a previously obtained readlock
 
         Parameters
         ----------
-        lockdirName : string
+        lockdir_name : str
             Name of the previously obtained readlock
 
         """
 
         # Make sure the lock still exists before deleting it
-        if (os.path.exists(lockdirName) and os.path.isdir(lockdirName)):
-            os.rmdir(lockdirName)
+        if os.path.exists(lockdir_name) and os.path.isdir(lockdir_name):
+            os.rmdir(lockdir_name)
 
     def get_writelock(self, filename):
         """Obtain a writelock on a file.
@@ -377,20 +369,20 @@ class LocalDatasetCache(object):
 
         Parameters
         ----------
-        filename : string
+        filename : str
             Name of the file on which to obtain a writelock
 
         """
 
-        # compilelock expect locks to be on folder. Since we want a lock on a
-        # file, we will have to ask compilelock for a folder with a different
-        # name from the file we want a lock on or else compilelock will
+        # write lock expect locks to be on folder. Since we want a lock on a
+        # file, we will have to ask write lock for a folder with a different
+        # name from the file we want a lock on or else write lock will
         # try to create a folder with the same name as the file
-        compilelock.get_lock(filename + ".writelock")
+        write_lock.get_lock(filename + ".writelock")
 
     def release_writelock(self):
         """Release the previously obtained writelock."""
-        compilelock.release_lock()
+        write_lock.release_lock()
 
 
 datasetCache = LocalDatasetCache()
