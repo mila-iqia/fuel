@@ -51,6 +51,11 @@ The following configurations are supported:
    The default :class:`~numpy.dtype` to use for floating point numbers. The
    default value is ``float64``. A lower value can save memory.
 
+.. option:: local_data_path
+
+   The local path where the dataset is going to be copied. This is a useful
+   option for slow network file systems.
+
 .. option:: extra_downloaders
 
    A list of package names which, like fuel.downloaders, define an
@@ -192,6 +197,8 @@ config = Configuration()
 # Define configuration options
 config.add_config('data_path', type_=multiple_paths_parser,
                   env_var='FUEL_DATA_PATH')
+config.add_config('local_data_path', type_=multiple_paths_parser,
+                  env_var='FUEL_LOCAL_DATA_PATH')
 config.add_config('default_seed', type_=int, default=1)
 config.add_config('extra_downloaders', type_=extra_downloader_converter,
                   default=[], env_var='FUEL_EXTRA_DOWNLOADERS')

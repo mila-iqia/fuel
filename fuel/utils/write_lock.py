@@ -9,6 +9,7 @@ hostname = socket.gethostname()
 logger = logging.getLogger(__name__)
 TIMEOUT = 5
 MIN_WAIT = 5
+NOT_SET = object()
 
 
 class Unlocker(object):
@@ -79,11 +80,10 @@ def refresh_lock(lock_file):
         raise
     return unique_id
 
-# This is because None is a valid input for timeout
-notset = object()
+# NOT_SET is used because None is a valid input for timeout
 
 
-def lock(tmp_dir, timeout=notset, min_wait=None, max_wait=None, verbosity=1):
+def lock(tmp_dir, timeout=NOT_SET, min_wait=None, max_wait=None, verbosity=1):
     """Obtain lock.
 
     Obtain lock access by creating a given temporary directory (whose base will
@@ -127,7 +127,7 @@ def lock(tmp_dir, timeout=notset, min_wait=None, max_wait=None, verbosity=1):
         min_wait = MIN_WAIT
     if max_wait is None:
         max_wait = min_wait * 2
-    if timeout is notset:
+    if timeout is NOT_SET:
         timeout = TIMEOUT
     # Create base of lock directory if required.
     base_lock = os.path.dirname(tmp_dir)
