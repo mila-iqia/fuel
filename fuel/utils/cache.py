@@ -20,8 +20,8 @@ import stat
 import time
 import shutil
 
-from fuel.utils import write_lock
 from fuel import config
+from fuel.utils import write_lock
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class LocalDatasetCache(object):
         if self.dataset_local_dir == "":
             return filename
 
-        common_msg = ("Message from Pylearn2 local cache of dataset"
+        common_msg = ("Message from fuel local cache of dataset"
                       "(specified by the environment variable "
                       "FUEL_LOCAL_DATA_PATH): ")
         # Make sure the file to cache exists and really is a file
@@ -197,8 +197,7 @@ class LocalDatasetCache(object):
         remote_fname : str
             Remote file to copy
         local_fname : str
-            Path and name of the local copy to be made of the remote
-            file.
+            Path and name of the local copy to be made of the remote file.
 
         """
 
@@ -385,4 +384,4 @@ class LocalDatasetCache(object):
         write_lock.release_lock()
 
 
-datasetCache = LocalDatasetCache()
+dataset_cache = LocalDatasetCache()
