@@ -26,6 +26,7 @@ before_install:
   - export PATH=$HOME/miniconda/bin:$PATH
   - conda update -q --yes conda
   - export FUEL_DATA_PATH=$TRAVIS_BUILD_DIR/data
+  - export FUEL_LOCAL_DATA_PATH=$TRAVIS_BUILD_DIR/data_local
 install:
   # Install all Python dependencies
   - |
