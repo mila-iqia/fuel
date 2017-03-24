@@ -11,7 +11,7 @@ from six.moves import zip, range
 from fuel.datasets import Dataset
 from fuel.schemes import SequentialExampleScheme
 from fuel.utils import do_not_pickle_attributes, Subset
-from fuel.utils.cache import dataset_cache
+from fuel.utils.cache import cache_file
 
 
 @do_not_pickle_attributes('nodes', 'h5file')
@@ -174,7 +174,7 @@ class H5PYDataset(Dataset):
             self.external_file_handle = file_or_path
         else:
             self.path = file_or_path
-            self.path = dataset_cache.cache_file(self.path)
+            self.path = cache_file(self.path)
             self.external_file_handle = None
         which_sets_invalid_value = (
             isinstance(which_sets, six.string_types) or
