@@ -48,9 +48,8 @@ def cache_file(filename):
 
     """
     dataset_local_dir = config.local_data_path
-    dataset_remote_dirs = config.data_path
-    if any([remote_dir == "" for remote_dir in dataset_remote_dirs]) \
-            or dataset_local_dir == "":
+    dataset_remote_dir = os.path.dirname(filename)
+    if dataset_remote_dir == "" or dataset_local_dir == "":
         log.debug("Local dataset cache is deactivated")
 
     remote_name = filename
@@ -74,8 +73,7 @@ def cache_file(filename):
             "Error : Specified name {} is not a file".format(remote_name))
         return filename
 
-    if not any([remote_name.startswith(directory)
-                for directory in dataset_remote_dirs]):
+    if not remote_name.startswith(dataset_remote_dir):
         log.warning(
             common_msg +
             "We cache in the local directory only what is"
@@ -89,10 +87,9 @@ def cache_file(filename):
                 stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH))
 
     # Determine local path to which the file is to be cached
-    # TODO
     local_name = os.path.join(dataset_local_dir,
                               os.path.relpath(remote_name,
-                                              dataset_remote_dirs))
+                                              dataset_remote_dir))
 
     # Create the folder structure to receive the remote file
     local_folder = os.path.split(local_name)[0]
@@ -133,7 +130,7 @@ def cache_file(filename):
             return filename
 
         # There is enough space; make a local copy of the file
-        copy_from_server_to_local(dataset_remote_dirs, dataset_local_dir,
+        copy_from_server_to_local(dataset_remote_dir, dataset_local_dir,
                                   remote_name, local_name)
         log.info(common_msg + "File {} has been locally cached to {}"
                  .format(remote_name, local_name))
@@ -182,7 +179,7 @@ def cache_file(filename):
     return local_name
 
 
-def copy_from_server_to_local(dataset_remote_dirs, dataset_local_dir,
+def copy_from_server_to_local(dataset_remote_dir, dataset_local_dir,
                               remote_fname, local_fname):
     """Copies a remote file locally.
 
@@ -222,7 +219,7 @@ def copy_from_server_to_local(dataset_remote_dirs, dataset_local_dir,
     if sep[0] == "":
         sep = sep[1:]
     for i in range(len(sep)):
-        orig_p = os.path.join(dataset_remote_dirs, *sep[:i + 1])
+        orig_p = os.path.join(dataset_remote_dir, *sep[:i + 1])
         new_p = os.path.join(dataset_local_dir, *sep[:i + 1])
         orig_st = os.stat(orig_p)
         new_st = os.stat(new_p)
