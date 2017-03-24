@@ -92,8 +92,8 @@ class LocalDatasetCache(object):
             return filename
 
         # Create the $FUEL_LOCAL_DATA_PATH folder if needed
-        self.safe_mkdir(self.dataset_local_dir,
-                        (stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR |
+        safe_mkdir(self.dataset_local_dir,
+                   (stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR |
                          stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP |
                          stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH))
 
@@ -105,7 +105,7 @@ class LocalDatasetCache(object):
         # Create the folder structure to receive the remote file
         local_folder = os.path.split(local_name)[0]
         try:
-            self.safe_mkdir(local_folder)
+            safe_mkdir(local_folder)
         except Exception as e:
             log.warning(
                 (common_msg +
@@ -126,17 +126,18 @@ class LocalDatasetCache(object):
                         " Manually fix the permission."
                         .format(local_folder))
             return filename
-        self.get_writelock(local_name)
+        get_writelock(local_name)
 
         # If the file does not exist locally, consider creating it
         if not os.path.exists(local_name):
 
             # Check that there is enough space to cache the file
-            if not self.check_enough_space(remote_name, local_name):
+            if not check_enough_space(self.dataset_local_dir, remote_name,
+                                      local_name):
                 log.warning(common_msg +
                             "File {} not cached: Not enough free space"
                             .format(remote_name))
-                self.release_writelock()
+                release_writelock()
                 return filename
 
             # There is enough space; make a local copy of the file
@@ -158,7 +159,7 @@ class LocalDatasetCache(object):
                                 remote_modifid_time,
                                 local_name,
                                 local_modified_time))
-            self.release_writelock()
+            release_writelock()
             return filename
         elif os.path.getsize(local_name) != os.path.getsize(remote_name):
             log.warning(common_msg +
@@ -167,14 +168,14 @@ class LocalDatasetCache(object):
                         "({} bytes). The local cache might be corrupt."
                         .format(remote_name, os.path.getsize(remote_name),
                                 local_name, os.path.getsize(local_name)))
-            self.release_writelock()
+            release_writelock()
             return filename
         elif not os.access(local_name, os.R_OK):
             log.warning(common_msg +
                         "File {} in cache isn't readable. We will use the"
                         " remote version. Manually fix the permission."
                         .format(local_name))
-            self.release_writelock()
+            release_writelock()
             return filename
         else:
             log.debug("File {} has previously been locally cached to {}"
@@ -184,8 +185,8 @@ class LocalDatasetCache(object):
         # writelock. This is to prevent having a moment where there is no
         # lock on this file which could give the impression that it is
         # unused and therefore safe to delete.
-        self.get_readlock(local_name)
-        self.release_writelock()
+        get_readlock(self.pid, local_name)
+        release_writelock()
 
         return local_name
 
@@ -240,148 +241,155 @@ class LocalDatasetCache(object):
                 except OSError:
                     pass
 
-    def disk_usage(self, path):
-        """Return free usage about the given path, in bytes.
 
-        Parameters
-        ----------
-        path : str
-            Folder for which to return disk usage
+def check_enough_space(dataset_local_dir, remote_fname, local_fname,
+                       max_disk_usage=0.9):
+    """Check if the given local folder has enough space.
 
-        Returns
-        -------
-        output : tuple
-            Tuple containing total space in the folder and currently
-            used space in the folder
+    Check if the given local folder has enough space to store
+    the specified remote file.
 
-        """
+    Parameters
+    ----------
+    remote_fname : str
+        Path to the remote file
+    remote_fname : str
+        Path to the local folder
+    max_disk_usage : float
+        Fraction indicating how much of the total space in the
+        local folder can be used before the local cache must stop
+        adding to it.
 
-        st = os.statvfs(path)
-        total = st.f_blocks * st.f_frsize
-        used = (st.f_blocks - st.f_bfree) * st.f_frsize
-        return total, used
+    Returns
+    -------
+    output : boolean
+        True if there is enough space to store the remote file.
 
-    def check_enough_space(self, remote_fname, local_fname,
-                           max_disk_usage=0.9):
-        """Check if the given local folder has enough space.
+    """
 
-        Check if the given local folder has enough space to store
-        the specified remote file.
+    storage_need = os.path.getsize(remote_fname)
+    storage_total, storage_used = disk_usage(dataset_local_dir)
 
-        Parameters
-        ----------
-        remote_fname : str
-            Path to the remote file
-        remote_fname : str
-            Path to the local folder
-        max_disk_usage : float
-            Fraction indicating how much of the total space in the
-            local folder can be used before the local cache must stop
-            adding to it.
+    # Instead of only looking if there's enough space, we ensure we do not
+    # go over max disk usage level to avoid filling the disk/partition
+    return ((storage_used + storage_need) <
+            (storage_total * max_disk_usage))
 
-        Returns
-        -------
-        output : boolean
-            True if there is enough space to store the remote file.
 
-        """
+def get_readlock(pid, path):
+    """Obtain a readlock on a file
 
-        storage_need = os.path.getsize(remote_fname)
-        storage_total, storage_used = self.disk_usage(self.dataset_local_dir)
+    Parameters
+    ----------
+    path : str
+        Name of the file on which to obtain a readlock
 
-        # Instead of only looking if there's enough space, we ensure we do not
-        # go over max disk usage level to avoid filling the disk/partition
-        return ((storage_used + storage_need) <
-                (storage_total * max_disk_usage))
+    """
 
-    def safe_mkdir(self, folder_name, force_perm=None):
-        """Create the specified folder.
+    timestamp = int(time.time() * 1e6)
+    lockdir_name = "%s.readlock.%i.%i" % (path, pid, timestamp)
+    os.mkdir(lockdir_name)
 
-        If the parent folders do not exist, they are also created.
-        If the folder already exists, nothing is done.
+    # Register function to release the readlock at the end of the script
+    atexit.register(release_readlock, lockdirName=lockdir_name)
 
-        Parameters
-        ----------
-        folder_name : str
-            Name of the folder to create.
-        force_perm : str
-            Mode to use for folder creation.
 
-        """
-        if os.path.exists(folder_name):
-            return
-        intermediary_folders = folder_name.split(os.path.sep)
+def release_readlock(lockdir_name):
+    """Release a previously obtained readlock
 
-        # Remove invalid elements from intermediary_folders
-        if intermediary_folders[-1] == "":
-            intermediary_folders = intermediary_folders[:-1]
+    Parameters
+    ----------
+    lockdir_name : str
+        Name of the previously obtained readlock
+
+    """
+
+    # Make sure the lock still exists before deleting it
+    if os.path.exists(lockdir_name) and os.path.isdir(lockdir_name):
+        os.rmdir(lockdir_name)
+
+
+def get_writelock(filename):
+    """Obtain a writelock on a file.
+
+    Only one write lock may be held at any given time.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the file on which to obtain a writelock
+
+    """
+
+    # write lock expect locks to be on folder. Since we want a lock on a
+    # file, we will have to ask write lock for a folder with a different
+    # name from the file we want a lock on or else write lock will
+    # try to create a folder with the same name as the file
+    write_lock.get_lock(filename + ".writelock")
+
+
+def release_writelock():
+    """Release the previously obtained writelock."""
+    write_lock.release_lock()
+
+
+def disk_usage(path):
+    """Return free usage about the given path, in bytes.
+
+    Parameters
+    ----------
+    path : str
+        Folder for which to return disk usage
+
+    Returns
+    -------
+    output : tuple
+        Tuple containing total space in the folder and currently
+        used space in the folder
+
+    """
+
+    st = os.statvfs(path)
+    total = st.f_blocks * st.f_frsize
+    used = (st.f_blocks - st.f_bfree) * st.f_frsize
+    return total, used
+
+
+def safe_mkdir(folder_name, force_perm=None):
+    """Create the specified folder.
+
+    If the parent folders do not exist, they are also created.
+    If the folder already exists, nothing is done.
+
+    Parameters
+    ----------
+    folder_name : str
+        Name of the folder to create.
+    force_perm : str
+        Mode to use for folder creation.
+
+    """
+    if os.path.exists(folder_name):
+        return
+    intermediary_folders = folder_name.split(os.path.sep)
+
+    # Remove invalid elements from intermediary_folders
+    if intermediary_folders[-1] == "":
+        intermediary_folders = intermediary_folders[:-1]
+    if force_perm:
+        force_perm_path = folder_name.split(os.path.sep)
+        if force_perm_path[-1] == "":
+            force_perm_path = force_perm_path[:-1]
+        base = len(force_perm_path) - len(intermediary_folders)
+
+    for i in range(1, len(intermediary_folders)):
+        folder_to_create = os.path.sep.join(intermediary_folders[:i + 1])
+
+        if os.path.exists(folder_to_create):
+            continue
+        os.mkdir(folder_to_create)
         if force_perm:
-            force_perm_path = folder_name.split(os.path.sep)
-            if force_perm_path[-1] == "":
-                force_perm_path = force_perm_path[:-1]
-            base = len(force_perm_path) - len(intermediary_folders)
-
-        for i in range(1, len(intermediary_folders)):
-            folder_to_create = os.path.sep.join(intermediary_folders[:i + 1])
-
-            if os.path.exists(folder_to_create):
-                continue
-            os.mkdir(folder_to_create)
-            if force_perm:
-                os.chmod(folder_to_create, force_perm)
-
-    def get_readlock(self, path):
-        """Obtain a readlock on a file
-
-        Parameters
-        ----------
-        path : str
-            Name of the file on which to obtain a readlock
-
-        """
-
-        timestamp = int(time.time() * 1e6)
-        lockdir_name = "%s.readlock.%i.%i" % (path, self.pid, timestamp)
-        os.mkdir(lockdir_name)
-
-        # Register function to release the readlock at the end of the script
-        atexit.register(self.release_readlock, lockdirName=lockdir_name)
-
-    def release_readlock(self, lockdir_name):
-        """Release a previously obtained readlock
-
-        Parameters
-        ----------
-        lockdir_name : str
-            Name of the previously obtained readlock
-
-        """
-
-        # Make sure the lock still exists before deleting it
-        if os.path.exists(lockdir_name) and os.path.isdir(lockdir_name):
-            os.rmdir(lockdir_name)
-
-    def get_writelock(self, filename):
-        """Obtain a writelock on a file.
-
-        Only one write lock may be held at any given time.
-
-        Parameters
-        ----------
-        filename : str
-            Name of the file on which to obtain a writelock
-
-        """
-
-        # write lock expect locks to be on folder. Since we want a lock on a
-        # file, we will have to ask write lock for a folder with a different
-        # name from the file we want a lock on or else write lock will
-        # try to create a folder with the same name as the file
-        write_lock.get_lock(filename + ".writelock")
-
-    def release_writelock(self):
-        """Release the previously obtained writelock."""
-        write_lock.release_lock()
+            os.chmod(folder_to_create, force_perm)
 
 
 dataset_cache = LocalDatasetCache()
