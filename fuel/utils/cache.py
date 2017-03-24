@@ -13,15 +13,14 @@ the same access as it has under ${FUEL_LOCAL_DATA_PATH}. This is
 guaranteed by default copy.
 
 """
-import atexit
 import logging
 import os
+import shutil
 import stat
 import time
-import shutil
 
 from fuel import config
-from fuel.utils import write_lock
+from fuel.utils.lock import get_writelock, release_writelock, get_readlock
 
 log = logging.getLogger(__name__)
 
@@ -274,63 +273,6 @@ def check_enough_space(dataset_local_dir, remote_fname, local_fname,
     # go over max disk usage level to avoid filling the disk/partition
     return ((storage_used + storage_need) <
             (storage_total * max_disk_usage))
-
-
-def get_readlock(pid, path):
-    """Obtain a readlock on a file
-
-    Parameters
-    ----------
-    path : str
-        Name of the file on which to obtain a readlock
-
-    """
-
-    timestamp = int(time.time() * 1e6)
-    lockdir_name = "%s.readlock.%i.%i" % (path, pid, timestamp)
-    os.mkdir(lockdir_name)
-
-    # Register function to release the readlock at the end of the script
-    atexit.register(release_readlock, lockdirName=lockdir_name)
-
-
-def release_readlock(lockdir_name):
-    """Release a previously obtained readlock
-
-    Parameters
-    ----------
-    lockdir_name : str
-        Name of the previously obtained readlock
-
-    """
-
-    # Make sure the lock still exists before deleting it
-    if os.path.exists(lockdir_name) and os.path.isdir(lockdir_name):
-        os.rmdir(lockdir_name)
-
-
-def get_writelock(filename):
-    """Obtain a writelock on a file.
-
-    Only one write lock may be held at any given time.
-
-    Parameters
-    ----------
-    filename : str
-        Name of the file on which to obtain a writelock
-
-    """
-
-    # write lock expect locks to be on folder. Since we want a lock on a
-    # file, we will have to ask write lock for a folder with a different
-    # name from the file we want a lock on or else write lock will
-    # try to create a folder with the same name as the file
-    write_lock.get_lock(filename + ".writelock")
-
-
-def release_writelock():
-    """Release the previously obtained writelock."""
-    write_lock.release_lock()
 
 
 def disk_usage(path):
