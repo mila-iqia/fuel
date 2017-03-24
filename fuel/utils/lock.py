@@ -381,4 +381,4 @@ def get_readlock(pid, path):
     os.mkdir(lockdir_name)
 
     # Register function to release the readlock at the end of the script
-    atexit.register(release_readlock, lockdirName=lockdir_name)
+    atexit.register(release_readlock, lockdir_name=lockdir_name)
