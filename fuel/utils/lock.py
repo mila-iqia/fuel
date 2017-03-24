@@ -343,12 +343,12 @@ def get_writelock(filename):
     # file, we will have to ask write lock for a folder with a different
     # name from the file we want a lock on or else write lock will
     # try to create a folder with the same name as the file
-    lock.get_lock(filename + ".writelock")
+    get_lock(filename + ".writelock")
 
 
 def release_writelock():
     """Release the previously obtained writelock."""
-    lock.release_lock()
+    release_lock()
 
 
 def release_readlock(lockdir_name):
