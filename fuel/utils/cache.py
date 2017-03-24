@@ -83,7 +83,8 @@ class LocalDatasetCache(object):
                 "Error : Specified name {} is not a file".format(remote_name))
             return filename
 
-        if not remote_name.startswith(self.dataset_remote_dir):
+        if not any([remote_name.startswith(directory)
+                    for directory in self.dataset_remote_dir]):
             log.warning(
                 common_msg +
                 "We cache in the local directory only what is"
