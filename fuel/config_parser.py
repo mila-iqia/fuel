@@ -196,14 +196,6 @@ config.add_config('extra_downloaders', type_=extra_downloader_converter,
                   default=[], env_var='FUEL_EXTRA_DOWNLOADERS')
 config.add_config('extra_converters', type_=extra_downloader_converter,
                   default=[], env_var='FUEL_EXTRA_CONVERTERS')
-
-# Default to Theano's floatX if possible
-try:
-    from theano import config as theano_config
-    default_floatX = theano_config.floatX
-except Exception:
-    default_floatX = 'float64'
-config.add_config('floatX', type_=str, env_var='FUEL_FLOATX',
-                  default=default_floatX)
+config.add_config('floatX', type_=str, env_var='FUEL_FLOATX')
 
 config.load_yaml()
