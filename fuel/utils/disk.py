@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """Some of code below is taken from
 [pylearn2](https://github.com/lisa-lab/pylearn2) framework developed under
 the copyright:

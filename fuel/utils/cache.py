@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Dataset preloading tool
 
 This file provides the ability to make a local cache of a dataset or
