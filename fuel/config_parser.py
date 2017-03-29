@@ -54,7 +54,11 @@ The following configurations are supported:
 .. option:: local_data_path
 
    The local path where the dataset is going to be copied. This is a useful
-   option for slow network file systems.
+   option for slow network file systems. The dataset is copied once to a
+   local directory and reused later. Currently, caching is implemented
+   for :class:`H5PYDataset` and therefore for the majority of builtin
+   datasets. In order to use caching with your own dataset refer to the
+   caching documentation: :func:`cache_file`.
 
 .. option:: extra_downloaders
 
