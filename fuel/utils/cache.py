@@ -223,6 +223,8 @@ def copy_from_server_to_local(dataset_remote_dir, dataset_local_dir,
         Path and name of the local copy to be made of the remote file.
 
     """
+    log.debug("Copying file `{}` to a local directory `{}`."
+              .format(remote_fname, dataset_local_dir))
 
     head, tail = os.path.split(local_fname)
     head += os.path.sep
