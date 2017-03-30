@@ -193,25 +193,37 @@ class Mapping(Transformer):
         The wrapped data stream.
     mapping : callable
         The mapping to be applied. The mapping function is supposed
-        to accept a tuple and return a tuple by default. It is possible
-        change this behavior by annotating_ the input as a dictionary.
-        In this case the mapping function is provided an ordered 
-        dictionary with source names as keys.
+        to accept a tuple and return a tuple by default. If `mapping_accepts`
+        is set to `dict`, the function is expected to work with ordered
+        dictionaries where source names are the keys.
+        This behavior can be changed by annotating_ the mapping's input as a
+        dictionary.
 
         Convenience functions :func:`~.accepts_dict` and 
-        :func:`~.accepts_list` are provided for using with legacy python.
+        :func:`~.accepts_list` are provided for annotating with legacy python.
     add_sources : tuple of str, optional
         When given, the data produced by the mapping is added to original
         data under source names `add_sources`.
+    mapping_accepts : type, optional
+        Can be `list` or `dict`.
 
 
     .. _annotating: https://docs.python.org/3.6/tutorial/
                     controlflow.html#function-annotations
 
     """
-    def __init__(self, data_stream, mapping, add_sources=None, **kwargs):
+    def __init__(self, data_stream, mapping, add_sources=None,
+                 mapping_accepts=None, **kwargs):
         super(Mapping, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
+        if mapping_accepts is not None:
+            self.mapping_accepts = mapping_accepts
+        else:
+            self._configure_mapping(mapping)
+        self.mapping = mapping
+        self.add_sources = add_sources
+
+    def _configure_mapping(self, mapping):
         annotations = getattr(mapping, '__annotations__', {None: list})
         annotations.pop('return', None)
         if len(annotations) > 1:
@@ -220,11 +232,9 @@ class Mapping(Transformer):
             self.mapping_accepts = list(annotations.values())[0]
         else:
             self.mapping_accepts = list
-        if not self.mapping_accepts in [list, dict]:
+        if self.mapping_accepts not in [list, dict]:
             raise ValueError('`mapping` function should accept `list` or'
                              '`dict`, not `{}`'.format(self.mapping_accepts))
-        self.mapping = mapping
-        self.add_sources = add_sources
 
     @property
     def sources(self):
@@ -238,6 +248,8 @@ class Mapping(Transformer):
         if self.mapping_accepts == dict:
             data = OrderedDict(equizip(self.data_stream.sources, data))
         image = self.mapping(data)
+        if self.mapping_accepts == dict:
+            image = tuple(image[source] for source in self.sources)
         if not self.add_sources:
             return image
         return data + image
