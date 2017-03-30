@@ -193,14 +193,15 @@ class Mapping(Transformer):
         The wrapped data stream.
     mapping : callable
         The mapping to be applied. The mapping function is supposed
-        to accept a tuple and return a tuple by default. If `mapping_accepts`
-        is set to `dict`, the function is expected to work with ordered
-        dictionaries where source names are the keys.
-        This behavior can be changed by annotating_ the mapping's input as a
-        dictionary.
+        to accept a tuple and return a tuple by default. If
+        `mapping_accepts` is set to `dict`, the function is expected to
+        work with ordered dictionaries where source names are the keys.
+        This behavior can be changed by annotating_ the mapping's input as
+        a dictionary.
 
         Convenience functions :func:`~.accepts_dict` and
-        :func:`~.accepts_list` are provided for annotating with legacy python.
+        :func:`~.accepts_list` are provided for annotating with legacy
+        python.
     add_sources : tuple of str, optional
         When given, the data produced by the mapping is added to original
         data under source names `add_sources`.

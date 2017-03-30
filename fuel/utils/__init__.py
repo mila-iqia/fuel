@@ -514,7 +514,7 @@ def do_not_pickle_attributes(*lazy_properties):
 
 
 def _func_annotation_for(func):
-    """Retrieve the function annotation for a given function or create it"""
+    """Retrieve the function annotation for a given function or create it."""
     current = getattr(func, '__annotations__', None)
     if current is None:
         current = func.__annotations__ = {}
@@ -522,14 +522,14 @@ def _func_annotation_for(func):
 
 
 def accepts_list(function):
-    """A decorator to add an annotation that the input is a list"""
+    """A decorator to add an annotation that the input is a list."""
     base = _func_annotation_for(function)
     base.update({None: list})
     return function
 
 
 def accepts_dict(function):
-    """A decorator to add an annotation that the input is a dict"""
+    """A decorator to add an annotation that the input is a dict."""
     base = _func_annotation_for(function)
     base.update({None: dict})
     return function
