@@ -518,7 +518,7 @@ def _func_annotation_for(func):
     current = getattr(func, '__annotations__', None)
     if current is None:
         current = func.__annotations__ = {}
-    return current 
+    return current
 
 
 def accepts_list(function):

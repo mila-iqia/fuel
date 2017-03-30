@@ -199,7 +199,7 @@ class Mapping(Transformer):
         This behavior can be changed by annotating_ the mapping's input as a
         dictionary.
 
-        Convenience functions :func:`~.accepts_dict` and 
+        Convenience functions :func:`~.accepts_dict` and
         :func:`~.accepts_list` are provided for annotating with legacy python.
     add_sources : tuple of str, optional
         When given, the data produced by the mapping is added to original
