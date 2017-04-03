@@ -3,7 +3,7 @@ numpy==1.12.1
 tables==3.3.0
 picklable-itertools==0.1.1
 pillow==4.0.0
-progressbar2==3.16.1
+progressbar2==3.17.0
 pyyaml==3.12
 pyzmq==16.0.2
 requests==2.13.0
