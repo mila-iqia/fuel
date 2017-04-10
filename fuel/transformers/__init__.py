@@ -196,46 +196,25 @@ class Mapping(Transformer):
         to accept a tuple and return a tuple by default. If
         `mapping_accepts` is set to `dict`, the function is expected to
         work with ordered dictionaries where source names are the keys.
-        This behavior can be changed by annotating_ the mapping's input as
-        a dictionary.
-
-        Convenience functions :func:`~.accepts_dict` and
-        :func:`~.accepts_list` are provided for annotating with legacy
-        python.
     add_sources : tuple of str, optional
         When given, the data produced by the mapping is added to original
         data under source names `add_sources`.
     mapping_accepts : type, optional
-        Can be `list` or `dict`.
-
-
-    .. _annotating: https://docs.python.org/3.6/tutorial/
-                    controlflow.html#function-annotations
+        Input and output type of the mapping function `list` by default,
+        can be changed to `dict`.
 
     """
     def __init__(self, data_stream, mapping, add_sources=None,
-                 mapping_accepts=None, **kwargs):
+                 mapping_accepts=list, **kwargs):
         super(Mapping, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
-        if mapping_accepts is not None:
-            self.mapping_accepts = mapping_accepts
-        else:
-            self._configure_mapping(mapping)
+        if mapping_accepts not in [list, dict]:
+            raise ValueError('`Mapping` can accept `list` or `dict`, not `{}`'
+                             .format(mapping_accepts))
+
+        self.mapping_accepts = mapping_accepts
         self.mapping = mapping
         self.add_sources = add_sources
-
-    def _configure_mapping(self, mapping):
-        annotations = getattr(mapping, '__annotations__', {None: list})
-        annotations.pop('return', None)
-        if len(annotations) > 1:
-            raise ValueError('`mapping` function should accept one argument')
-        if annotations:
-            self.mapping_accepts = list(annotations.values())[0]
-        else:
-            self.mapping_accepts = list
-        if self.mapping_accepts not in [list, dict]:
-            raise ValueError('`mapping` function should accept `list` or'
-                             '`dict`, not `{}`'.format(self.mapping_accepts))
 
     @property
     def sources(self):
