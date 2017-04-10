@@ -16,7 +16,6 @@ from fuel.transformers import (
     Cache, Batch, Padding, MultiProcessing, Unpack, Merge,
     SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename, FilterSources)
 from fuel.transformers.defaults import ToBytes
-from fuel.utils import accepts_dict, accepts_list
 
 
 class FlagDataStream(DataStream):
@@ -90,36 +89,20 @@ class TestMapping(object):
                      list(zip([[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
 
     def test_mapping_dict(self):
-        @accepts_dict
         def mapping(d):
             return {'data': [2 * i for i in d['data']]}
-        stream = DataStream(IterableDataset(self.data))
-        transformer = Mapping(stream, mapping)
-        assert_equal(list(transformer.get_epoch_iterator()),
-                     list(zip([[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
 
         stream = DataStream(IterableDataset(self.data))
         transformer = Mapping(stream, mapping, mapping_accepts=dict)
         assert_equal(list(transformer.get_epoch_iterator()),
                      list(zip([[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
 
-    def test_mapping_accepts_list(self):
-        @accepts_list
+    def test_mapping_accepts_list_or_dict(self):
         def mapping(d):
             return [2 * i for i in d[0]],
         stream = DataStream(IterableDataset(self.data))
-        transformer = Mapping(stream, mapping)
-        assert_equal(list(transformer.get_epoch_iterator()),
-                     list(zip([[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
-
-    def test_mapping_incorrect_annotation(self):
-        def mapping(d):
-            return {'data': [2 * i for i in d['data']]}
-        mapping.__annotations__ = {'d': list, 'c': list}
-        stream = DataStream(IterableDataset(self.data))
-        assert_raises(ValueError, lambda: Mapping(stream, mapping))
-        mapping.__annotations__ = {'d': 'list'}
-        assert_raises(ValueError, lambda: Mapping(stream, mapping))
+        assert_raises(ValueError,
+                      lambda: Mapping(stream, mapping, mapping_accepts=int))
 
     def test_add_sources(self):
         stream = DataStream(IterableDataset(self.data))
