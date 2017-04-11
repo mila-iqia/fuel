@@ -1,10 +1,11 @@
 from abc import ABCMeta, abstractmethod
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import logging
 from multiprocessing import Process, Queue
 
 import numpy
 from picklable_itertools import chain, ifilter, izip
+from picklable_itertools.extras import equizip
 from six import add_metaclass, iteritems
 
 from fuel import config
@@ -191,15 +192,27 @@ class Mapping(Transformer):
     data_stream : instance of :class:`DataStream`
         The wrapped data stream.
     mapping : callable
-        The mapping to be applied.
+        The mapping to be applied. The mapping function is supposed
+        to accept a tuple and return a tuple by default. If
+        `mapping_accepts` is set to `dict`, the function is expected to
+        work with ordered dictionaries where source names are the keys.
     add_sources : tuple of str, optional
         When given, the data produced by the mapping is added to original
         data under source names `add_sources`.
+    mapping_accepts : type, optional
+        Input and output type of the mapping function `list` by default,
+        can be changed to `dict`.
 
     """
-    def __init__(self, data_stream, mapping, add_sources=None, **kwargs):
+    def __init__(self, data_stream, mapping, add_sources=None,
+                 mapping_accepts=list, **kwargs):
         super(Mapping, self).__init__(
             data_stream, data_stream.produces_examples, **kwargs)
+        if mapping_accepts not in [list, dict]:
+            raise ValueError('`Mapping` can accept `list` or `dict`, not `{}`'
+                             .format(mapping_accepts))
+
+        self.mapping_accepts = mapping_accepts
         self.mapping = mapping
         self.add_sources = add_sources
 
@@ -212,7 +225,11 @@ class Mapping(Transformer):
         if request is not None:
             raise ValueError
         data = next(self.child_epoch_iterator)
+        if self.mapping_accepts == dict:
+            data = OrderedDict(equizip(self.data_stream.sources, data))
         image = self.mapping(data)
+        if self.mapping_accepts == dict:
+            image = tuple(image[source] for source in self.sources)
         if not self.add_sources:
             return image
         return data + image
