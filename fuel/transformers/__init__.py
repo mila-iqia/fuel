@@ -218,8 +218,8 @@ class Mapping(Transformer):
 
     @property
     def sources(self):
-        return self.data_stream.sources + (self.add_sources
-                                           if self.add_sources else ())
+        return self.data_stream.sources + [self.add_sources
+                                           if self.add_sources else ()]
 
     def get_data(self, request=None):
         if request is not None:
