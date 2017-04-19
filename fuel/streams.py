@@ -219,7 +219,7 @@ class ServerDataStream(AbstractDataStream):
         self.host = host
         self.port = port
         self.hwm = hwm
-        self.connect()
+        self.connected = False
 
     def connect(self):
         context = zmq.Context()
@@ -251,5 +251,6 @@ class ServerDataStream(AbstractDataStream):
     def __getstate__(self):
         state = self.__dict__.copy()
         state['connected'] = False
-        del state['socket']
+        if 'socket' in state:
+            del state['socket']
         return state
