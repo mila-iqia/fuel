@@ -225,14 +225,17 @@ class Mapping(Transformer):
         if request is not None:
             raise ValueError
         data = next(self.child_epoch_iterator)
+        mapping_input = data
         if self.mapping_accepts == dict:
-            data = OrderedDict(equizip(self.data_stream.sources, data))
-        image = self.mapping(data)
+            mapping_input = OrderedDict(equizip(self.data_stream.sources,
+                                                data))
+        image = self.mapping(mapping_input)
+        image_sources = self.add_sources if self.add_sources else self.sources
         if self.mapping_accepts == dict:
-            image = tuple(image[source] for source in self.sources)
-        if not self.add_sources:
-            return image
-        return data + image
+            image = tuple(image[source] for source in image_sources)
+        if self.add_sources:
+            return data + image
+        return image
 
 
 @add_metaclass(ABCMeta)

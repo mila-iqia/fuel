@@ -112,6 +112,17 @@ class TestMapping(object):
         assert_equal(list(transformer.get_epoch_iterator()),
                      list(zip(self.data, [[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
 
+    def test_mapping_dict_add_sources(self):
+        stream = DataStream(IterableDataset(self.data))
+        transformer = Mapping(
+            stream,
+            lambda d: {'doubled': ([2 * i for i in d['data']],)},
+            mapping_accepts=dict,
+            add_sources=('doubled',))
+        assert_equal(transformer.sources, ('data', 'doubled'))
+        assert_equal(list(transformer.get_epoch_iterator()),
+                     list(zip(self.data, [[2, 4, 6], [4, 6, 2], [6, 4, 2]])))
+
     def test_sort_mapping_trivial_key(self):
         stream = DataStream(IterableDataset(self.data))
         transformer = Mapping(stream, SortMapping(operator.itemgetter(0)))
