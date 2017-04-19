@@ -37,6 +37,8 @@ class TestServer(object):
     def test_pickling(self):
         try:
             self.stream = cPickle.loads(cPickle.dumps(self.stream))
+            # regression test: pickling of an unpickled stream used it fail
+            cPickle.dumps(self.stream)
             server_data = self.stream.get_epoch_iterator()
             expected_data = get_stream().get_epoch_iterator()
             for _, s, e in zip(range(3), server_data, expected_data):
