@@ -186,6 +186,7 @@ class Configuration(object):
         if default is not NOT_SET:
             self.config[key]['default'] = default
 
+
 config = Configuration()
 
 # Define configuration options
