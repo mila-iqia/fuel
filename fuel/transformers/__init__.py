@@ -229,7 +229,9 @@ class Mapping(Transformer):
             data = OrderedDict(equizip(self.data_stream.sources, data))
         image = self.mapping(data)
         if self.mapping_accepts == dict:
-            image = tuple(image[source] for source in self.sources)
+            sources = (self.data_stream.sources
+                       if not self.add_sources else self.add_sources)
+            image = tuple(image[source] for source in sources)
         if not self.add_sources:
             return image
         return data + image
