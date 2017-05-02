@@ -2,7 +2,7 @@ h5py==2.5.0
 numpy==1.10.4
 tables==3.2.2
 picklable-itertools==0.1.1
-pillow==3.1.1
+pillow==4.1.0
 progressbar2==3.6.2
 pyyaml==3.11
 pyzmq==15.2.0
