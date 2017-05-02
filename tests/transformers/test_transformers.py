@@ -116,7 +116,7 @@ class TestMapping(object):
         stream = DataStream(IterableDataset(self.data))
         transformer = Mapping(
             stream,
-            lambda d: {'doubled': ([2 * i for i in d['data']],)},
+            lambda d: {'doubled': [2 * i for i in d['data']]},
             mapping_accepts=dict,
             add_sources=('doubled',))
         assert_equal(transformer.sources, ('data', 'doubled'))
