@@ -18,8 +18,8 @@ modification, are permitted provided that the following conditions are met:
    and/or other materials provided with the distribution.
 
 3. Neither the name of the copyright holder nor the names of its contributors
-   may be used to endorse or promote products derived from this software without
-   specific prior written permission.
+   may be used to endorse or promote products derived from this software
+   without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -83,7 +83,6 @@ def safe_mkdir(folder_name, force_perm=None):
         force_perm_path = folder_name.split(os.path.sep)
         if force_perm_path[-1] == "":
             force_perm_path = force_perm_path[:-1]
-        base = len(force_perm_path) - len(intermediary_folders)
 
     for i in range(1, len(intermediary_folders)):
         folder_to_create = os.path.sep.join(intermediary_folders[:i + 1])

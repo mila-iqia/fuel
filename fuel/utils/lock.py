@@ -18,8 +18,8 @@ modification, are permitted provided that the following conditions are met:
    and/or other materials provided with the distribution.
 
 3. Neither the name of the copyright holder nor the names of its contributors
-   may be used to endorse or promote products derived from this software without
-   specific prior written permission.
+   may be used to endorse or promote products derived from this software
+   without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -223,7 +223,7 @@ def lock(tmp_dir, timeout=NOT_SET, min_wait=None, max_wait=None, verbosity=1):
                     continue
                 if last_owner == read_owner:
                     if (timeout is not None and
-                                    time.time() - time_start >= timeout):
+                            time.time() - time_start >= timeout):
                         # Timeout exceeded or locking process dead.
                         if not no_display:
                             if read_owner == 'failure':
