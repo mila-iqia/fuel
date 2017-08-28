@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-"""Some of code below is taken from
+"""Filesystem utility code.
+
+Some of code below is taken from
 [pylearn2](https://github.com/lisa-lab/pylearn2) framework developed under
 the copyright:
 
@@ -49,9 +51,7 @@ def disk_usage(path):
     output : tuple
         Tuple containing total space in the folder and currently
         used space in the folder
-
     """
-
     st = os.statvfs(path)
     total = st.f_blocks * st.f_frsize
     used = (st.f_blocks - st.f_bfree) * st.f_frsize
@@ -118,7 +118,6 @@ def check_enough_space(dataset_local_dir, remote_fname, local_fname,
         True if there is enough space to store the remote file.
 
     """
-
     storage_need = os.path.getsize(remote_fname)
     storage_total, storage_used = disk_usage(dataset_local_dir)
 

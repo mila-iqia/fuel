@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Dataset preloading tool
+"""Dataset preloading tool.
 
 This file provides the ability to make a local cache of a dataset or
 part of it. It is meant to help in the case where multiple jobs are

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+"""Utility code to manage filesystem locks.
 
-"""Some of code below is taken from
+Some of code below is taken from
 [pylearn2](https://github.com/lisa-lab/pylearn2) framework developed under
 the copyright:
 
@@ -63,6 +64,7 @@ class Unlocker(object):
         self.os = os
 
     def __del__(self):
+        """Destructor."""
         self.unlock()
 
     def unlock(self):
@@ -371,9 +373,7 @@ def get_writelock(filename):
     ----------
     filename : str
         Name of the file on which to obtain a writelock
-
     """
-
     # write lock expect locks to be on folder. Since we want a lock on a
     # file, we will have to ask write lock for a folder with a different
     # name from the file we want a lock on or else write lock will
@@ -387,7 +387,7 @@ def release_writelock():
 
 
 def release_readlock(lockdir_name):
-    """Release a previously obtained readlock
+    """Release a previously obtained readlock.
 
     Parameters
     ----------
@@ -395,14 +395,13 @@ def release_readlock(lockdir_name):
         Name of the previously obtained readlock
 
     """
-
     # Make sure the lock still exists before deleting it
     if os.path.exists(lockdir_name) and os.path.isdir(lockdir_name):
         os.rmdir(lockdir_name)
 
 
 def get_readlock(pid, path):
-    """Obtain a readlock on a file
+    """Obtain a readlock on a file.
 
     Parameters
     ----------
@@ -410,7 +409,6 @@ def get_readlock(pid, path):
         Name of the file on which to obtain a readlock
 
     """
-
     timestamp = int(time.time() * 1e6)
     lockdir_name = "%s.readlock.%i.%i" % (path, pid, timestamp)
     os.mkdir(lockdir_name)
