@@ -11,6 +11,7 @@ Welcome to Fuel's documentation!
    new_dataset
    extending_fuel
    server
+   caching
    api/index
 
 Fuel is a data pipeline framework which provides your machine learning models
