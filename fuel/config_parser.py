@@ -202,7 +202,7 @@ config = Configuration()
 config.add_config('data_path', type_=multiple_paths_parser,
                   env_var='FUEL_DATA_PATH')
 config.add_config('local_data_path', type_=str,
-                  env_var='FUEL_LOCAL_DATA_PATH')
+                  env_var='FUEL_LOCAL_DATA_PATH', default="")
 config.add_config('default_seed', type_=int, default=1)
 config.add_config('extra_downloaders', type_=extra_downloader_converter,
                   default=[], env_var='FUEL_EXTRA_DOWNLOADERS')
