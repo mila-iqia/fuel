@@ -32,9 +32,7 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-
 """Filesystem utility code."""
-
 import os
 
 
@@ -51,6 +49,7 @@ def disk_usage(path):
     output : tuple
         Tuple containing total space in the folder and currently
         used space in the folder
+
     """
     st = os.statvfs(path)
     total = st.f_blocks * st.f_frsize

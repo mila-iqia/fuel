@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+#
 # Some of code below is taken from
 # [pylearn2](https://github.com/lisa-lab/pylearn2) framework developed under
 # the copyright:
@@ -32,7 +32,7 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-
+#
 """Dataset preloading tool.
 
 This file provides the ability to make a local cache of a dataset or
@@ -46,8 +46,8 @@ over the network.
 Whenever a folder or a dataset copy is created locally, it is granted
 the same access as it has under ${FUEL_LOCAL_DATA_PATH}. This is
 guaranteed by default copy.
-"""
 
+"""
 import logging
 import os
 import shutil

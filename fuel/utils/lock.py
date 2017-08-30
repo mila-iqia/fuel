@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+#
 # Some of code below is taken from
 # [pylearn2](https://github.com/lisa-lab/pylearn2) framework developed under
 # the copyright:
@@ -32,9 +32,8 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-
+#
 """Utility code to manage filesystem locks."""
-
 import atexit
 import logging
 import os
@@ -55,8 +54,8 @@ class Unlocker(object):
     Ensures that the lock is automatically released when the program
     exits (even when crashing or being interrupted), using the __del__
     class method.
-    """
 
+    """
     def __init__(self, tmp_dir):
         self.tmp_dir = tmp_dir
         # Keep a pointer to the 'os' module, otherwise it may not be accessible
@@ -96,8 +95,9 @@ class Unlocker(object):
 def refresh_lock(lock_file):
     """'Refresh' an existing lock.
 
-    'Refresh' an existing lock by re-writing the file containing the owner's
-    unique id, using a new (randomly generated) id, which is also returned.
+    'Refresh' an existing lock by re-writing the file containing the
+    owner's unique id, using a new (randomly generated) id, which is also
+    returned.
 
     """
     unique_id = '%s_%s_%s' % (
@@ -123,23 +123,24 @@ def refresh_lock(lock_file):
 def lock(tmp_dir, timeout=NOT_SET, min_wait=None, max_wait=None, verbosity=1):
     """Obtain lock.
 
-    Obtain lock access by creating a given temporary directory (whose base will
-    be created if needed, but will not be deleted after the lock is removed).
-    If access is refused by the same lock owner during more than 'timeout'
-    seconds, then the current lock is overridden. If timeout is None, then no
-    timeout is performed.
+    Obtain lock access by creating a given temporary directory (whose base
+    will be created if needed, but will not be deleted after the lock is
+    removed). If access is refused by the same lock owner during more than
+    'timeout' seconds, then the current lock is overridden. If timeout is
+    None, then no timeout is performed.
 
-    The lock is performed by creating a 'lock' file in 'tmp_dir' that contains
-    a unique id identifying the owner of the lock (the process id, followed by
-    a random string).
+    The lock is performed by creating a 'lock' file in 'tmp_dir' that
+    contains a unique id identifying the owner of the lock (the process
+    id, followed by a random string).
 
-    When there is already a lock, the process sleeps for a random amount of
-    time between min_wait and max_wait seconds before trying again.
+    When there is already a lock, the process sleeps for a random amount
+    of time between min_wait and max_wait seconds before trying again.
 
-    If 'verbosity' is >= 1, then a message will be displayed when we need to
-    wait for the lock. If it is set to a value >1, then this message will be
-    displayed each time we re-check for the presence of the lock. Otherwise it
-    is displayed only when we notice the lock's owner has changed.
+    If 'verbosity' is >= 1, then a message will be displayed when we need
+    to wait for the lock. If it is set to a value >1, then this message
+    will be displayed each time we re-check for the presence of the lock.
+    Otherwise it is displayed only when we notice the lock's owner has
+    changed.
 
     Parameters
     ----------
@@ -150,11 +151,12 @@ def lock(tmp_dir, timeout=NOT_SET, min_wait=None, max_wait=None, verbosity=1):
         Time (in seconds) to wait before replacing an existing lock.
 
     min_wait : int
-        Minimum time (in seconds) to wait before trying again to get the lock.
+        Minimum time (in seconds) to wait before trying again to get the
+        lock.
 
     max_wait : int
-        Maximum time (in seconds) to wait before trying again to get the lock
-        (default 2 * min_wait).
+        Maximum time (in seconds) to wait before trying again to get the
+        lock (default 2 * min_wait).
 
     verbosity : int
         Amount of feedback displayed to screen (default 1).
@@ -373,6 +375,7 @@ def get_writelock(filename):
     ----------
     filename : str
         Name of the file on which to obtain a writelock
+
     """
     # write lock expect locks to be on folder. Since we want a lock on a
     # file, we will have to ask write lock for a folder with a different
