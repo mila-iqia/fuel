@@ -16,3 +16,7 @@ This variable can also be set through an environment variable as follows:
 .. code-block:: bash
 
     $ export FUEL_LOCAL_DATA_PATH="/home/username/my_local_cache"
+
+Please note that currently, caching is only implemented in the ``H5PyDataset``.
+In order to add caching to other types of datasets, one should use the
+``cache_file`` function, which is defined in ``fuel/utils/cache.py``.
