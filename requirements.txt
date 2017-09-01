@@ -1,4 +1,4 @@
-h5py==2.7.0
+h5py==2.7.1
 numpy==1.13.1
 tables==3.4.2
 picklable-itertools==0.1.1
