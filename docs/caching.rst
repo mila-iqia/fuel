@@ -19,7 +19,4 @@ This variable can also be set through an environment variable as follows:
 
 Please note that currently, caching is only implemented in the ``H5PyDataset``.
 In order to add caching to other types of datasets, one should use the
-|cache_file|_ function.
-
-.. |cache_file| replace:: ``cache_file``
-.. _cache_file: api/utils.html#fuel.utils.cache.cache_file
+:func:`fuel.utils.cache.cache_file` function.
