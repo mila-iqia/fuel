@@ -1,4 +1,5 @@
 import os
+import zipfile
 
 import h5py
 import numpy
@@ -8,7 +9,7 @@ from PIL import Image
 from fuel.converters.base import check_exists, progress_bar
 from fuel.datasets import H5PYDataset
 
-IMAGE_FOLDER = 'Camvid'
+DATASET_FILE = 'camvid_dataset.zip'
 ATTRIBUTES_FILE_TRAIN = 'train.txt'
 ATTRIBUTES_FILE_VALID = 'val.txt'
 ATTRIBUTES_FILE_TEST = 'test.txt'
@@ -76,19 +77,21 @@ def convert_camvid(directory, output_directory,
     """
     output_path = os.path.join(output_directory, output_filename)
     h5file = _initialize_conversion(directory, output_path, (360, 480))
+    image_file_path = os.path.join(directory, DATASET_FILE)
 
     features_dataset = h5file['features']
     targets_dataset = h5file['targets']
-    with progress_bar('images', NUM_EXAMPLES) as bar:
-        for files in DATASET_FILES:
-            open_file = open(files, 'r')
-            for i, line in enumerate(open_file):
-                image_name, target_name = line.split()
-                image = Image.open(image_name[15:], 'r')
-                target = Image.open(target_name[15:], 'r')
-                features_dataset[i] = numpy.asarray(image).transpose(2, 0, 1)
-                targets_dataset[i] = numpy.asarray(target)
-                bar.update(i + 1)
+    with zipfile.ZipFile(image_file_path, 'r'):
+        with progress_bar('images', NUM_EXAMPLES) as bar:
+            for files in DATASET_FILES:
+                open_file = open(files, 'r')
+                for i, line in enumerate(open_file):
+                    image_name, target_name = line.split()
+                    image = Image.open(image_name[15:], 'r')
+                    target = Image.open(target_name[15:], 'r')
+                    features_dataset[i] = numpy.asarray(image).transpose(2, 0, 1)
+                    targets_dataset[i] = numpy.asarray(target)
+                    bar.update(i + 1)
 
     h5file.flush()
     h5file.close()
