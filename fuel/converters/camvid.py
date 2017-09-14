@@ -94,3 +94,13 @@ def convert_camvid(directory, output_directory,
     h5file.close()
 
     return (output_path,)
+
+
+def fill_subparser(subparser):
+    """Sets up a subparser to convert the Camvid dataset files.
+    Parameters
+    ----------
+    subparser : :class:`argparse.ArgumentParser`
+        Subparser handling the `camvid` command.
+    """
+    return convert_camvid

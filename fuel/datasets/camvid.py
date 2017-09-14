@@ -13,13 +13,11 @@ class Camvid(H5PYDataset):
     that resizes the original data to 360 by 480 resolution and remaps
     the ground truth to a subset of 11 semantic classes, plus a void
     class.
-    The dataset should be downloaded from [Camvid2]_ into the
-    `shared_path` (that should be specified in the config.ini according
-    to the instructions in ../README.md).
+    The dataset should be downloaded from [Camvid2].
     Parameters
     ----------
     which_sets: string
-        A string in ['train', 'val', 'valid', 'test'], corresponding to
+        A string in ['train', 'valid', 'test'], corresponding to
         the set to be returned.
     References
     ----------
@@ -29,7 +27,7 @@ class Camvid(H5PYDataset):
     '''
 
     filename = 'camvid.hdf5'
-    default_transformers = uint8_pixels_to_floatX(('features', 'labels'))
+    default_transformers = uint8_pixels_to_floatX(('features',))
 
     def __init__(self, which_sets, **kwargs):
         super(Camvid, self).__init__(
