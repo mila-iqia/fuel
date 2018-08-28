@@ -45,8 +45,10 @@ setup(
     ],
     keywords='dataset data iteration pipeline processing',
     packages=find_packages(exclude=['tests']),
-    install_requires=['numpy', 'six', 'picklable_itertools', 'pyyaml', 'h5py', 'tables',
-                      'progressbar2', 'pyzmq', 'scipy', 'pillow', 'requests'],
+    install_requires=['numpy', 'six', 'picklable_itertools', 'pyyaml',
+                      'h5py', 'tables',
+                      'progressbar2', 'pyzmq', 'scipy', 'pillow>=3.3.2',
+                      'requests'],
     extras_require={
         'test': ['mock', 'nose', 'nose2'],
         'docs': ['sphinx', 'sphinx-rtd-theme']
