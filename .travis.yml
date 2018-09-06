@@ -17,14 +17,17 @@ before_install:
   # Setup Python environment with BLAS libraries
   - |
       if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then
-         wget -q http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+      # "./.travis-data.sh: line 8: fuel-download: command not found" with minocnda 4.4.10
+         wget -q http://repo.continuum.io/miniconda/Miniconda2-4.3.31-Linux-x86_64.sh -O miniconda.sh
       else
-         wget -q http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+         wget -q http://repo.continuum.io/miniconda/Miniconda3-4.3.31-Linux-x86_64.sh -O miniconda.sh
       fi
   - chmod +x miniconda.sh
   - ./miniconda.sh -b -p $HOME/miniconda
   - export PATH=$HOME/miniconda/bin:$PATH
-  - conda update -q --yes conda
+  - python --version
+  - pip --version
+  - conda --version
   - export FUEL_DATA_PATH=$TRAVIS_BUILD_DIR/data
   - export FUEL_LOCAL_DATA_PATH=$TRAVIS_BUILD_DIR/data_local
   - export FUEL_FLOATX=float64
@@ -49,6 +52,7 @@ script:
   - function fail { export FAILED=1; }
   - |
       if [[ $TESTS == 'blocks' ]]; then
+        export MKL_THREADING_LAYER=GNU # For Theano
         bokeh-server &> /dev/null &
         export PYTHONPATH=$HOME/blocks
         nose2 tests --start-dir $HOME/blocks || fail

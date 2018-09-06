@@ -49,7 +49,7 @@ def load_tests(loader, tests, ignore):
                 module=importlib.import_module(module), setUp=setup,
                 optionflags=doctest.IGNORE_EXCEPTION_DETAIL,
                 checker=Py23DocChecker()))
-        except:
+        except Exception:
             pass
 
     # This part loads the doctests from the documentation

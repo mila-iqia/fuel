@@ -72,7 +72,7 @@ def fill_hdf5_file(h5file, data):
     for name in split_names:
         lengths = [len(split_tuple[2]) for split_tuple in data
                    if split_tuple[0] == name]
-        if not all(l == lengths[0] for l in lengths):
+        if not all(le == lengths[0] for le in lengths):
             raise ValueError("split '{}' has sources that ".format(name) +
                              "vary in length")
 
