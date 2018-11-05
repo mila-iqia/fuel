@@ -9,6 +9,7 @@ Download functions accept two arguments:
 from fuel.downloaders import adult
 from fuel.downloaders import binarized_mnist
 from fuel.downloaders import caltech101_silhouettes
+from fuel.downloaders import camvid
 from fuel.downloaders import celeba
 from fuel.downloaders import cifar10
 from fuel.downloaders import cifar100
@@ -24,6 +25,7 @@ all_downloaders = (
     ('adult', adult.fill_subparser),
     ('binarized_mnist', binarized_mnist.fill_subparser),
     ('caltech101_silhouettes', caltech101_silhouettes.fill_subparser),
+    ('camvid', camvid.fill_subparser),
     ('celeba', celeba.fill_subparser),
     ('cifar10', cifar10.fill_subparser),
     ('cifar100', cifar100.fill_subparser),
