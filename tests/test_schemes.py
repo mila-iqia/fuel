@@ -4,7 +4,7 @@ from numpy.testing import assert_raises
 from fuel.schemes import (ConstantScheme, SequentialExampleScheme,
                           SequentialScheme, ShuffledExampleScheme,
                           ShuffledScheme, ConcatenatedScheme,
-                          cross_validation)
+                          cross_validation, TruncatedEpochScheme)
 
 
 def iterator_requester(scheme):
@@ -116,6 +116,7 @@ def test_concatenated_scheme():
     sch = ConcatenatedScheme(schemes=[ConstantScheme(batch_size=10, times=5),
                                       ConstantScheme(batch_size=20, times=3),
                                       ConstantScheme(batch_size=30, times=1)])
+
     assert (list(sch.get_request_iterator()) ==
             ([10] * 5) + ([20] * 3) + [30])
 
@@ -194,3 +195,8 @@ def test_cross_validation():
     assert list(valid.get_request_iterator()) == [[4, 5], [6, 7]]
 
     assert_raises(StopIteration, next, cross)
+
+
+def test_truncated_epoch_scheme():
+    limited_scheme = TruncatedEpochScheme(SequentialScheme(20, 2), times=5)
+    assert sum(list(limited_scheme.get_request_iterator()), []) == list(range(10))

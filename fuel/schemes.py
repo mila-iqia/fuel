@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections import Iterable
 
 import numpy
-from picklable_itertools import chain, repeat, imap, iter_
+from picklable_itertools import chain, repeat, imap, iter_, islice
 from picklable_itertools.extras import partition_all
 from six import add_metaclass
 from six.moves import xrange
@@ -303,3 +303,20 @@ def cross_validation(scheme_class, num_examples, num_folds, strict=True,
             yield (train, valid)
         else:
             yield (train, valid, end - begin)
+
+
+@add_metaclass(ABCMeta)
+class TruncatedEpochScheme(IterationScheme):
+    """limiting the number of excursion in an iterator.
+
+    Returns elements from an iterator with an early stopping.
+    """
+    def __init__(self, iteration_scheme, times):
+        self.iteration_scheme = iteration_scheme
+        if times < 1:
+            raise ValueError("times is a positive number")
+        self.times = times
+
+    def get_request_iterator(self):
+        it = self.iteration_scheme.get_request_iterator()
+        return islice(it, start=0, stop=self.times)
