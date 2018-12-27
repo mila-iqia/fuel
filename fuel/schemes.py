@@ -229,6 +229,58 @@ class ShuffledScheme(BatchScheme):
             return imap(list, partition_all(self.batch_size, indices))
 
 
+class BalancedSamplingScheme(ShuffledScheme):
+    """Balanced sampling batches iterator.
+
+    Samples an equal amount of examples from each class (or group) and
+    iterates over them in shuffled batches.
+
+    Parameters
+    ----------
+    targets : list of int
+        Represents for each datapoint the class (or group).
+    samples_per_class : int, optional
+        How many examples are sampled per class. If not set, the amount of
+        samples per class will be equal to the amount of examples in the
+        smallest class.
+
+    Notes
+    -----
+    The targets must correspond to the specified examples.
+
+    """
+    def __init__(self, targets, *args, **kwargs):
+        count = numpy.bincount(targets)
+        non_zero = numpy.nonzero(count)[0]
+        num_per_class = zip(non_zero, count[non_zero])
+
+        self.samples_per_class = kwargs.pop('samples_per_class',
+                                            numpy.min(count[non_zero]))
+        super(BalancedSamplingScheme, self).__init__(*args, **kwargs)
+
+        if len(self.indices) != len(targets):
+            raise ValueError('The number of targets ({}) must be equal to '
+                             'the number of specified examples ({})'
+                             .format(len(targets), len(self.indices)))
+
+        self.class_indices = []
+        for idx, _ in num_per_class:
+            cur_indices = numpy.where(targets == idx)[0]
+            self.class_indices.append([self.indices[i] for i in cur_indices])
+
+    def get_request_iterator(self):
+        epoch_indices = []
+        for cur_indices in self.class_indices:
+            with_replacement = self.samples_per_class > len(cur_indices)
+            samples_indices = self.rng.choice(cur_indices,
+                                              size=self.samples_per_class,
+                                              replace=with_replacement)
+            epoch_indices += list(samples_indices)
+
+        self.indices = epoch_indices
+        return super(BalancedSamplingScheme, self).get_request_iterator()
+
+
 class SequentialExampleScheme(IndexScheme):
     """Sequential examples iterator.
 

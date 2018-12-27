@@ -4,7 +4,7 @@ from numpy.testing import assert_raises
 from fuel.schemes import (ConstantScheme, SequentialExampleScheme,
                           SequentialScheme, ShuffledExampleScheme,
                           ShuffledScheme, ConcatenatedScheme,
-                          cross_validation)
+                          cross_validation, BalancedSamplingScheme)
 
 
 def iterator_requester(scheme):
@@ -82,6 +82,57 @@ def test_shuffled_scheme_unsorted_indices():
 
 def test_shuffled_scheme_requests_batches():
     assert not ShuffledScheme(3, 3).requests_examples
+
+
+def test_balanced_sampling_scheme_subsample_min_class():
+    get_request_iterator = iterator_requester(BalancedSamplingScheme)
+    targets = numpy.random.randint(10, size=500)
+    expected = [numpy.bincount(targets).min()]*10
+
+    all_tgt = []
+    all_idx = []
+    for batch in get_request_iterator(targets, len(targets), batch_size=100):
+        all_tgt += list(targets[batch])
+        all_idx += list(batch)
+    assert numpy.array_equal(numpy.bincount(all_tgt), expected)
+    assert numpy.unique(all_idx, return_counts=True)[1].max() == 1
+
+
+def test_balanced_sampling_scheme_more_samples_per_class():
+    get_request_iterator = iterator_requester(BalancedSamplingScheme)
+    targets = numpy.random.randint(10, size=500)
+    expected = [100]*10
+
+    all_tgt = []
+    all_idx = []
+    for batch in get_request_iterator(targets, len(targets),
+                                      samples_per_class=100,
+                                      batch_size=100):
+        all_tgt += list(targets[batch])
+        all_idx += list(batch)
+    assert numpy.array_equal(numpy.bincount(all_tgt), expected)
+    assert numpy.unique(all_idx, return_counts=True)[1].max() >= 1
+
+
+def test_balanced_sampling_scheme_indexed_examples():
+    get_request_iterator = iterator_requester(BalancedSamplingScheme)
+    targets = numpy.random.randint(10, size=500)
+    indices = numpy.random.choice(range(500), 200, replace=False)
+    expected = [numpy.bincount(targets[indices]).min()]*10
+
+    all_tgt = []
+    all_idx = []
+    for batch in get_request_iterator(targets[indices], indices,
+                                      batch_size=100):
+        all_tgt += list(targets[batch])
+        all_idx += list(batch)
+    assert numpy.array_equal(numpy.bincount(all_tgt), expected)
+    assert numpy.unique(all_idx, return_counts=True)[1].max() == 1
+
+
+def test_balanced_sampling_scheme_indexed_examples():
+    targets = numpy.random.randint(10, size=500)
+    assert_raises(ValueError, BalancedSamplingScheme, targets, 200, 100)
 
 
 def test_shuffled_example_scheme():
