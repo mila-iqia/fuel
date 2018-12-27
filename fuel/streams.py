@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import copy
 
 import zmq
 from six import add_metaclass, iteritems
@@ -42,9 +43,10 @@ class AbstractDataStream(object):
         of examples).
 
     """
-    def __init__(self, iteration_scheme=None, axis_labels=None):
+    def __init__(self, iteration_scheme=None, axis_labels=None, copy=False):
         self.iteration_scheme = iteration_scheme
         self.axis_labels = axis_labels
+        self.copy = copy
 
     @property
     def produces_examples(self):
@@ -95,8 +97,9 @@ class AbstractDataStream(object):
 
     @abstractmethod
     def get_epoch_iterator(self, as_dict=False):
-        return DataIterator(self, self.iteration_scheme.get_request_iterator()
-                            if self.iteration_scheme else None,
+        new_self = copy.deepcopy(self) if self.copy else self
+        return DataIterator(new_self, new_self.iteration_scheme.get_request_iterator()
+                            if new_self.iteration_scheme else None,
                             as_dict=as_dict)
 
     def iterate_epochs(self, as_dict=False):
