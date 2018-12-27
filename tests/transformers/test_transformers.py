@@ -14,7 +14,8 @@ from fuel.streams import DataStream
 from fuel.transformers import (
     ExpectsAxisLabels, Transformer, Mapping, SortMapping, ForceFloatX, Filter,
     Cache, Batch, Padding, MultiProcessing, Unpack, Merge,
-    SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename, FilterSources)
+    SourcewiseTransformer, Flatten, ScaleAndShift, Cast, Rename,
+    FilterSources, OneHotEncoding)
 from fuel.transformers.defaults import ToBytes
 
 
@@ -768,6 +769,69 @@ class TestFilterSources(object):
         transformer = FilterSources(self.stream, sources=("features",))
         assert_equal(transformer.axis_labels,
                      {'features': ('batch', 'width', 'height')})
+
+
+class TestOneHotEncoding(object):
+    def setUp(self):
+        self.data = OrderedDict(
+            [('features', numpy.ones((4, 2, 2))),
+             ('targets', numpy.array([[0], [1], [2], [3]]))])
+
+    def test_one_hot_examples(self):
+        wrapper = OneHotEncoding(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialExampleScheme(4)),
+            num_classes=4,
+            which_sources=('targets',))
+        assert_equal(
+            list(wrapper.get_epoch_iterator()),
+            [(numpy.ones((2, 2)), numpy.array([[1, 0, 0, 0]])),
+             (numpy.ones((2, 2)), numpy.array([[0, 1, 0, 0]])),
+             (numpy.ones((2, 2)), numpy.array([[0, 0, 1, 0]])),
+             (numpy.ones((2, 2)), numpy.array([[0, 0, 0, 1]]))])
+
+    def test_one_hot_examples_invalid_inputs(self):
+        wrapper = OneHotEncoding(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialExampleScheme(4)),
+            num_classes=2,
+            which_sources=('targets',))
+        assert_raises(ValueError, list, wrapper.get_epoch_iterator())
+
+    def test_one_hot_batches(self):
+        wrapper = OneHotEncoding(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2)),
+            num_classes=4,
+            which_sources=('targets',))
+        assert_equal(
+            list(wrapper.get_epoch_iterator()),
+            [(numpy.ones((2, 2, 2)),
+              numpy.array([[1, 0, 0, 0], [0, 1, 0, 0]])),
+             (numpy.ones((2, 2, 2)),
+              numpy.array([[0, 0, 1, 0], [0, 0, 0, 1]]))])
+
+    def test_one_hot_with_1d_targets(self):
+        self.data['targets'] = self.data['targets'][:, 0]
+        wrapper = OneHotEncoding(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2)),
+            num_classes=4,
+            which_sources=('targets',))
+        assert_equal(
+            list(wrapper.get_epoch_iterator()),
+            [(numpy.ones((2, 2, 2)),
+              numpy.array([[1, 0, 0, 0], [0, 1, 0, 0]])),
+             (numpy.ones((2, 2, 2)),
+              numpy.array([[0, 0, 1, 0], [0, 0, 0, 1]]))])
+
+    def test_one_hot_batches_invalid_input(self):
+        wrapper = OneHotEncoding(
+            DataStream(IndexableDataset(self.data),
+                       iteration_scheme=SequentialScheme(4, 2)),
+            num_classes=2,
+            which_sources=('targets',))
+        assert_raises(ValueError, list, wrapper.get_epoch_iterator())
 
 
 class VerifyWarningHandler(logging.Handler):

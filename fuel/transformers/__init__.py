@@ -985,3 +985,50 @@ class FilterSources(AgnosticTransformer):
     def transform_any(self, data):
         return [d for d, s in izip(data, self.data_stream.sources)
                 if s in self.sources]
+
+
+class OneHotEncoding(SourcewiseTransformer):
+    """Converts integer target variables to one hot encoding.
+
+    It assumes that the targets are integer numbers from 0,... , N-1.
+    Since it works on the fly the number of classes N needs to be
+    specified.
+
+    Batch input is assumed to be of shape (N,) or (N, 1).
+
+    Parameters
+    ----------
+    data_stream : :class:`DataStream` or :class:`Transformer`.
+        The data stream.
+    num_classes : int
+        The number of classes.
+
+    """
+    def __init__(self, data_stream, num_classes, **kwargs):
+        if data_stream.axis_labels:
+            kwargs.setdefault('axis_labels', data_stream.axis_labels.copy())
+        super(OneHotEncoding, self).__init__(
+            data_stream, data_stream.produces_examples, **kwargs)
+        self.num_classes = num_classes
+
+    def transform_source_example(self, source_example, source_name):
+        if source_example >= self.num_classes:
+            raise ValueError("source_example ({}) must be lower than "
+                             "num_classes ({})".format(source_example,
+                                                       self.num_classes))
+        output = numpy.zeros((1, self.num_classes))
+        output[0, source_example] = 1
+        return output
+
+    def transform_source_batch(self, source_batch, source_name):
+        if numpy.max(source_batch) >= self.num_classes:
+            raise ValueError("all entries in source_batch must be lower than "
+                             "num_classes ({})".format(self.num_classes))
+        output = numpy.zeros((source_batch.shape[0], self.num_classes),
+                             dtype=source_batch.dtype)
+        # if batch is of shape N x 1
+        if source_batch.ndim == 2 and source_batch.shape[1] == 1:
+            source_batch = source_batch[:, 0]
+        for i in range(self.num_classes):
+            output[source_batch == i, i] = 1
+        return output
