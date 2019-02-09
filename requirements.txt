@@ -7,5 +7,5 @@ progressbar2==3.39.2
 pyyaml==3.13
 pyzmq==17.1.2
 requests==2.21.0
-scipy==1.2.0
+scipy==1.2.1
 six==1.12.0
