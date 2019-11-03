@@ -4,7 +4,7 @@ tables==3.4.4
 picklable-itertools==0.1.1
 pillow==5.2.0
 progressbar2==3.6.2
-pyyaml==3.13
+pyyaml==5.1
 pyzmq==15.2.0
 requests==2.20.0
 scipy==0.17.0
