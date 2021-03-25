@@ -1,5 +1,5 @@
 picklable-itertools==0.1.1
 progressbar2==3.6.2
-pyyaml==3.11
+pyyaml==5.4
 requests==2.20.0
 six==1.10.0
